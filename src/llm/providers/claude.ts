@@ -1,0 +1,57 @@
+import Anthropic from '@anthropic-ai/sdk';
+import { getApiKey } from '../../config.js';
+import type { LLMProvider, Message, ChatOptions } from '../types.js';
+
+export class ClaudeProvider implements LLMProvider {
+    name = 'claude';
+    private client: Anthropic | null = null;
+    private modelId: string;
+
+    constructor(modelId: string = 'claude-sonnet-4-20250514') {
+        this.modelId = modelId;
+    }
+
+    private async getClient(): Promise<Anthropic> {
+        if (this.client) {
+            return this.client;
+        }
+
+        const apiKey = await getApiKey('claude');
+        if (!apiKey) {
+            throw new Error(
+                "Dobbie needs an API key for Claude, sir. Please run 'dobbie config add-provider claude'"
+            );
+        }
+
+        this.client = new Anthropic({ apiKey });
+        return this.client;
+    }
+
+    async chat(messages: Message[], options: ChatOptions = {}): Promise<string> {
+        const client = await this.getClient();
+
+        // Separate system prompt from messages
+        const systemPrompt = options.systemPrompt || messages.find(m => m.role === 'system')?.content;
+        const chatMessages = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+                role: m.role as 'user' | 'assistant',
+                content: m.content,
+            }));
+
+        const response = await client.messages.create({
+            model: this.modelId,
+            max_tokens: options.maxTokens || 4096,
+            system: systemPrompt,
+            messages: chatMessages,
+        });
+
+        // Extract text from response
+        const textBlock = response.content.find(block => block.type === 'text');
+        return textBlock?.text || '';
+    }
+}
+
+export function createClaudeProvider(modelId?: string): LLMProvider {
+    return new ClaudeProvider(modelId);
+}

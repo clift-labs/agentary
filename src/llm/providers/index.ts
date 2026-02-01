@@ -1,0 +1,26 @@
+import type { LLMProvider } from '../types.js';
+import { createClaudeProvider } from './claude.js';
+
+const providers: Map<string, (modelId?: string) => LLMProvider> = new Map();
+
+// Register built-in providers
+providers.set('claude', createClaudeProvider);
+
+export function registerProvider(
+    name: string,
+    factory: (modelId?: string) => LLMProvider
+): void {
+    providers.set(name, factory);
+}
+
+export function getProvider(name: string, modelId?: string): LLMProvider {
+    const factory = providers.get(name);
+    if (!factory) {
+        throw new Error(`Unknown LLM provider: ${name}. Dobbie doesn't know this one, sir.`);
+    }
+    return factory(modelId);
+}
+
+export function listProviders(): string[] {
+    return Array.from(providers.keys());
+}

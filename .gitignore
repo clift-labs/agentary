@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local state (not synced)
+.state.json
+
+# OS files
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
