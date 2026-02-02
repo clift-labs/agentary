@@ -57,6 +57,7 @@ export type Config = z.infer<typeof ConfigSchema>;
 export const StateSchema = z.object({
     activeProject: z.string().nullable(),
     lastUsed: z.string().optional(),
+    userName: z.string().optional(),
 });
 
 export type State = z.infer<typeof StateSchema>;

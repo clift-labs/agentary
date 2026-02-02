@@ -7,6 +7,7 @@ import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getTodosContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getResponse } from '../responses.js';
 
 interface TodoState {
     title: string;
@@ -59,7 +60,7 @@ async function findExistingTodo(project: string, titleOrFilename: string): Promi
 }
 
 async function breakdownTodo(state: TodoState): Promise<string> {
-    console.log(chalk.gray('\nDobbie is breaking down the task, sir...'));
+    console.log(chalk.gray('\n' + getResponse('todo_breakdown')));
 
     const context = await getTodosContext(state.project);
     const llm = await getModelForCapability('reason');
@@ -92,7 +93,7 @@ ${state.content || '(No details yet)'}`,
 }
 
 async function clarifyTodo(state: TodoState): Promise<string> {
-    console.log(chalk.gray('\nDobbie is clarifying the task, sir...'));
+    console.log(chalk.gray('\n' + getResponse('processing')));
 
     const context = await getTodosContext(state.project);
     const llm = await getModelForCapability('reason');
@@ -127,7 +128,7 @@ ${state.content || '(No details yet)'}`,
 }
 
 async function estimateTodo(state: TodoState): Promise<string> {
-    console.log(chalk.gray('\nDobbie is estimating the effort, sir...'));
+    console.log(chalk.gray('\n' + getResponse('thinking')));
 
     const context = await getTodosContext(state.project);
     const llm = await getModelForCapability('reason');
@@ -157,7 +158,7 @@ ${state.content || '(No details yet)'}`,
 }
 
 async function modifyTodo(state: TodoState, feedback: string): Promise<string> {
-    console.log(chalk.gray('\nDobbie is modifying the todo, sir...'));
+    console.log(chalk.gray('\n' + getResponse('processing')));
 
     const context = await getTodosContext(state.project);
     const llm = await getModelForCapability('reason');
@@ -192,7 +193,7 @@ User Feedback: ${feedback}`,
 }
 
 async function formatTodo(state: TodoState): Promise<string> {
-    console.log(chalk.gray('\nDobbie is formatting the todo, sir...'));
+    console.log(chalk.gray('\n' + getResponse('processing')));
 
     try {
         const context = await getTodosContext(state.project);
@@ -616,7 +617,7 @@ export const todoCommand = new Command('todo')
             }
 
         } catch (error) {
-            console.error(chalk.red('Dobbie encountered an error, sir:'), error);
+            console.error(chalk.red(getResponse('error')), error);
         }
     });
 

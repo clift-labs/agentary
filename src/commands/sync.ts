@@ -4,6 +4,7 @@ import ora from 'ora';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getVaultRoot } from '../state/manager.js';
+import { getResponse } from '../responses.js';
 
 const execAsync = promisify(exec);
 
@@ -11,7 +12,7 @@ export const syncCommand = new Command('sync')
     .description('Sync with GitHub')
     .option('-m, --message <message>', 'Commit message', 'Dobbie synced notes')
     .action(async (options: { message: string }) => {
-        const spinner = ora('Dobbie is syncing with GitHub, sir...').start();
+        const spinner = ora(getResponse('sync_start')).start();
 
         try {
             const cwd = await getVaultRoot();
@@ -50,7 +51,7 @@ export const syncCommand = new Command('sync')
             spinner.text = 'Pushing to GitHub...';
             try {
                 await execAsync('git push', { cwd });
-                spinner.succeed('Dobbie has synced everything, sir!');
+                spinner.succeed(getResponse('sync_complete'));
             } catch (error: unknown) {
                 // Push might fail if no upstream set
                 const errorMessage = error instanceof Error ? error.message : String(error);
@@ -66,7 +67,7 @@ export const syncCommand = new Command('sync')
             console.log(chalk.gray(`\n  ${lines.length} file(s) synced`));
 
         } catch (error) {
-            spinner.fail('Dobbie encountered a problem, sir.');
+            spinner.fail(getResponse('error'));
             console.error(chalk.red('\nError:'), error);
         }
     });

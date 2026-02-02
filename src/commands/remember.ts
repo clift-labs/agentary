@@ -7,6 +7,7 @@ import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getProjectContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { appendToMarkdown } from '../markdown/parser.js';
+import { getResponse } from '../responses.js';
 
 export const rememberCommand = new Command('remember')
     .description('Add something to context or notes')
@@ -30,7 +31,7 @@ export const rememberCommand = new Command('remember')
                 console.log(chalk.gray(`Adding to project "${project}", sir.`));
             }
 
-            const spinner = ora('Dobbie is processing, sir...').start();
+            const spinner = ora(getResponse('processing')).start();
 
             try {
                 // Try to use AI to format the note
@@ -61,7 +62,7 @@ Format the response as markdown that can be appended to an existing document.`;
                     await fs.appendFile(targetPath, noteWithDate);
                 }
 
-                console.log(chalk.green('✓ Dobbie has remembered that for you, sir!'));
+                console.log(chalk.green('✓ ' + getResponse('remember_saved')));
                 console.log(chalk.gray(formattedNote));
 
             } catch {
@@ -83,7 +84,7 @@ Format the response as markdown that can be appended to an existing document.`;
             }
 
         } catch (error) {
-            console.error(chalk.red('Dobbie encountered an error, sir:'), error);
+            console.error(chalk.red(getResponse('error')), error);
         }
     });
 

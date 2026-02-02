@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import os from 'os';
 import { StateSchema, type State } from '../schemas/index.js';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
@@ -91,6 +92,23 @@ export async function getActiveProject(): Promise<string | null> {
 export async function setActiveProject(projectName: string): Promise<void> {
     const state = await loadState();
     state.activeProject = projectName;
+    await saveState(state);
+}
+
+/**
+ * Gets the user's name from state, falling back to OS username.
+ */
+export async function getUserName(): Promise<string> {
+    const state = await loadState();
+    return state.userName || os.userInfo().username || 'sir';
+}
+
+/**
+ * Sets the user's name in state.
+ */
+export async function setUserName(name: string): Promise<void> {
+    const state = await loadState();
+    state.userName = name;
     await saveState(state);
 }
 

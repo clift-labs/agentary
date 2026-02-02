@@ -134,4 +134,15 @@ configCommand
         console.log('');
     });
 
+// Set user name
+configCommand
+    .command('set-name <name>')
+    .description('Set your name for personalized responses')
+    .action(async (name: string) => {
+        const { setUserName } = await import('../state/manager.js');
+        await setUserName(name);
+        console.log(chalk.green(`\n✓ Dobbie will call you "${name}" from now on!`));
+    });
+
 export default configCommand;
+

@@ -6,11 +6,12 @@ import path from 'path';
 import { getActiveProject, getVaultRoot } from '../state/manager.js';
 import { getContextString } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getResponse } from '../responses.js';
 
 export const todayCommand = new Command('today')
     .description('Show daily todos and notes')
     .action(async () => {
-        const spinner = ora('Dobbie is gathering your tasks, sir...').start();
+        const spinner = ora(getResponse('processing')).start();
 
         try {
             const vaultRoot = await getVaultRoot();
@@ -99,7 +100,7 @@ ${activeProject ? `Project "${activeProject}" Todos:\n${projectTodos || '(No pro
 
 Provide a prioritized summary of what the user should focus on today.`;
 
-                const spinner2 = ora('Dobbie is organizing your day, sir...').start();
+                const spinner2 = ora(getResponse('thinking')).start();
                 const response = await llm.chat(
                     [{ role: 'user', content: prompt }],
                     { systemPrompt }
@@ -127,7 +128,7 @@ Provide a prioritized summary of what the user should focus on today.`;
 
         } catch (error) {
             spinner.stop();
-            console.error(chalk.red('Dobbie encountered an error, sir:'), error);
+            console.error(chalk.red(getResponse('error')), error);
         }
     });
 

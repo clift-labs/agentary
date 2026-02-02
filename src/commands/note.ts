@@ -7,6 +7,7 @@ import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getNotesContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getResponse } from '../responses.js';
 
 interface NoteState {
     title: string;
@@ -53,7 +54,7 @@ async function findExistingNote(project: string, titleOrFilename: string): Promi
 }
 
 async function reviewNote(state: NoteState): Promise<string> {
-    console.log(chalk.gray('\nDobbie is reviewing your note, sir...'));
+    console.log(chalk.gray('\n' + getResponse('note_reviewing')));
 
     const context = await getNotesContext(state.project);
     const llm = await getModelForCapability('reason');
@@ -75,7 +76,7 @@ ${state.content}`,
 }
 
 async function generateQuestions(state: NoteState): Promise<string[]> {
-    console.log(chalk.gray('\nDobbie is thinking of questions, sir...'));
+    console.log(chalk.gray('\n' + getResponse('thinking')));
 
     const context = await getNotesContext(state.project);
     const llm = await getModelForCapability('reason');
@@ -99,7 +100,7 @@ ${state.content}`,
 }
 
 async function modifyNote(state: NoteState, feedback: string): Promise<string> {
-    console.log(chalk.gray('\nDobbie is modifying your note, sir...'));
+    console.log(chalk.gray('\n' + getResponse('processing')));
 
     const context = await getNotesContext(state.project);
     const llm = await getModelForCapability('reason');
@@ -123,7 +124,7 @@ User Feedback: ${feedback}`,
 }
 
 async function formatAsMarkdown(state: NoteState): Promise<string> {
-    console.log(chalk.gray('\nDobbie is formatting your note as markdown, sir...'));
+    console.log(chalk.gray('\n' + getResponse('note_formatted')));
 
     try {
         const context = await getNotesContext(state.project);
@@ -215,7 +216,7 @@ function displayNote(state: NoteState): void {
 type DiagramType = 'flowchart' | 'class' | 'sequence';
 
 async function generateDiagram(state: NoteState, diagramType: DiagramType): Promise<string> {
-    console.log(chalk.gray(`\nDobbie is generating a ${diagramType} diagram, sir...`));
+    console.log(chalk.gray('\n' + getResponse('diagram_generating')));
 
     const context = await getNotesContext(state.project);
     const llm = await getModelForCapability('reason');
@@ -528,7 +529,7 @@ export const noteCommand = new Command('note')
             }
 
         } catch (error) {
-            console.error(chalk.red('Dobbie encountered an error, sir:'), error);
+            console.error(chalk.red(getResponse('error')), error);
         }
     });
 
