@@ -1,27 +1,82 @@
 import type { LLMCapability } from '../schemas/index.js';
+import type { TaskLogger, Canvas, EntityType } from '../service/protocol.js';
+import type { ContextProvider } from '../service/context/provider.js';
 
-export interface Tool {
+// ─────────────────────────────────────────────────────────────────────────────
+// Service Tool Interface
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface LLMProxy {
+    chat(messages: { role: string; content: string }[], options?: { systemPrompt?: string }): Promise<string>;
+}
+
+export interface ServiceToolExecutionContext {
+    taskId: string;
+    stepId: string;
+    sessionId?: string;
+
+    // Unified context access
+    ctx: ContextProvider;
+
+    // Task-specific data
+    previousOutputs: readonly unknown[];
+    canvas?: Canvas;
+
+    // Debug logging
+    log: TaskLogger;
+
+    // Proxied services
+    llm: LLMProxy;
+}
+
+export interface ServiceToolResult {
+    success: boolean;
+    output: unknown;
+    tokensToSet?: Record<string, string>;
+    canvasUpdate?: Partial<Canvas>;
+    error?: string;
+}
+
+export interface ServiceTool {
     name: string;
     description: string;
     type: 'deterministic' | 'ai';
-    capability?: LLMCapability;  // Which capability to use (if type === 'ai')
-    execute(input: string, context?: string[]): Promise<string>;
+    capability?: LLMCapability;
+
+    // Input schema for validation
+    inputSchema?: {
+        type: string;
+        properties?: Record<string, {
+            type: string;
+            description?: string;
+            required?: boolean;
+            properties?: Record<string, { type: string; description?: string }>;
+            items?: { type: string };
+        }>;
+        required?: string[];
+    };
+
+    execute(input: unknown, context: ServiceToolExecutionContext): Promise<ServiceToolResult>;
 }
 
-const tools: Map<string, Tool> = new Map();
+// ─────────────────────────────────────────────────────────────────────────────
+// Tool Registry
+// ─────────────────────────────────────────────────────────────────────────────
 
-export function registerTool(tool: Tool): void {
-    tools.set(tool.name, tool);
+const serviceTools: Map<string, ServiceTool> = new Map();
+
+export function registerServiceTool(tool: ServiceTool): void {
+    serviceTools.set(tool.name, tool);
 }
 
-export function getTool(name: string): Tool | undefined {
-    return tools.get(name);
+export function getServiceTool(name: string): ServiceTool | undefined {
+    return serviceTools.get(name);
 }
 
-export function listTools(): Tool[] {
-    return Array.from(tools.values());
+export function listServiceTools(): ServiceTool[] {
+    return Array.from(serviceTools.values());
 }
 
-export function hasTool(name: string): boolean {
-    return tools.has(name);
+export function hasServiceTool(name: string): boolean {
+    return serviceTools.has(name);
 }

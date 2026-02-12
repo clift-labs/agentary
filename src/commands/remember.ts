@@ -57,7 +57,7 @@ Format the response as markdown that can be appended to an existing document.`;
 
                 try {
                     await appendToMarkdown(targetPath, noteWithDate);
-                } catch {
+                } catch (err) { console.debug('[dobbie:commands:remember]', err);
                     // File doesn't exist or can't be parsed, just append
                     await fs.appendFile(targetPath, noteWithDate);
                 }
@@ -65,7 +65,7 @@ Format the response as markdown that can be appended to an existing document.`;
                 console.log(chalk.green('✓ ' + getResponse('remember_saved')));
                 console.log(chalk.gray(formattedNote));
 
-            } catch {
+            } catch (err) { console.debug('[dobbie:commands:remember]', err);
                 spinner.stop();
 
                 // Fall back to simple append without AI
@@ -73,7 +73,7 @@ Format the response as markdown that can be appended to an existing document.`;
 
                 try {
                     await fs.appendFile(targetPath, simpleNote);
-                } catch {
+                } catch (err) { console.debug('[dobbie:commands:remember]', err);
                     // Create the directory and file if needed
                     await fs.mkdir(path.dirname(targetPath), { recursive: true });
                     await fs.writeFile(targetPath, simpleNote);

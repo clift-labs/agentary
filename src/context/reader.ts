@@ -12,7 +12,7 @@ async function readSocksFile(dirPath: string): Promise<string | null> {
     const socksPath = path.join(dirPath, SOCKS_FILE);
     try {
         return await fs.readFile(socksPath, 'utf-8');
-    } catch {
+    } catch (err) { console.debug('[dobbie:context:reader]', err);
         return null;
     }
 }
@@ -74,32 +74,10 @@ export async function getProjectContext(projectName: string): Promise<string> {
 
 /**
  * Gets the context for notes in a project.
- * Gathers .socks.md files in this order (broadest to most specific):
- * 1. .socks.md (root)
- * 2. projects/.socks.md
- * 3. projects/{project}/.socks.md
- * 4. projects/{project}/notes/.socks.md
+ * Convenience wrapper for getSubdirectoryContext.
  */
 export async function getNotesContext(projectName: string): Promise<string> {
-    const vaultRoot = await getVaultRoot();
-    const contexts: string[] = [];
-
-    // Define the hierarchy from root to notes (broadest to most specific)
-    const hierarchy = [
-        vaultRoot,                                           // .socks.md
-        path.join(vaultRoot, 'projects'),                    // projects/.socks.md
-        path.join(vaultRoot, 'projects', projectName),       // projects/{project}/.socks.md
-        path.join(vaultRoot, 'projects', projectName, 'notes') // projects/{project}/notes/.socks.md
-    ];
-
-    for (const dirPath of hierarchy) {
-        const content = await readSocksFile(dirPath);
-        if (content) {
-            contexts.push(content);
-        }
-    }
-
-    return contexts.join('\n\n---\n\n');
+    return getSubdirectoryContext(projectName, 'notes');
 }
 
 /**

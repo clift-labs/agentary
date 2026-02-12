@@ -32,7 +32,7 @@ export const todayCommand = new Command('today')
                         globalTodos += content + '\n\n';
                     }
                 }
-            } catch {
+            } catch (err) { console.debug('[dobbie:commands:today]', err);
                 // No todos folder or empty
             }
 
@@ -47,7 +47,7 @@ export const todayCommand = new Command('today')
                         schedule += content + '\n\n';
                     }
                 }
-            } catch {
+            } catch (err) { console.debug('[dobbie:commands:today]', err);
                 // No schedule folder or empty
             }
 
@@ -63,7 +63,7 @@ export const todayCommand = new Command('today')
                             projectTodos += content + '\n\n';
                         }
                     }
-                } catch {
+                } catch (err) { console.debug('[dobbie:commands:today]', err);
                     // No project todos
                 }
             }

@@ -37,7 +37,7 @@ export async function loadSecrets(): Promise<Secrets> {
         await ensureDobbieDir();
         const data = await fs.readFile(SECRETS_PATH, 'utf-8');
         return SecretsSchema.parse(JSON.parse(data));
-    } catch {
+    } catch (err) { console.debug('[dobbie:config]', err);
         return DEFAULT_SECRETS;
     }
 }
@@ -52,7 +52,7 @@ export async function loadConfig(): Promise<Config> {
         await ensureDobbieDir();
         const data = await fs.readFile(CONFIG_PATH, 'utf-8');
         return ConfigSchema.parse(JSON.parse(data));
-    } catch {
+    } catch (err) { console.debug('[dobbie:config]', err);
         return DEFAULT_CONFIG;
     }
 }

@@ -28,7 +28,7 @@ export const initCommand = new Command('init')
             await fs.access(socksPath);
             console.log(chalk.yellow('.socks.md already exists. This is already a vault, sir.'));
             return;
-        } catch {
+        } catch (err) { console.debug('[dobbie:commands:init]', err);
             // Good, doesn't exist
         }
 
@@ -127,7 +127,7 @@ Time-blocked events and appointments.
         try {
             await fs.access(path.join(cwd, '.gitignore'));
             await fs.appendFile(path.join(cwd, '.gitignore'), '\n' + gitignore);
-        } catch {
+        } catch (err) { console.debug('[dobbie:commands:init]', err);
             await fs.writeFile(path.join(cwd, '.gitignore'), gitignore);
         }
 

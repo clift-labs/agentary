@@ -27,7 +27,7 @@ export async function findVaultRoot(): Promise<string | null> {
             await fs.access(socksPath);
             cachedVaultRoot = currentDir;
             return currentDir;
-        } catch {
+        } catch (err) { console.debug('[dobbie:state:manager]', err);
             // No .socks.md here, try parent
             currentDir = path.dirname(currentDir);
         }
@@ -73,7 +73,7 @@ export async function loadState(): Promise<State> {
         const vaultRoot = await getVaultRoot();
         const data = await fs.readFile(getStatePath(vaultRoot), 'utf-8');
         return StateSchema.parse(JSON.parse(data));
-    } catch {
+    } catch (err) { console.debug('[dobbie:state:manager]', err);
         return DEFAULT_STATE;
     }
 }
@@ -167,7 +167,7 @@ export async function listProjects(): Promise<string[]> {
         return entries
             .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
             .map(entry => entry.name);
-    } catch {
+    } catch (err) { console.debug('[dobbie:state:manager]', err);
         return [];
     }
 }
@@ -182,6 +182,7 @@ export async function createProject(name: string): Promise<void> {
     await fs.mkdir(path.join(projectDir, 'research'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'events'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'inbox'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'goals'), { recursive: true });
 
     // Create project .socks.md
     const today = new Date().toISOString().split('T')[0];
@@ -207,7 +208,7 @@ Project-specific context and notes.
     await fs.writeFile(path.join(projectDir, '.socks.md'), socksContent);
 
     // Create sub-folder .socks.md files
-    const subFolders = ['notes', 'todos', 'research', 'events', 'inbox'];
+    const subFolders = ['notes', 'todos', 'research', 'events', 'inbox', 'goals'];
     for (const folder of subFolders) {
         const folderSocks = `---
 title: "${name} ${folder.charAt(0).toUpperCase() + folder.slice(1)} Context"
@@ -228,7 +229,7 @@ export async function projectExists(name: string): Promise<boolean> {
     try {
         const stat = await fs.stat(projectDir);
         return stat.isDirectory();
-    } catch {
+    } catch (err) { console.debug('[dobbie:state:manager]', err);
         return false;
     }
 }

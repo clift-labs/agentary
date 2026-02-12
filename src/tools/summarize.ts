@@ -1,28 +1,38 @@
-import type { Tool } from './types.js';
-import { registerTool } from './types.js';
-import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { registerServiceTool, type ServiceToolResult } from './types.js';
 
-export const summarizeTool: Tool = {
+// ─────────────────────────────────────────────────────────────────────────────
+// SUMMARIZE TOOL (V2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+registerServiceTool({
     name: 'summarize',
     description: 'Summarizes text using AI',
     type: 'ai',
     capability: 'summarize',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            text: { type: 'string', description: 'Text to summarize', required: true },
+        },
+        required: ['text'],
+    },
+    execute: async (input, context): Promise<ServiceToolResult> => {
+        const { text } = input as { text: string };
 
-    async execute(input: string, context: string[] = []): Promise<string> {
-        const llm = await getModelForCapability('summarize');
-        const contextString = context.join('\n\n---\n\n');
-        const systemPrompt = createDobbieSystemPrompt(contextString);
+        context.log.info('Summarizing text');
 
-        const response = await llm.chat(
-            [{ role: 'user', content: `Please summarize the following text concisely:\n\n${input}` }],
-            { systemPrompt }
+        const fullContext = await context.ctx.getFullContext('notes');
+
+        const response = await context.llm.chat(
+            [
+                { role: 'system', content: fullContext.combined },
+                { role: 'user', content: `Please summarize the following text concisely:\n\n${text}` },
+            ],
         );
 
-        return response;
+        return {
+            success: true,
+            output: response,
+        };
     },
-};
-
-// Register the tool
-registerTool(summarizeTool);
-
-export default summarizeTool;
+});

@@ -46,7 +46,7 @@ async function findExistingNote(project: string, titleOrFilename: string): Promi
                 };
             }
         }
-    } catch {
+    } catch (err) { console.debug('[dobbie:commands:note]', err);
         // Notes directory doesn't exist yet
     }
 
@@ -159,7 +159,7 @@ ${state.content}`,
         }
 
         return formatted.trim();
-    } catch {
+    } catch (err) { console.debug('[dobbie:commands:note]', err);
         // If formatting fails, return original content
         console.log(chalk.yellow('Note: Markdown formatting skipped (configure AI for formatting)'));
         return state.content;

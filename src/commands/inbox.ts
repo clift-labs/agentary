@@ -79,7 +79,7 @@ ${content}`,
             content: parsed.content || content,
             metadata: parsed.metadata || {},
         };
-    } catch {
+    } catch (err) { console.debug('[dobbie:commands:inbox]', err);
         // Fallback if JSON parsing fails
         console.log(chalk.yellow('Could not parse AI response, defaulting to note'));
         return {
@@ -196,7 +196,7 @@ async function listInboxItems(project: string): Promise<string[]> {
         return files
             .filter(f => !f.startsWith('.'))
             .map(f => path.join(inboxDir, f));
-    } catch {
+    } catch (err) { console.debug('[dobbie:commands:inbox]', err);
         return [];
     }
 }
@@ -230,7 +230,7 @@ export const inboxCommand = new Command('inbox')
                         console.log(chalk.green(`✓ Added file to inbox: ${path.basename(destPath)}`));
                         return;
                     }
-                } catch {
+                } catch (err) { console.debug('[dobbie:commands:inbox]', err);
                     // Not a file, treat as text content
                 }
 

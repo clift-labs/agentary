@@ -52,7 +52,7 @@ async function findExistingTodo(project: string, titleOrFilename: string): Promi
                 };
             }
         }
-    } catch {
+    } catch (err) { console.debug('[dobbie:commands:todo]', err);
         // Todos directory doesn't exist yet
     }
 
@@ -228,7 +228,7 @@ ${state.content}`,
         }
 
         return formatted.trim();
-    } catch {
+    } catch (err) { console.debug('[dobbie:commands:todo]', err);
         console.log(chalk.yellow('Formatting skipped (configure AI for formatting)'));
         return state.content;
     }

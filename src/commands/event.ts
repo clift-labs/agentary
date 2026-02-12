@@ -71,7 +71,7 @@ async function findExistingEvent(project: string, titleOrFilename: string): Prom
                 };
             }
         }
-    } catch {
+    } catch (err) { console.debug('[dobbie:commands:event]', err);
         // Events directory doesn't exist yet
     }
 
