@@ -252,12 +252,15 @@ async function promptDateTime(message: string, defaultValue?: string): Promise<s
 
 export const eventCommand = new Command('event')
     .description('Interactive event management with AI assistance')
-    .argument('[title]', 'Event title (opens existing event if found)')
-    .action(async (titleArg?: string) => {
+    .argument('[words...]', 'Title and optional inline description (e.g. "dentist Need to schedule cleaning")')
+    .action(async (words: string[]) => {
         try {
             const project = await requireProject();
 
-            let title = titleArg;
+            // Parse: first word = title, rest = inline description
+            let title = words.length > 0 ? words[0] : undefined;
+            const inlineBody = words.length > 1 ? words.slice(1).join(' ') : undefined;
+
             if (!title) {
                 const { eventTitle } = await inquirer.prompt([
                     {
@@ -275,10 +278,38 @@ export const eventCommand = new Command('event')
             let state: EventState;
 
             if (existing) {
+                // Open existing event — if inline body, append to description
+                if (inlineBody) {
+                    const updatedDescription = existing.description
+                        ? existing.description + '\n\n' + inlineBody
+                        : inlineBody;
+                    state = {
+                        ...existing,
+                        description: updatedDescription,
+                    };
+                    const filepath = await saveEvent(state);
+                    console.log(chalk.green(`\n✓ Appended to "${existing.title}" → ${filepath}`));
+                    return;
+                }
+
                 console.log(chalk.green(`\n✓ Opening existing event "${existing.title}"`));
                 state = existing;
+            } else if (inlineBody) {
+                // Quick event — save immediately, dates can be set later
+                state = {
+                    title: title!,
+                    description: inlineBody,
+                    project,
+                    startTime: '',
+                    endTime: '',
+                    location: undefined,
+                    isExisting: false,
+                };
+                const filepath = await saveEvent(state);
+                console.log(chalk.green(`\n✓ Quick event saved → ${filepath}`));
+                return;
             } else {
-                // Create new event
+                // Create new event with full prompts
                 console.log(chalk.gray('\nLet\'s set up the event details, sir.'));
 
                 const startTime = await promptDateTime('Start time (e.g., "2026-02-01 14:00"):');

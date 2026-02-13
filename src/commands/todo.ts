@@ -319,14 +319,17 @@ Commands:
 
 export const todoCommand = new Command('todo')
     .description('Interactive todo management with AI assistance')
-    .argument('[title]', 'Todo title (opens existing todo if found)')
-    .action(async (titleArg?: string) => {
+    .argument('[words...]', 'Title and optional inline description (e.g. "fix-login The login 500s with plus signs")')
+    .action(async (words: string[]) => {
         try {
             // Require a project
             const project = await requireProject();
 
+            // Parse: first word = title, rest = inline description
+            let title = words.length > 0 ? words[0] : undefined;
+            const inlineBody = words.length > 1 ? words.slice(1).join(' ') : undefined;
+
             // Get title if not provided
-            let title = titleArg;
             if (!title) {
                 const { todoTitle } = await inquirer.prompt([
                     {
@@ -345,7 +348,26 @@ export const todoCommand = new Command('todo')
             let state: TodoState;
 
             if (existing) {
-                // Open existing todo
+                // Open existing todo — if inline body, append to it
+                if (inlineBody) {
+                    const updatedContent = existing.content
+                        ? existing.content + '\n\n' + inlineBody
+                        : inlineBody;
+                    state = {
+                        title: existing.title,
+                        content: updatedContent,
+                        project,
+                        priority: existing.priority as 'low' | 'medium' | 'high',
+                        dueDate: existing.dueDate,
+                        filepath: existing.filepath,
+                        isExisting: true,
+                        completed: existing.completed,
+                    };
+                    const filepath = await saveTodo(state);
+                    console.log(chalk.green(`\n✓ Appended to "${existing.title}" → ${filepath}`));
+                    return;
+                }
+
                 console.log(chalk.green(`\n✓ Opening existing todo "${existing.title}"`));
                 state = {
                     title: existing.title,
@@ -357,6 +379,20 @@ export const todoCommand = new Command('todo')
                     isExisting: true,
                     completed: existing.completed,
                 };
+            } else if (inlineBody) {
+                // Quick todo — save immediately with medium priority
+                state = {
+                    title: title!,
+                    content: inlineBody,
+                    project,
+                    priority: 'medium',
+                    dueDate: undefined,
+                    isExisting: false,
+                    completed: false,
+                };
+                const filepath = await saveTodo(state);
+                console.log(chalk.green(`\n✓ Quick todo saved → ${filepath}`));
+                return;
             } else {
                 // Create new todo - get initial details
                 const { priority } = await inquirer.prompt([
