@@ -81,7 +81,7 @@ function buildCompleter(): (line: string) => [string[], string] {
  * This completely isolates Commander from readline — the child process has its
  * own stdin/stdout and can never interfere with the shell's character echo.
  */
-function runCommand(args: string[]): Promise<void> {
+function runCommand(args: string[]): Promise<'continue' | 'quit'> {
     return new Promise((resolve) => {
         const child = spawn(process.argv[0], [process.argv[1], ...args], {
             stdio: 'inherit',
@@ -89,10 +89,10 @@ function runCommand(args: string[]): Promise<void> {
             env: process.env,
         });
 
-        child.on('close', () => resolve());
+        child.on('close', (code) => resolve(code === 42 ? 'quit' : 'continue'));
         child.on('error', (err) => {
             console.log(chalk.red(`Failed to run command: ${err.message}`));
-            resolve();
+            resolve('continue');
         });
     });
 }
@@ -166,8 +166,14 @@ export function createShellCommand(_program: Command): Command {
                     // Dispatch via subprocess — keeps readline completely isolated
                     const args = input.split(/\s+/);
                     rl.pause();
-                    await runCommand(args);
+                    const result = await runCommand(args);
                     rl.resume();
+
+                    if (result === 'quit') {
+                        poller.stop();
+                        rl.close();
+                        return;
+                    }
 
                     console.log('');
                     showPrompt(rl, bar);
