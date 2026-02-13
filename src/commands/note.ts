@@ -285,8 +285,8 @@ Commands:
   ${chalk.bold('show')}       - Display the current note
   ${chalk.bold('edit')}       - Edit the note content
   ${chalk.bold('title')}      - Change the title
-  ${chalk.bold('exit')}       - Save and exit
-  ${chalk.bold('quit')}       - Exit without saving
+  ${chalk.bold('exit')}       - Save and go back
+  ${chalk.bold('back')}       - Go back without saving
   ${chalk.bold('help')}       - Show this help
 `));
 }
@@ -380,18 +380,18 @@ export const noteCommand = new Command('note')
                         break;
                     }
 
-                    case 'quit':
-                    case 'q': {
+                    case 'back':
+                    case 'b': {
                         const { confirm } = await inquirer.prompt([
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Exit without saving?',
+                                message: 'Dobbie notices unsaved work, sir. Discard changes?',
                                 default: false,
                             },
                         ]);
                         if (confirm) {
-                            console.log(chalk.yellow('Note discarded, sir.'));
+                            console.log(chalk.yellow(getResponse('task_discarded')));
                             running = false;
                         }
                         break;

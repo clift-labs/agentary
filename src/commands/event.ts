@@ -7,6 +7,7 @@ import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getEventsContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, eventHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
@@ -225,8 +226,8 @@ Commands:
   ${chalk.bold('start')}        - Set start time
   ${chalk.bold('end')}          - Set end time
   ${chalk.bold('location')}     - Set location
-  ${chalk.bold('exit')}         - Save and exit
-  ${chalk.bold('quit')}         - Exit without saving
+  ${chalk.bold('exit')}         - Save and go back
+  ${chalk.bold('back')}         - Go back without saving
   ${chalk.bold('help')}         - Show this help
 `));
 }
@@ -341,18 +342,18 @@ export const eventCommand = new Command('event')
                         break;
                     }
 
-                    case 'quit':
-                    case 'q': {
+                    case 'back':
+                    case 'b': {
                         const { confirm } = await inquirer.prompt([
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Exit without saving?',
+                                message: 'Dobbie notices unsaved work, sir. Discard changes?',
                                 default: false,
                             },
                         ]);
                         if (confirm) {
-                            console.log(chalk.yellow('Event discarded, sir.'));
+                            console.log(chalk.yellow(getResponse('task_discarded')));
                             running = false;
                         }
                         break;

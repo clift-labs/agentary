@@ -310,8 +310,8 @@ Commands:
   ${chalk.bold('priority')}   - Set priority (low|medium|high)
   ${chalk.bold('due')}        - Set due date
   ${chalk.bold('done')}       - Mark as completed
-  ${chalk.bold('exit')}       - Save and exit
-  ${chalk.bold('quit')}       - Exit without saving
+  ${chalk.bold('exit')}       - Save and go back
+  ${chalk.bold('back')}       - Go back without saving
   ${chalk.bold('help')}       - Show this help
 `));
 }
@@ -436,18 +436,18 @@ export const todoCommand = new Command('todo')
                         break;
                     }
 
-                    case 'quit':
-                    case 'q': {
+                    case 'back':
+                    case 'b': {
                         const { confirm } = await inquirer.prompt([
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Exit without saving?',
+                                message: 'Dobbie notices unsaved work, sir. Discard changes?',
                                 default: false,
                             },
                         ]);
                         if (confirm) {
-                            console.log(chalk.yellow('Todo discarded, sir.'));
+                            console.log(chalk.yellow(getResponse('task_discarded')));
                             running = false;
                         }
                         break;
