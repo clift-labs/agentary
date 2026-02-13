@@ -83,7 +83,7 @@ function buildCompleter(): (line: string) => [string[], string] {
 function runCommand(args: string[]): Promise<void> {
     return new Promise((resolve) => {
         const child = spawn(process.argv[0], [process.argv[1], ...args], {
-            stdio: ['ignore', 'inherit', 'inherit'],
+            stdio: 'inherit',
             cwd: process.cwd(),
             env: process.env,
         });
