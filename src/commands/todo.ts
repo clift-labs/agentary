@@ -312,6 +312,7 @@ Commands:
   ${chalk.bold('done')}       - Mark as completed
   ${chalk.bold('exit')}       - Save and go back
   ${chalk.bold('back')}       - Go back without saving
+  ${chalk.bold('quit')}       - Quit Dobbie entirely
   ${chalk.bold('help')}       - Show this help
 `));
 }
@@ -449,6 +450,23 @@ export const todoCommand = new Command('todo')
                         if (confirm) {
                             console.log(chalk.yellow(getResponse('task_discarded')));
                             running = false;
+                        }
+                        break;
+                    }
+
+                    case 'quit':
+                    case 'q': {
+                        const { confirm: quitConfirm } = await inquirer.prompt([
+                            {
+                                type: 'confirm',
+                                name: 'confirm',
+                                message: 'Dobbie notices unsaved work, sir. Quit Dobbie entirely?',
+                                default: false,
+                            },
+                        ]);
+                        if (quitConfirm) {
+                            console.log(chalk.yellow(getResponse('farewell')));
+                            process.exit(0);
                         }
                         break;
                     }
