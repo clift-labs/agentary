@@ -8,6 +8,7 @@ import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getEventsContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { renderEntityHeader, entityPrompt, eventHeaderConfig } from '../ui/entity-prompt.js';
+import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 
 interface EventState {
     title: string;
@@ -309,6 +310,7 @@ export const eventCommand = new Command('event')
                 console.log(chalk.green(`\n✓ Event created for project "${project}"`));
             }
 
+            pushCrumb('event');
             renderEntityHeader(eventHeaderConfig(state));
             showHelp();
             displayEvent(state);
@@ -484,6 +486,7 @@ export const eventCommand = new Command('event')
                     }
                 }
             }
+            popCrumb();
 
         } catch (error) {
             console.error(chalk.red('Dobbie encountered an error, sir:'), error);

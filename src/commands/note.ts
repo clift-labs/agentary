@@ -9,6 +9,7 @@ import { getNotesContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, noteHeaderConfig } from '../ui/entity-prompt.js';
+import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 
 interface NoteState {
     title: string;
@@ -347,6 +348,7 @@ export const noteCommand = new Command('note')
                 console.log(chalk.green(`\n✓ Note started for project "${project}"`));
             }
 
+            pushCrumb('note');
             renderEntityHeader(noteHeaderConfig(state));
             showHelp();
             displayNote(state);
@@ -531,6 +533,7 @@ export const noteCommand = new Command('note')
                     }
                 }
             }
+            popCrumb();
 
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error);

@@ -9,6 +9,7 @@ import { getTodosContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, todoHeaderConfig } from '../ui/entity-prompt.js';
+import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 
 interface TodoState {
     title: string;
@@ -403,6 +404,7 @@ export const todoCommand = new Command('todo')
                 console.log(chalk.green(`\n✓ Todo created for project "${project}"`));
             }
 
+            pushCrumb('todo');
             renderEntityHeader(todoHeaderConfig(state));
             showHelp();
             displayTodo(state);
@@ -619,6 +621,7 @@ export const todoCommand = new Command('todo')
                     }
                 }
             }
+            popCrumb();
 
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error);

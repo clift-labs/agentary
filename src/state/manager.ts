@@ -11,6 +11,14 @@ const STATE_FILE = '.state.json';
 let cachedVaultRoot: string | null = null;
 
 /**
+ * Reset the vault root cache.  Used by integration tests that create
+ * temporary vaults so that `findVaultRoot` re-scans the directory tree.
+ */
+export function resetVaultCache(): void {
+    cachedVaultRoot = null;
+}
+
+/**
  * Finds the vault root by looking for .socks.md in cwd or parent directories.
  * Returns null if no vault is found.
  */

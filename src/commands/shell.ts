@@ -6,6 +6,7 @@ import { listServiceTools } from '../tools/index.js';
 import { getResponse } from '../responses.js';
 import { StatusBar } from '../shell/tui.js';
 import { StatusPoller } from '../shell/status-poller.js';
+import { breadcrumbPrompt } from '../ui/breadcrumb.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMMAND TREE (for tab-completion)
@@ -121,7 +122,7 @@ export function createShellCommand(_program: Command): Command {
 
             bar.printWelcome();
 
-            const prompt = chalk.cyan('🧝 dobbie') + chalk.gray('> ');
+            const prompt = breadcrumbPrompt();
 
             const rl = readline.createInterface({
                 input: process.stdin,

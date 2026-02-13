@@ -178,6 +178,12 @@ export async function writeEntity(
     // Remove internal fields
     const cleanMeta = { ...meta };
     delete cleanMeta._filepath;
+    // Strip undefined values — js-yaml can't serialize them
+    for (const key of Object.keys(cleanMeta)) {
+        if (cleanMeta[key] === undefined) {
+            delete cleanMeta[key];
+        }
+    }
     const fileContent = matter.stringify(content, cleanMeta);
     await fs.writeFile(filepath, fileContent);
 }
@@ -192,7 +198,8 @@ export async function findEntityByTitle(
     let dir: string;
     try {
         dir = await getEntityDir(entityType);
-    } catch (err) { console.debug('[dobbie:entities:entity]', err);
+    } catch (err) {
+        console.debug('[dobbie:entities:entity]', err);
         return null;
     }
     const slug = slugify(titleOrFilename);
@@ -216,7 +223,8 @@ export async function findEntityByTitle(
                 return { filepath, meta, content };
             }
         }
-    } catch (err) { console.debug('[dobbie:entities:entity]', err);
+    } catch (err) {
+        console.debug('[dobbie:entities:entity]', err);
         // Directory doesn't exist yet
     }
 
@@ -232,7 +240,8 @@ export async function listEntities(
     let dir: string;
     try {
         dir = await getEntityDir(entityType);
-    } catch (err) { console.debug('[dobbie:entities:entity]', err);
+    } catch (err) {
+        console.debug('[dobbie:entities:entity]', err);
         return [];
     }
 
@@ -250,7 +259,8 @@ export async function listEntities(
 
             entities.push({ filepath, meta, content });
         }
-    } catch (err) { console.debug('[dobbie:entities:entity]', err);
+    } catch (err) {
+        console.debug('[dobbie:entities:entity]', err);
         // Directory doesn't exist
     }
 

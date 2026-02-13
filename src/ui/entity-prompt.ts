@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { breadcrumbPrompt } from './breadcrumb.js';
 
 /**
  * Configuration for rendering an entity mode status bar header.
@@ -74,10 +75,10 @@ export function renderEntityHeader(config: EntityHeaderConfig): void {
 
 /**
  * Returns the entity-mode prompt string for the interactive loop.
- * Keeps the prompt short and clean: `note>`, `todo>`, `event>`
+ * Uses the breadcrumb path so the prompt shows `🧝 dobbie.note>` etc.
  */
-export function entityPrompt(type: string): string {
-    return chalk.cyan(`${type}>`);
+export function entityPrompt(_type: string): string {
+    return breadcrumbPrompt();
 }
 
 // ── Helpers for Note ────────────────────────────────────
