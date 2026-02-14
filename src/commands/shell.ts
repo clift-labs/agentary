@@ -23,6 +23,7 @@ const COMMAND_TREE: Record<string, string[]> = {
     todo: ['list'],
     event: ['list'],
     research: ['list'],
+    recurrence: ['create', 'list', 'edit', 'delete', 'generate'],
     inbox: ['add'],
     service: ['start', 'stop', 'status'],
     queue: ['size', 'status', 'clear', 'pause', 'resume'],

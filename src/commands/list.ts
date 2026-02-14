@@ -7,13 +7,14 @@ import { requireProject, getVaultRoot } from '../state/manager.js';
 /**
  * Supported entity types and their corresponding subdirectory names.
  */
-export type EntityType = 'notes' | 'todos' | 'events' | 'research';
+export type EntityType = 'notes' | 'todos' | 'events' | 'research' | 'recurrences';
 
 const ENTITY_ICONS: Record<EntityType, string> = {
     notes: '📝',
     todos: '✅',
     events: '📅',
     research: '📚',
+    recurrences: '🔄',
 };
 
 /**
@@ -58,6 +59,9 @@ export async function listEntities(entityType: EntityType, project?: string): Pr
             break;
         case 'events':
             printEvents(items);
+            break;
+        case 'recurrences':
+            printRecurrences(items);
             break;
         default:
             // notes & research share the same simple layout
@@ -115,6 +119,21 @@ function printEvents(items: { file: string; data: Record<string, any> }[]): void
             `  ${chalk.bold.white(title)}` +
             (start ? chalk.gray(`  🕐 ${start}`) : '') +
             (location ? chalk.gray(`  📍 ${location}`) : ''),
+        );
+    }
+}
+
+function printRecurrences(items: { file: string; data: Record<string, any> }[]): void {
+    for (const { file, data } of items) {
+        const title = data.title ?? file.replace('.md', '');
+        const type = data.recurrenceType === 'event' ? '📅' : '✅';
+        const cadence = data.cadence ?? '?';
+        const blackouts = Array.isArray(data.blackoutWindows) ? data.blackoutWindows.length : 0;
+
+        console.log(
+            `  ${type} ${chalk.bold.white(title)}` +
+            chalk.gray(`  ${cadence}`) +
+            (blackouts > 0 ? chalk.gray(`  ⛔ ${blackouts} blackout${blackouts > 1 ? 's' : ''}`) : ''),
         );
     }
 }

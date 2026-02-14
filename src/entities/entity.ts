@@ -13,7 +13,7 @@ import { getVaultRoot, getActiveProject } from '../state/manager.js';
 // SHARED TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EntityTypeName = 'note' | 'task' | 'event' | 'research' | 'goal';
+export type EntityTypeName = 'note' | 'task' | 'event' | 'research' | 'goal' | 'recurrence';
 
 export type TaskStatus = 'open' | 'in-progress' | 'done' | 'blocked';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -24,6 +24,23 @@ export type GoalPriority = 'low' | 'medium' | 'high';
 export type ResearchStatus = 'draft' | 'in-progress' | 'complete';
 
 export type EventRecurrence = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+export type RecurrenceCadence = 'daily' | 'weekly' | 'monthly';
+export type RecurrenceTargetType = 'todo' | 'event';
+
+export interface BlackoutWindow {
+    start: string;         // YYYY-MM-DD
+    end: string;           // YYYY-MM-DD
+    reason?: string;
+}
+
+export interface CadenceDetails {
+    dayOfMonth?: number;   // 1–31 for monthly
+    dayOfWeek?: string;    // e.g. 'monday' for weekly
+    startTime?: string;    // HH:mm for events
+    endTime?: string;      // HH:mm for events
+    location?: string;     // events only
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BASE ENTITY (shared by all)
@@ -88,8 +105,18 @@ export interface GoalEntity extends EntityMeta {
     milestones: string[];
 }
 
+/** Recurrence — template for generating concrete todos or events */
+export interface RecurrenceEntity extends EntityMeta {
+    entityType: 'recurrence';
+    recurrenceType: RecurrenceTargetType;
+    cadence: RecurrenceCadence;
+    cadenceDetails: CadenceDetails;
+    priority?: string;        // todo-only default priority
+    blackoutWindows?: BlackoutWindow[];
+}
+
 /** Discriminated union of all entity types */
-export type Entity = NoteEntity | TaskEntity | EventEntity | ResearchEntity | GoalEntity;
+export type Entity = NoteEntity | TaskEntity | EventEntity | ResearchEntity | GoalEntity | RecurrenceEntity;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -142,6 +169,7 @@ export async function getEntityDir(entityType: EntityTypeName): Promise<string> 
         event: 'events',
         research: 'research',
         goal: 'goals',
+        recurrence: 'recurrences',
     };
     return path.join(vaultRoot, 'projects', project, dirMap[entityType]);
 }
