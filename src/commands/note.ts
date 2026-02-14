@@ -11,6 +11,7 @@ import { getResponse, getPersonalizedResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, noteHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
+import { listEntities } from './list.js';
 
 interface NoteState {
     title: string;
@@ -297,6 +298,12 @@ export const noteCommand = new Command('note')
     .argument('[words...]', 'Title and optional inline body (e.g. "my-idea Use the Ferral CCI system")')
     .action(async (words: string[]) => {
         try {
+            // Handle: dobbie note list
+            if (words[0] === 'list') {
+                await listEntities('notes');
+                return;
+            }
+
             // Require a project
             const project = await requireProject();
 

@@ -11,6 +11,7 @@ import { getResponse, getPersonalizedResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, eventHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
+import { listEntities } from './list.js';
 
 interface EventState {
     title: string;
@@ -255,6 +256,12 @@ export const eventCommand = new Command('event')
     .argument('[words...]', 'Title and optional inline description (e.g. "dentist Need to schedule cleaning")')
     .action(async (words: string[]) => {
         try {
+            // Handle: dobbie event list
+            if (words[0] === 'list') {
+                await listEntities('events');
+                return;
+            }
+
             const project = await requireProject();
 
             // Parse: first word = title, rest = inline description

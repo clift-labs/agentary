@@ -11,6 +11,7 @@ import { getResponse, getPersonalizedResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, todoHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
+import { listEntities } from './list.js';
 
 interface TodoState {
     title: string;
@@ -322,6 +323,12 @@ export const todoCommand = new Command('todo')
     .argument('[words...]', 'Title and optional inline description (e.g. "fix-login The login 500s with plus signs")')
     .action(async (words: string[]) => {
         try {
+            // Handle: dobbie todo list
+            if (words[0] === 'list') {
+                await listEntities('todos');
+                return;
+            }
+
             // Require a project
             const project = await requireProject();
 
