@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import readline from 'readline';
 import { spawn } from 'child_process';
 import { listServiceTools } from '../tools/index.js';
-import { getResponse } from '../responses.js';
+import { getResponse, getPersonalizedResponse } from '../responses.js';
 import { StatusBar } from '../shell/tui.js';
 import { StatusPoller } from '../shell/status-poller.js';
 import { breadcrumbPrompt } from '../ui/breadcrumb.js';
@@ -149,7 +149,9 @@ export function createShellCommand(_program: Command): Command {
                     // Built-in shell commands
                     if (input === 'exit' || input === 'quit') {
                         poller.stop();
-                        console.log(chalk.cyan(`\n${getResponse('farewell')}\n`));
+                        const msg = await getPersonalizedResponse('farewell');
+                        console.log(chalk.cyan(`\n${msg}\n`));
+                        rl.close();
                         process.exit(0);
                     }
 
@@ -187,9 +189,10 @@ export function createShellCommand(_program: Command): Command {
                 });
             });
 
-            rl.on('close', () => {
+            rl.on('close', async () => {
                 poller.stop();
-                console.log(chalk.cyan(`\n${getResponse('farewell')}\n`));
+                const msg = await getPersonalizedResponse('farewell');
+                console.log(chalk.cyan(`\n${msg}\n`));
                 process.exit(0);
             });
 
