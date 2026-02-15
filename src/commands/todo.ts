@@ -319,6 +319,7 @@ Commands:
 }
 
 export const todoCommand = new Command('todo')
+    .alias('task')
     .description('Interactive todo management with AI assistance')
     .argument('[words...]', 'Title and optional inline description (e.g. "fix-login The login 500s with plus signs")')
     .action(async (words: string[]) => {

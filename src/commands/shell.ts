@@ -21,6 +21,7 @@ const COMMAND_TREE: Record<string, string[]> = {
     sync: [],
     note: ['list'],
     todo: ['list'],
+    task: ['list'],
     event: ['list'],
     research: ['list'],
     recurrence: ['create', 'list', 'edit', 'delete', 'generate'],
