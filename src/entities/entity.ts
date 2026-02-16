@@ -13,7 +13,7 @@ import { getVaultRoot, getActiveProject } from '../state/manager.js';
 // SHARED TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EntityTypeName = 'note' | 'task' | 'event' | 'research' | 'goal' | 'recurrence';
+export type EntityTypeName = 'note' | 'task' | 'event' | 'research' | 'goal' | 'recurrence' | 'person';
 
 export type TaskStatus = 'open' | 'in-progress' | 'done' | 'blocked';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -115,8 +115,18 @@ export interface RecurrenceEntity extends EntityMeta {
     blackoutWindows?: BlackoutWindow[];
 }
 
+/** Person — contact with company/group/handle info */
+export interface PersonEntity extends EntityMeta {
+    entityType: 'person';
+    company?: string;
+    group?: string;
+    phone?: string;
+    email?: string;
+    handle?: string;           // Slack, Teams, or work management handle
+}
+
 /** Discriminated union of all entity types */
-export type Entity = NoteEntity | TaskEntity | EventEntity | ResearchEntity | GoalEntity | RecurrenceEntity;
+export type Entity = NoteEntity | TaskEntity | EventEntity | ResearchEntity | GoalEntity | RecurrenceEntity | PersonEntity;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -170,6 +180,7 @@ export async function getEntityDir(entityType: EntityTypeName): Promise<string> 
         research: 'research',
         goal: 'goals',
         recurrence: 'recurrences',
+        person: 'people',
     };
     return path.join(vaultRoot, 'projects', project, dirMap[entityType]);
 }

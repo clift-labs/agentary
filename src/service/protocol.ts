@@ -12,7 +12,7 @@ export type TaskScope =
 // ENTITY TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EntityType = 'notes' | 'todos' | 'events' | 'research' | 'goals' | 'inbox';
+export type EntityType = 'notes' | 'todos' | 'events' | 'research' | 'goals' | 'inbox' | 'people';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LOG TYPES

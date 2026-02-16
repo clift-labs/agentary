@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
-import { getNotesContext } from '../context/reader.js';
+import { getEnrichedContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { getResponse, getPersonalizedResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, noteHeaderConfig } from '../ui/entity-prompt.js';
@@ -61,7 +61,7 @@ async function findExistingNote(project: string, titleOrFilename: string): Promi
 async function reviewNote(state: NoteState): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('note_reviewing')));
 
-    const context = await getNotesContext(state.project);
+    const context = await getEnrichedContext(state.project, 'notes', state.content);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -80,7 +80,7 @@ ${state.content}`,
 async function generateQuestions(state: NoteState): Promise<string[]> {
     console.log(chalk.gray('\n' + getResponse('thinking')));
 
-    const context = await getNotesContext(state.project);
+    const context = await getEnrichedContext(state.project, 'notes', state.content);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -104,7 +104,7 @@ ${state.content}`,
 async function modifyNote(state: NoteState, feedback: string): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('processing')));
 
-    const context = await getNotesContext(state.project);
+    const context = await getEnrichedContext(state.project, 'notes', state.content);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -129,7 +129,7 @@ async function formatAsMarkdown(state: NoteState): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('note_formatted')));
 
     try {
-        const context = await getNotesContext(state.project);
+        const context = await getEnrichedContext(state.project, 'notes', state.content);
         const llm = await getModelForCapability('format');
         const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -221,7 +221,7 @@ type DiagramType = 'flowchart' | 'class' | 'sequence';
 async function generateDiagram(state: NoteState, diagramType: DiagramType): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('diagram_generating')));
 
-    const context = await getNotesContext(state.project);
+    const context = await getEnrichedContext(state.project, 'notes', state.content);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -285,7 +285,8 @@ Commands:
   ${chalk.bold('edit')}       - Edit the note content
   ${chalk.bold('title')}      - Change the title
   ${chalk.bold('exit')}       - Save and go back
-  ${chalk.bold('back')}       - Go back without saving
+  ${chalk.bold('back')}       - Save and go back
+  ${chalk.bold('abort')}      - Discard changes and go back
   ${chalk.bold('quit')}       - Quit Dobbie entirely
   ${chalk.bold('help')}       - Show this help
 `));
@@ -423,6 +424,13 @@ export const noteCommand = new Command('note')
 
                     case 'back':
                     case 'b': {
+                        const filepath = await saveNote(state);
+                        console.log(chalk.green(`\n✓ Note saved to ${filepath}, sir!`));
+                        running = false;
+                        break;
+                    }
+
+                    case 'abort': {
                         const { confirm } = await inquirer.prompt([
                             {
                                 type: 'confirm',

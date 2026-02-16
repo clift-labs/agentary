@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
-import { getTodosContext } from '../context/reader.js';
+import { getEnrichedContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { getResponse, getPersonalizedResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, todoHeaderConfig } from '../ui/entity-prompt.js';
@@ -67,7 +67,7 @@ async function findExistingTodo(project: string, titleOrFilename: string): Promi
 async function breakdownTodo(state: TodoState): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('todo_breakdown')));
 
-    const context = await getTodosContext(state.project);
+    const context = await getEnrichedContext(state.project, 'todos', state.content);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -100,7 +100,7 @@ ${state.content || '(No details yet)'}`,
 async function clarifyTodo(state: TodoState): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('processing')));
 
-    const context = await getTodosContext(state.project);
+    const context = await getEnrichedContext(state.project, 'todos', state.content);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -135,7 +135,7 @@ ${state.content || '(No details yet)'}`,
 async function estimateTodo(state: TodoState): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('thinking')));
 
-    const context = await getTodosContext(state.project);
+    const context = await getEnrichedContext(state.project, 'todos', state.content);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -165,7 +165,7 @@ ${state.content || '(No details yet)'}`,
 async function modifyTodo(state: TodoState, feedback: string): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('processing')));
 
-    const context = await getTodosContext(state.project);
+    const context = await getEnrichedContext(state.project, 'todos', state.content);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -201,7 +201,7 @@ async function formatTodo(state: TodoState): Promise<string> {
     console.log(chalk.gray('\n' + getResponse('processing')));
 
     try {
-        const context = await getTodosContext(state.project);
+        const context = await getEnrichedContext(state.project, 'todos', state.content);
         const llm = await getModelForCapability('format');
         const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -313,7 +313,8 @@ Commands:
   ${chalk.bold('due')}        - Set due date
   ${chalk.bold('done')}       - Mark as completed
   ${chalk.bold('exit')}       - Save and go back
-  ${chalk.bold('back')}       - Go back without saving
+  ${chalk.bold('back')}       - Save and go back
+  ${chalk.bold('abort')}      - Discard changes and go back
   ${chalk.bold('quit')}       - Quit Dobbie entirely
   ${chalk.bold('help')}       - Show this help
 `));
@@ -489,6 +490,13 @@ export const todoCommand = new Command('todo')
 
                     case 'back':
                     case 'b': {
+                        const filepath = await saveTodo(state);
+                        console.log(chalk.green(`\n✓ Todo saved to ${filepath}, sir!`));
+                        running = false;
+                        break;
+                    }
+
+                    case 'abort': {
                         const { confirm } = await inquirer.prompt([
                             {
                                 type: 'confirm',

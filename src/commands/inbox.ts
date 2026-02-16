@@ -13,7 +13,7 @@ import type { Context } from '../feral/context/context.js';
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ImportCategory = 'note' | 'task' | 'event' | 'research' | 'goal';
+type ImportCategory = 'note' | 'task' | 'event' | 'research' | 'goal' | 'person';
 
 const CATEGORY_ICONS: Record<ImportCategory, string> = {
     note: '📝',
@@ -21,6 +21,7 @@ const CATEGORY_ICONS: Record<ImportCategory, string> = {
     event: '📅',
     research: '📚',
     goal: '🎯',
+    person: '👤',
 };
 
 const CATEGORY_LABELS: Record<ImportCategory, string> = {
@@ -29,6 +30,7 @@ const CATEGORY_LABELS: Record<ImportCategory, string> = {
     event: 'Event',
     research: 'Research',
     goal: 'Goal',
+    person: 'Person',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

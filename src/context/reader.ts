@@ -138,3 +138,26 @@ export async function getEventsContext(projectName: string): Promise<string> {
 export async function getInboxContext(projectName: string): Promise<string> {
     return getSubdirectoryContext(projectName, 'inbox');
 }
+
+/**
+ * Gets the context for people in a project.
+ * Convenience wrapper for getSubdirectoryContext.
+ */
+export async function getPeopleContext(projectName: string): Promise<string> {
+    return getSubdirectoryContext(projectName, 'people');
+}
+
+/**
+ * Gets enriched context that includes .socks.md chain PLUS resolved
+ * @mentions and entity:slug cross-references found in the entity content.
+ */
+export async function getEnrichedContext(
+    projectName: string,
+    subdirectory: string,
+    entityContent: string,
+): Promise<string> {
+    const { resolveReferences } = await import('./mentions.js');
+    const baseContext = await getSubdirectoryContext(projectName, subdirectory);
+    const refsContext = await resolveReferences(entityContent);
+    return refsContext ? `${baseContext}\n\n---\n\n${refsContext}` : baseContext;
+}

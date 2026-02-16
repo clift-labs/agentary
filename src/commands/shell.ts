@@ -27,6 +27,7 @@ const COMMAND_TREE: Record<string, string[]> = {
     event: ['list'],
     research: ['list'],
     recurrence: ['create', 'list', 'edit', 'delete', 'generate'],
+    person: ['list', 'edit', 'delete'],
     inbox: ['add'],
     service: ['start', 'stop', 'status'],
     queue: ['size', 'status', 'clear', 'pause', 'resume'],
@@ -240,7 +241,7 @@ ${chalk.bold('Available Commands:')}
 
   ${chalk.bold('Vault:')}      init, sync, today
   ${chalk.bold('Projects:')}   project [list|switch|new]
-  ${chalk.bold('Memory:')}     note, todo, event, inbox [add], remember
+  ${chalk.bold('Memory:')}     note, todo, event, person, inbox [add], remember
   ${chalk.bold('Config:')}     config [add-provider|set-capability|list-capabilities|list-providers|set-name]
   ${chalk.bold('Service:')}    service [start|stop|status]
   ${chalk.bold('Queue:')}      queue [size|status|clear|pause|resume]

@@ -22,6 +22,7 @@ const ENTITY_CONFIGS: EntityConfig[] = [
     { type: 'event', plural: 'events', createFields: 'startDate,endDate,location,recurring', updateFields: 'startDate,endDate,location,recurring' },
     { type: 'research', plural: 'research', createFields: 'status,sources', updateFields: 'status,sources,appendContent' },
     { type: 'goal', plural: 'goals', createFields: 'status,priority,smart,milestones', updateFields: 'status,priority,smart,milestones,addMilestone', sortBy: 'priority,status' },
+    { type: 'person', plural: 'people', createFields: 'company,group,phone,email,handle', updateFields: 'company,group,phone,email,handle' },
 ];
 
 /**
@@ -153,6 +154,7 @@ Classify each item into one of these categories:
 - event: Scheduled activities with specific dates/times
 - research: Reference material, articles, documentation
 - goal: Aspirations, objectives, long-term targets
+- person: People, contacts, team members, stakeholders
 
 For each item, return a FLAT JSON object (no nesting) with these fields:
 - category: one of the above
@@ -165,6 +167,7 @@ Plus type-specific fields AT THE TOP LEVEL:
 - event: startDate (ISO datetime), endDate (ISO datetime), location (string)
 - research: status ("active"), sources (array of strings)
 - goal: status ("active"), priority (low/medium/high), smart (object with specific/measurable/achievable/relevant/timeBound), milestones (array)
+- person: company (string), group (string), phone (string), email (string), handle (string)
 - note: no extra fields needed
 
 Respond with a JSON array. Even for a single item, return an array:

@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
-import { getEventsContext } from '../context/reader.js';
+import { getEnrichedContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { getResponse, getPersonalizedResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, eventHeaderConfig } from '../ui/entity-prompt.js';
@@ -87,7 +87,7 @@ async function findExistingEvent(project: string, titleOrFilename: string): Prom
 async function clarifyEvent(state: EventState): Promise<string> {
     console.log(chalk.gray('\nDobbie is clarifying the event, sir...'));
 
-    const context = await getEventsContext(state.project);
+    const context = await getEnrichedContext(state.project, 'events', state.description);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -115,7 +115,7 @@ ${state.description || '(No description yet)'}`,
 async function suggestTime(state: EventState): Promise<void> {
     console.log(chalk.gray('\nDobbie is analyzing timing, sir...'));
 
-    const context = await getEventsContext(state.project);
+    const context = await getEnrichedContext(state.project, 'events', state.description);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -146,7 +146,7 @@ ${state.description || '(No description)'}`,
 async function modifyEvent(state: EventState, feedback: string): Promise<string> {
     console.log(chalk.gray('\nDobbie is modifying the event, sir...'));
 
-    const context = await getEventsContext(state.project);
+    const context = await getEnrichedContext(state.project, 'events', state.description);
     const llm = await getModelForCapability('reason');
     const systemPrompt = createDobbieSystemPrompt(context);
 
@@ -229,7 +229,8 @@ Commands:
   ${chalk.bold('end')}          - Set end time
   ${chalk.bold('location')}     - Set location
   ${chalk.bold('exit')}         - Save and go back
-  ${chalk.bold('back')}         - Go back without saving
+  ${chalk.bold('back')}         - Save and go back
+  ${chalk.bold('abort')}        - Discard changes and go back
   ${chalk.bold('quit')}         - Quit Dobbie entirely
   ${chalk.bold('help')}         - Show this help
 `));
@@ -389,6 +390,13 @@ export const eventCommand = new Command('event')
 
                     case 'back':
                     case 'b': {
+                        const filepath = await saveEvent(state);
+                        console.log(chalk.green(`\n✓ Event saved to ${filepath}, sir!`));
+                        running = false;
+                        break;
+                    }
+
+                    case 'abort': {
                         const { confirm } = await inquirer.prompt([
                             {
                                 type: 'confirm',
