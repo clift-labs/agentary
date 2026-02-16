@@ -58,6 +58,13 @@ export const StateSchema = z.object({
     activeProject: z.string().nullable(),
     lastUsed: z.string().optional(),
     userName: z.string().optional(),
+    honorific: z.string().optional(),
+    workType: z.string().optional(),
+    familySituation: z.string().optional(),
+    hasCar: z.boolean().optional(),
+    cityLive: z.string().optional(),
+    cityWork: z.string().optional(),
+    interviewComplete: z.boolean().optional(),
 });
 
 export type State = z.infer<typeof StateSchema>;

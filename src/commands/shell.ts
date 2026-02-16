@@ -3,10 +3,12 @@ import chalk from 'chalk';
 import readline from 'readline';
 import { spawn } from 'child_process';
 import { listServiceTools } from '../tools/index.js';
-import { getResponse, getPersonalizedResponse } from '../responses.js';
+import { getPersonalizedResponse, getPersonalizedResponseWith } from '../responses.js';
 import { StatusBar } from '../shell/tui.js';
 import { StatusPoller } from '../shell/status-poller.js';
 import { breadcrumbPrompt } from '../ui/breadcrumb.js';
+import { isInterviewComplete } from '../state/manager.js';
+import { runInterview } from './interview.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMMAND TREE (for tab-completion)
@@ -31,6 +33,7 @@ const COMMAND_TREE: Record<string, string[]> = {
     tools: [],
     tool: [],    // dynamically completed with tool names
     feral: ['nodes', 'catalog', 'process'],
+    interview: [],
     shell: [],
     help: [],
     clear: [],
@@ -126,6 +129,12 @@ export function createShellCommand(_program: Command): Command {
 
             await bar.printWelcome();
 
+            // First-run interview
+            const interviewed = await isInterviewComplete();
+            if (!interviewed) {
+                await runInterview();
+            }
+
             const prompt = breadcrumbPrompt();
 
             const rl = readline.createInterface({
@@ -153,8 +162,8 @@ export function createShellCommand(_program: Command): Command {
                         poller.stop();
                         const msg = await getPersonalizedResponse('farewell');
                         console.log(chalk.cyan(`\n${msg}\n`));
-                        rl.close();
                         process.exit(0);
+                        return; // unreachable, but makes intent clear
                     }
 
                     if (input === 'clear') {
@@ -171,6 +180,17 @@ export function createShellCommand(_program: Command): Command {
 
                     // Dispatch via subprocess — keeps readline completely isolated
                     const args = input.split(/\s+/);
+
+                    // Unknown command? Show a witty message + available commands
+                    const command = args[0];
+                    if (command && !TOP_LEVEL_COMMANDS.includes(command)) {
+                        const msg = await getPersonalizedResponseWith('unknown_command', { command });
+                        console.log(chalk.yellow(`\n  ${msg}`));
+                        printShellHelp();
+                        showPrompt(rl, bar);
+                        return;
+                    }
+
                     rl.pause();
                     const result = await runCommand(args);
                     rl.resume();
@@ -180,6 +200,10 @@ export function createShellCommand(_program: Command): Command {
                         rl.close();
                         return;
                     }
+
+                    // Refresh status bar data immediately (command may have
+                    // started/stopped the service or changed queue state).
+                    await poller.pollNow();
 
                     console.log('');
                     showPrompt(rl, bar);
@@ -191,6 +215,7 @@ export function createShellCommand(_program: Command): Command {
                 });
             });
 
+            // Ctrl+D closes the readline — show farewell and exit
             rl.on('close', async () => {
                 poller.stop();
                 const msg = await getPersonalizedResponse('farewell');

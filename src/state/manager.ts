@@ -122,6 +122,46 @@ export async function setUserName(name: string): Promise<void> {
     await saveState(state);
 }
 
+/**
+ * Gets the user's preferred honorific, falling back to 'sir'.
+ */
+export async function getUserHonorific(): Promise<string> {
+    const state = await loadState();
+    return state.honorific || 'sir';
+}
+
+/**
+ * Whether the onboarding interview has been completed.
+ */
+export async function isInterviewComplete(): Promise<boolean> {
+    const state = await loadState();
+    return state.interviewComplete === true;
+}
+
+/**
+ * Save the full user profile from the onboarding interview.
+ */
+export async function saveProfile(profile: {
+    userName: string;
+    honorific: string;
+    workType?: string;
+    familySituation?: string;
+    hasCar?: boolean;
+    cityLive?: string;
+    cityWork?: string;
+}): Promise<void> {
+    const state = await loadState();
+    state.userName = profile.userName;
+    state.honorific = profile.honorific;
+    state.workType = profile.workType;
+    state.familySituation = profile.familySituation;
+    state.hasCar = profile.hasCar;
+    state.cityLive = profile.cityLive;
+    state.cityWork = profile.cityWork;
+    state.interviewComplete = true;
+    await saveState(state);
+}
+
 export async function clearActiveProject(): Promise<void> {
     const state = await loadState();
     state.activeProject = null;

@@ -35,5 +35,5 @@ export function getCrumbs(): string[] {
 /** Build the styled prompt string from the current breadcrumb path. */
 export function breadcrumbPrompt(): string {
     const path = segments.join('.');
-    return chalk.cyan(`🧝 ${path}`) + chalk.gray('> ');
+    return chalk.cyan(path) + chalk.gray('> ');
 }

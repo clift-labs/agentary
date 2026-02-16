@@ -4,191 +4,98 @@ import inquirer from 'inquirer';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { requireProject, getVaultRoot } from '../state/manager.js';
-import { getResponse } from '../responses.js';
+import { getPersonalizedResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
-import { getInboxContext } from '../context/reader.js';
-import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { bootstrapFeral } from '../feral/bootstrap.js';
+import type { Context } from '../feral/context/context.js';
 
-type ContentCategory = 'note' | 'todo' | 'event' | 'research';
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────────────────────
 
-interface ClassifiedContent {
-    category: ContentCategory;
-    title: string;
-    content: string;
-    metadata: {
-        priority?: 'low' | 'medium' | 'high';
-        startTime?: string;
-        endTime?: string;
-        tags?: string[];
-    };
+type ImportCategory = 'note' | 'task' | 'event' | 'research' | 'goal';
+
+const CATEGORY_ICONS: Record<ImportCategory, string> = {
+    note: '📝',
+    task: '✅',
+    event: '📅',
+    research: '📚',
+    goal: '🎯',
+};
+
+const CATEGORY_LABELS: Record<ImportCategory, string> = {
+    note: 'Note',
+    task: 'Todo',
+    event: 'Event',
+    research: 'Research',
+    goal: 'Goal',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROCESS A SINGLE INBOX FILE VIA FERAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ImportResult {
+    success: boolean;
+    entities: Array<{ category: ImportCategory; title: string }>;
 }
 
-async function classifyContent(content: string, filename: string, project: string): Promise<ClassifiedContent> {
-    const context = await getInboxContext(project);
-    const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
-
-    const response = await llm.chat([
-        {
-            role: 'user',
-            content: `Analyze the following content and classify it into one of these categories:
-- note: General information, ideas, thoughts, meeting notes
-- todo: Tasks, action items, things to do, reminders
-- event: Scheduled activities with specific times (meetings, appointments)
-- research: Reference material, articles, documentation, learning content
-
-Also extract:
-- A clear, concise title
-- The cleaned-up content in markdown format
-- For todos: priority (low/medium/high)
-- For events: startTime and endTime in ISO format if mentioned
-- Relevant tags
-
-Respond in this exact JSON format:
-{
-  "category": "note|todo|event|research",
-  "title": "Clear title",
-  "content": "Cleaned markdown content",
-  "metadata": {
-    "priority": "low|medium|high",
-    "startTime": "ISO datetime or null",
-    "endTime": "ISO datetime or null",
-    "tags": ["tag1", "tag2"]
-  }
-}
-
-Original filename: ${filename}
-
-Content to classify:
-${content}`,
-        },
-    ], { systemPrompt });
-
-    // Parse JSON from response
-    let jsonStr = response.trim();
-
-    // Extract JSON if wrapped in code fences
-    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
-    }
-
-    try {
-        const parsed = JSON.parse(jsonStr);
-        return {
-            category: parsed.category || 'note',
-            title: parsed.title || filename.replace(/\.[^/.]+$/, ''),
-            content: parsed.content || content,
-            metadata: parsed.metadata || {},
-        };
-    } catch (err) {
-        debug('inbox', err);
-        // Fallback if JSON parsing fails
-        console.log(chalk.yellow('Could not parse AI response, defaulting to note'));
-        return {
-            category: 'note',
-            title: filename.replace(/\.[^/.]+$/, ''),
-            content: content,
-            metadata: {},
-        };
-    }
-}
-
-async function saveClassifiedContent(classified: ClassifiedContent, project: string): Promise<string> {
-    const vaultRoot = await getVaultRoot();
-    const today = new Date().toISOString().split('T')[0];
-
-    const filename = classified.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '') + '.md';
-
-    let targetDir: string;
-    let frontmatter: string;
-
-    switch (classified.category) {
-        case 'todo':
-            targetDir = path.join(vaultRoot, 'projects', project, 'todos');
-            frontmatter = `---
-title: "${classified.title}"
-created: ${today}
-project: ${project}
-priority: ${classified.metadata.priority || 'medium'}
-completed: false
-tags: [todo${classified.metadata.tags?.length ? ', ' + classified.metadata.tags.join(', ') : ''}]
----`;
-            break;
-
-        case 'event':
-            targetDir = path.join(vaultRoot, 'projects', project, 'events');
-            frontmatter = `---
-title: "${classified.title}"
-startTime: ${classified.metadata.startTime || new Date().toISOString()}
-endTime: ${classified.metadata.endTime || new Date(Date.now() + 3600000).toISOString()}
-project: ${project}
-tags: [event${classified.metadata.tags?.length ? ', ' + classified.metadata.tags.join(', ') : ''}]
----`;
-            break;
-
-        case 'research':
-            targetDir = path.join(vaultRoot, 'projects', project, 'research');
-            frontmatter = `---
-title: "${classified.title}"
-created: ${today}
-project: ${project}
-tags: [research${classified.metadata.tags?.length ? ', ' + classified.metadata.tags.join(', ') : ''}]
----`;
-            break;
-
-        case 'note':
-        default:
-            targetDir = path.join(vaultRoot, 'projects', project, 'notes');
-            frontmatter = `---
-title: "${classified.title}"
-created: ${today}
-project: ${project}
-tags: [note${classified.metadata.tags?.length ? ', ' + classified.metadata.tags.join(', ') : ''}]
----`;
-            break;
-    }
-
-    await fs.mkdir(targetDir, { recursive: true });
-    const filepath = path.join(targetDir, filename);
-
-    const markdown = `${frontmatter}
-
-${classified.content}
-`;
-
-    await fs.writeFile(filepath, markdown);
-    return filepath;
-}
-
-async function processInboxItem(itemPath: string, project: string): Promise<{ success: boolean; filepath?: string; classified?: ClassifiedContent }> {
+async function processInboxItem(itemPath: string, project: string): Promise<ImportResult> {
     const filename = path.basename(itemPath);
     const ext = path.extname(filename).toLowerCase();
 
-    // Read content based on file type
-    let content: string;
-
+    // Skip binary files
     if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
-        // For images, we'd need vision capability - for now, just note the image
-        content = `[Image file: ${filename}]\n\nThis image was added to the inbox and needs manual review.`;
-        console.log(chalk.yellow(`  ⚠ Image files require manual classification: ${filename}`));
-        return { success: false };
-    } else {
-        // Read as text
-        content = await fs.readFile(itemPath, 'utf-8');
+        console.log(chalk.yellow(`  ⚠ Image files need manual classification: ${filename}`));
+        return { success: false, entities: [] };
     }
 
-    // Classify the content
-    const classified = await classifyContent(content, filename, project);
+    // Check if file is empty
+    const content = await fs.readFile(itemPath, 'utf-8');
+    if (!content.trim()) {
+        console.log(chalk.yellow(`  ⚠ Empty file skipped: ${filename}`));
+        return { success: false, entities: [] };
+    }
 
-    // Save to appropriate location
-    const filepath = await saveClassifiedContent(classified, project);
+    // Bootstrap Feral and run the import process
+    const feral = await bootstrapFeral();
 
-    return { success: true, filepath, classified };
+    let ctx: Context;
+    try {
+        ctx = await feral.runner.run('inbox.import', {
+            file_path: itemPath,
+            filename,
+            project,
+        });
+    } catch (err) {
+        debug('inbox', err);
+        console.log(chalk.red(`  ✗ Process error: ${err instanceof Error ? err.message : String(err)}`));
+        return { success: false, entities: [] };
+    }
+
+    // Extract what was created from the context
+    const entities = ctx.getArray('entities') as Array<{ category: ImportCategory; title: string }>;
+    const createdEntities: Array<{ category: ImportCategory; title: string }> = [];
+
+    if (entities && entities.length > 0) {
+        const vaultRoot = await getVaultRoot();
+        for (const entity of entities) {
+            const icon = CATEGORY_ICONS[entity.category as ImportCategory] || '📄';
+            const label = CATEGORY_LABELS[entity.category as ImportCategory] || entity.category;
+            console.log(chalk.green(`  ${icon} ${chalk.bold(label)}: ${entity.title}`));
+            createdEntities.push({ category: entity.category, title: entity.title });
+        }
+
+        // Remove source file after successful processing
+        await fs.unlink(itemPath);
+    }
+
+    return { success: createdEntities.length > 0, entities: createdEntities };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIST INBOX ITEMS
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function listInboxItems(project: string): Promise<string[]> {
     const vaultRoot = await getVaultRoot();
@@ -205,8 +112,12 @@ async function listInboxItems(project: string): Promise<string[]> {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMAND
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const inboxCommand = new Command('inbox')
-    .description('Process inbox items with AI classification')
+    .description('Import inbox items via Feral process (LLM classification + entity creation)')
     .argument('[action]', 'Action: process (default) or add')
     .argument('[content]', 'File path or text content to add')
     .action(async (action?: string, content?: string) => {
@@ -227,22 +138,24 @@ export const inboxCommand = new Command('inbox')
                 try {
                     const stat = await fs.stat(content);
                     if (stat.isFile()) {
-                        // Copy file to inbox
                         const ext = path.extname(content);
                         const destPath = path.join(inboxDir, `${today}-${timestamp}${ext}`);
                         await fs.copyFile(content, destPath);
-                        console.log(chalk.green(`✓ Added file to inbox: ${path.basename(destPath)}`));
+                        const msg = await getPersonalizedResponse('task_saved');
+                        console.log(chalk.green(`\n${msg}`));
+                        console.log(chalk.gray(`  Added file to inbox: ${path.basename(destPath)}`));
                         return;
                     }
                 } catch (err) {
                     debug('inbox', err);
-                    // Not a file, treat as text content
                 }
 
                 // Add as text file
                 const textPath = path.join(inboxDir, `${today}-${timestamp}.txt`);
                 await fs.writeFile(textPath, content);
-                console.log(chalk.green(`✓ Added text to inbox: ${path.basename(textPath)}`));
+                const msg = await getPersonalizedResponse('task_saved');
+                console.log(chalk.green(`\n${msg}`));
+                console.log(chalk.gray(`  Added text to inbox: ${path.basename(textPath)}`));
                 return;
             }
 
@@ -250,88 +163,62 @@ export const inboxCommand = new Command('inbox')
             const items = await listInboxItems(project);
 
             if (items.length === 0) {
-                console.log(chalk.gray('\n📥 Inbox is empty, sir. Nothing to process.'));
+                const msg = await getPersonalizedResponse('inbox_empty');
+                console.log(chalk.gray(`\n📥 ${msg}`));
                 console.log(chalk.gray('\nTo add items:'));
                 console.log(chalk.gray('  dobbie inbox add "Remember to call mom"'));
                 console.log(chalk.gray('  dobbie inbox add /path/to/file.txt'));
                 return;
             }
 
-            console.log(chalk.cyan(`\n📥 Processing ${items.length} inbox item(s)...\n`));
+            const processingMsg = await getPersonalizedResponse('inbox_processing');
+            console.log(chalk.cyan(`\n📥 ${processingMsg}`));
+            console.log(chalk.gray(`   ${items.length} file(s) found in inbox\n`));
 
-            let processed = 0;
-            let failed = 0;
+            let totalEntities = 0;
+            let skippedFiles = 0;
 
             for (const itemPath of items) {
                 const filename = path.basename(itemPath);
-                console.log(chalk.gray(`Processing: ${filename}`));
+                console.log(chalk.cyan(`─── ${filename} ───`));
 
                 try {
                     const result = await processInboxItem(itemPath, project);
 
-                    if (result.success && result.classified && result.filepath) {
-                        const categoryIcons: Record<ContentCategory, string> = {
-                            note: '📝',
-                            todo: '✅',
-                            event: '📅',
-                            research: '📚',
-                        };
-                        const icon = categoryIcons[result.classified.category];
-
-                        console.log(chalk.green(`  ${icon} → ${result.classified.category}: ${result.classified.title}`));
-                        console.log(chalk.gray(`     Saved to: ${path.relative(vaultRoot, result.filepath)}`));
-
-                        // Remove from inbox after successful processing
-                        await fs.unlink(itemPath);
-                        processed++;
+                    if (result.success) {
+                        totalEntities += result.entities.length;
                     } else {
                         // Ask user what to do with failed items
-                        const { action: userAction } = await inquirer.prompt([
-                            {
-                                type: 'list',
-                                name: 'action',
-                                message: `Could not auto-classify "${filename}". What should Dobbie do?`,
-                                choices: [
-                                    { name: 'Skip (keep in inbox)', value: 'skip' },
-                                    { name: 'Delete from inbox', value: 'delete' },
-                                    { name: 'Manually classify as Note', value: 'note' },
-                                    { name: 'Manually classify as Todo', value: 'todo' },
-                                    { name: 'Manually classify as Event', value: 'event' },
-                                    { name: 'Manually classify as Research', value: 'research' },
-                                ],
-                            },
-                        ]);
+                        const { userAction } = await inquirer.prompt([{
+                            type: 'list',
+                            name: 'userAction',
+                            message: `Could not process "${filename}". What should Dobbie do?`,
+                            choices: [
+                                { name: 'Skip (keep in inbox)', value: 'skip' },
+                                { name: 'Delete from inbox', value: 'delete' },
+                            ],
+                        }]);
 
                         if (userAction === 'delete') {
                             await fs.unlink(itemPath);
                             console.log(chalk.yellow(`  🗑 Deleted: ${filename}`));
-                        } else if (userAction !== 'skip') {
-                            // Manual classification
-                            const content = await fs.readFile(itemPath, 'utf-8');
-                            const manual: ClassifiedContent = {
-                                category: userAction as ContentCategory,
-                                title: filename.replace(/\.[^/.]+$/, ''),
-                                content: content,
-                                metadata: {},
-                            };
-                            const filepath = await saveClassifiedContent(manual, project);
-                            await fs.unlink(itemPath);
-                            console.log(chalk.green(`  ✓ Saved as ${userAction}: ${path.relative(vaultRoot, filepath)}`));
-                            processed++;
                         } else {
-                            failed++;
+                            skippedFiles++;
                         }
                     }
                 } catch (error) {
                     console.error(chalk.red(`  ✗ Error processing ${filename}:`), error);
-                    failed++;
+                    skippedFiles++;
                 }
             }
 
-            console.log(chalk.cyan(`\n✓ Processed ${processed} item(s)${failed > 0 ? `, ${failed} skipped` : ''}`));
+            const doneMsg = await getPersonalizedResponse('inbox_complete');
+            console.log(chalk.cyan(`\n✓ ${doneMsg}`));
+            console.log(chalk.gray(`   ${totalEntities} entities created${skippedFiles > 0 ? `, ${skippedFiles} files skipped` : ''}`));
 
         } catch (error) {
-            console.error(chalk.red('Dobbie encountered an error, sir:'), error);
+            const errMsg = await getPersonalizedResponse('error');
+            console.error(chalk.red(`\n${errMsg}`), error);
         }
     });
 

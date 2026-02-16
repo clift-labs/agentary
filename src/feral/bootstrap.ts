@@ -27,6 +27,7 @@ import { StopNodeCode } from './node-code/flow/stop-node-code.js';
 import { NoopNodeCode } from './node-code/flow/noop-node-code.js';
 import { ComparatorNodeCode } from './node-code/flow/comparator-node-code.js';
 import { ContextValueResultNodeCode } from './node-code/flow/context-value-result-node-code.js';
+import { ArrayIteratorNodeCode } from './node-code/flow/array-iterator-node-code.js';
 import { ThrowExceptionNodeCode } from './node-code/flow/throw-exception-node-code.js';
 import { SetContextValueNodeCode } from './node-code/data/set-context-value-node-code.js';
 import { SetContextTableNodeCode } from './node-code/data/set-context-table-node-code.js';
@@ -39,6 +40,7 @@ import { LogNodeCode } from './node-code/data/log-node-code.js';
 import { RandomValueNodeCode } from './node-code/data/random-value-node-code.js';
 import { ReadFileNodeCode } from './node-code/data/read-file-node-code.js';
 import { LlmChatNodeCode } from './node-code/data/llm-chat-node-code.js';
+import { CleanLlmJsonNodeCode } from './node-code/data/clean-llm-json-node-code.js';
 
 // Slack node codes
 import { SlackBlockBuilderNodeCode } from './node-code/slack/slack-block-builder-node-code.js';
@@ -64,6 +66,7 @@ import { CreateEntityNodeCode } from './node-code/entity/create-entity-node-code
 import { UpdateEntityNodeCode } from './node-code/entity/update-entity-node-code.js';
 import { DeleteEntityNodeCode } from './node-code/entity/delete-entity-node-code.js';
 import { SortEntitiesNodeCode } from './node-code/entity/sort-entities-node-code.js';
+import { LoadVaultContextNodeCode } from './node-code/entity/load-vault-context-node-code.js';
 
 // Catalog sources
 import { SlackCatalogSource } from './catalog/slack-catalog-source.js';
@@ -84,6 +87,7 @@ function getBuiltInNodeCodes(): NodeCode[] {
         new NoopNodeCode(),
         new ComparatorNodeCode(),
         new ContextValueResultNodeCode(),
+        new ArrayIteratorNodeCode(),
         new ThrowExceptionNodeCode(),
         // Data
         new SetContextValueNodeCode(),
@@ -97,6 +101,7 @@ function getBuiltInNodeCodes(): NodeCode[] {
         new RandomValueNodeCode(),
         new ReadFileNodeCode(),
         new LlmChatNodeCode(),
+        new CleanLlmJsonNodeCode(),
         // Slack
         new SlackBlockBuilderNodeCode(),
         new SlackPostWebhookNodeCode(),
@@ -119,6 +124,7 @@ function getBuiltInNodeCodes(): NodeCode[] {
         new UpdateEntityNodeCode(),
         new DeleteEntityNodeCode(),
         new SortEntitiesNodeCode(),
+        new LoadVaultContextNodeCode(),
     ];
 }
 

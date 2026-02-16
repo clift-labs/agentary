@@ -17,6 +17,7 @@ import { inboxCommand } from './commands/inbox.js';
 import { serviceCommand, queueCommand } from './commands/service.js';
 import { createShellCommand } from './commands/shell.js';
 import { feralCommand } from './commands/feral.js';
+import { interviewCommand } from './commands/interview.js';
 import { listServiceTools, getServiceTool } from './tools/index.js';
 
 export const program = new Command();
@@ -42,6 +43,7 @@ program.addCommand(inboxCommand);
 program.addCommand(serviceCommand);
 program.addCommand(queueCommand);
 program.addCommand(feralCommand);
+program.addCommand(interviewCommand);
 program.addCommand(createShellCommand(program));
 
 // Tool command - run any registered tool

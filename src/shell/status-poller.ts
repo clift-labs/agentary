@@ -25,8 +25,8 @@ export class StatusPoller {
      * Start polling. Runs an initial poll immediately.
      */
     start(): void {
-        this.poll();
-        this.timer = setInterval(() => this.poll(), POLL_INTERVAL_MS);
+        this.pollNow();
+        this.timer = setInterval(() => this.pollNow(), POLL_INTERVAL_MS);
     }
 
     /**
@@ -40,9 +40,11 @@ export class StatusPoller {
     }
 
     /**
-     * Run a single poll cycle.
+     * Run a single poll cycle.  Called automatically by the timer,
+     * but can also be called externally after a command that may
+     * change service/queue state (e.g. `service start`).
      */
-    private async poll(): Promise<void> {
+    async pollNow(): Promise<void> {
         const status: Partial<ShellStatus> = {};
 
         // Service status
