@@ -100,6 +100,46 @@ export class ServiceClient {
     }
 
     /**
+     * Get service memory usage (in MB).
+     */
+    async getMemoryUsage(): Promise<{ rss: number; heapUsed: number; heapTotal: number; external: number }> {
+        const response = await this.query('service.memory');
+        return response.result as { rss: number; heapUsed: number; heapTotal: number; external: number };
+    }
+
+    /**
+     * Get entity index stats.
+     */
+    async getIndexStats(): Promise<{ nodeCount: number; edgeCount: number; byType: Record<string, number>; builtAt: string }> {
+        const response = await this.query('index.stats');
+        return response.result as { nodeCount: number; edgeCount: number; byType: Record<string, number>; builtAt: string };
+    }
+
+    /**
+     * Get all edges in the entity graph.
+     */
+    async getIndexGraph(): Promise<{ source: string; target: string; edgeType: string }[]> {
+        const response = await this.query('index.graph');
+        return response.result as { source: string; target: string; edgeType: string }[];
+    }
+
+    /**
+     * Get neighbors of a given entity key.
+     */
+    async getIndexNeighbors(key: string): Promise<{ node: { id: string; type: string; title: string }; direction: string; edgeType: string }[]> {
+        const response = await this.query('index.neighbors', { key });
+        return response.result as { node: { id: string; type: string; title: string }; direction: string; edgeType: string }[];
+    }
+
+    /**
+     * Rebuild the entity index.
+     */
+    async rebuildIndex(): Promise<{ nodeCount: number; edgeCount: number; byType: Record<string, number>; builtAt: string }> {
+        const response = await this.query('index.rebuild');
+        return response.result as { nodeCount: number; edgeCount: number; byType: Record<string, number>; builtAt: string };
+    }
+
+    /**
      * Get task status by ID.
      */
     async getTaskStatus(taskId: string): Promise<ServiceResponse> {

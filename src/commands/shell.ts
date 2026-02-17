@@ -31,6 +31,7 @@ const COMMAND_TREE: Record<string, string[]> = {
     inbox: ['add'],
     service: ['start', 'stop', 'status'],
     queue: ['size', 'status', 'clear', 'pause', 'resume'],
+    index: ['stats', 'graph', 'neighbors', 'rebuild'],
     tools: [],
     tool: [],    // dynamically completed with tool names
     feral: ['nodes', 'catalog', 'process'],

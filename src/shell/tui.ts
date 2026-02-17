@@ -16,6 +16,8 @@ export interface ShellStatus {
     serviceRunning: boolean;
     queueSize: number;
     queueMax: number;
+    memoryMB: number;
+    entityCount: number;
     project: string | null;
 }
 
@@ -23,6 +25,8 @@ const DEFAULT_STATUS: ShellStatus = {
     serviceRunning: false,
     queueSize: 0,
     queueMax: 10,
+    memoryMB: 0,
+    entityCount: 0,
     project: null,
 };
 
@@ -56,11 +60,19 @@ export class StatusBar {
             ? chalk.yellow('⬡') + chalk.white(` ${this.status.queueSize}/${this.status.queueMax}`)
             : chalk.gray('⬡') + chalk.gray(` ${this.status.queueSize}/${this.status.queueMax}`);
 
+        const memory = this.status.memoryMB > 0
+            ? chalk.white(`💾 ${this.status.memoryMB}MB`)
+            : chalk.gray('💾 —');
+
+        const entities = this.status.entityCount > 0
+            ? chalk.white(`📄 ${this.status.entityCount}`)
+            : chalk.gray('📄 0');
+
         const project = this.status.project
             ? chalk.white(`📁 ${this.status.project}`)
             : chalk.gray('📁 none');
 
-        const content = ` ${service} │ ${queue} │ ${project} `;
+        const content = ` ${service} │ ${queue} │ ${memory} │ ${entities} │ ${project} `;
 
         // Fill remaining width with ─
         // Visible character count (approximate — emojis and ANSI make exact count hard)

@@ -55,7 +55,7 @@ export class StatusPoller {
             status.serviceRunning = false;
         }
 
-        // Queue size (only if service is running)
+        // Queue size + memory + entity count (only if service is running)
         if (status.serviceRunning) {
             try {
                 const client = getServiceClient();
@@ -64,12 +64,23 @@ export class StatusPoller {
                 const result = queueStatus.result as { size: number; maxSize: number };
                 status.queueSize = result.size;
                 status.queueMax = result.maxSize;
+
+                const mem = await client.getMemoryUsage();
+                status.memoryMB = mem.rss;
+
+                const indexStats = await client.getIndexStats();
+                status.entityCount = indexStats.nodeCount;
+
                 client.disconnect();
             } catch {
                 status.queueSize = 0;
+                status.memoryMB = 0;
+                status.entityCount = 0;
             }
         } else {
             status.queueSize = 0;
+            status.memoryMB = 0;
+            status.entityCount = 0;
         }
 
         // Active project

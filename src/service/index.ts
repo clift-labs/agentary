@@ -11,6 +11,7 @@ import { ServiceServer } from './server.js';
 import { getQueueManager } from './queue/manager.js';
 import { getQueueProcessor } from './queue/processor.js';
 import { SOCKET_PATH } from './daemon.js';
+import { getEntityIndex } from '../entities/entity-index.js';
 import type { ServiceRequest, ServiceResponse, Task } from './protocol.js';
 
 // Only run if this is the service process
@@ -33,7 +34,7 @@ async function handleRequest(request: ServiceRequest): Promise<ServiceResponse> 
             }
 
             case 'query': {
-                const payload = request.payload as { query: string; taskId?: string };
+                const payload = request.payload as { query: string; taskId?: string; key?: string };
 
                 switch (payload.query) {
                     case 'queue.size':
@@ -50,12 +51,57 @@ async function handleRequest(request: ServiceRequest): Promise<ServiceResponse> 
                             result: queueManager.getFullStatus(),
                         };
 
+                    case 'service.memory': {
+                        const mem = process.memoryUsage();
+                        return {
+                            requestId: request.id,
+                            status: 'completed',
+                            result: {
+                                rss: Math.round(mem.rss / 1024 / 1024),
+                                heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+                                heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+                                external: Math.round(mem.external / 1024 / 1024),
+                            },
+                        };
+                    }
+
                     case 'task.status':
                         const task = queueManager.getTask(payload.taskId!);
                         return {
                             requestId: request.id,
                             status: 'completed',
                             result: task,
+                        };
+
+                    case 'index.stats':
+                        return {
+                            requestId: request.id,
+                            status: 'completed',
+                            result: getEntityIndex().getStats(),
+                        };
+
+                    case 'index.graph':
+                        return {
+                            requestId: request.id,
+                            status: 'completed',
+                            result: getEntityIndex().getAllEdges(),
+                        };
+
+                    case 'index.neighbors': {
+                        const neighbors = getEntityIndex().getNeighbors(payload.key!);
+                        return {
+                            requestId: request.id,
+                            status: 'completed',
+                            result: neighbors,
+                        };
+                    }
+
+                    case 'index.rebuild':
+                        await getEntityIndex().rebuild();
+                        return {
+                            requestId: request.id,
+                            status: 'completed',
+                            result: getEntityIndex().getStats(),
                         };
 
                     default:
@@ -150,6 +196,16 @@ async function main(): Promise<void> {
     // Start server and processor
     await server.start(SOCKET_PATH);
     await processor.start();
+
+    // Build entity index
+    try {
+        const index = getEntityIndex();
+        await index.build();
+        const stats = index.getStats();
+        console.log(`Entity index: ${stats.nodeCount} nodes, ${stats.edgeCount} edges`);
+    } catch (err) {
+        console.error('Failed to build entity index:', err);
+    }
 
     console.log(`Dobbie service running on ${SOCKET_PATH}`);
 }

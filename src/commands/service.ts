@@ -64,6 +64,25 @@ serviceCommand
                 console.log(chalk.green('✓ Dobbie service is running'));
                 console.log(chalk.dim(`  PID: ${status.pid}`));
                 console.log(chalk.dim(`  Socket: ${status.socketPath}`));
+
+                // Show memory usage
+                try {
+                    const client = getServiceClient();
+                    await client.connect();
+                    const mem = await client.getMemoryUsage();
+                    console.log(chalk.dim(`  Memory: ${mem.rss}MB RSS (heap: ${mem.heapUsed}/${mem.heapTotal}MB)`));
+
+                    const queueStatus = await client.getQueueStatus();
+                    const queue = queueStatus.result as {
+                        size: number; maxSize: number; processing: number;
+                        pending: number; completedCount: number; errorCount: number;
+                    };
+                    console.log(chalk.dim(`  Queue: ${queue.size}/${queue.maxSize} (${queue.processing} processing, ${queue.pending} pending)`));
+
+                    client.disconnect();
+                } catch {
+                    // Service running but can't connect — skip details
+                }
             } else {
                 console.log(chalk.yellow('○ Dobbie service is not running'));
                 console.log(chalk.dim('  Start with: dobbie service start'));
@@ -185,6 +204,115 @@ queueCommand
 
             await client.resumeQueue();
             console.log(chalk.green('▶ Queue processing resumed'));
+
+            client.disconnect();
+        } catch (error) {
+            console.error(chalk.red(getResponse('error')), error instanceof Error ? error.message : error);
+        }
+    });
+
+/**
+ * Entity index commands.
+ */
+export const indexCommand = new Command('index')
+    .description('Manage the entity index and relationship graph');
+
+// dobbie index stats
+indexCommand
+    .command('stats')
+    .description('Show entity index statistics')
+    .action(async () => {
+        try {
+            const client = getServiceClient();
+            await client.connect();
+
+            const stats = await client.getIndexStats();
+            console.log(chalk.cyan('Entity Index:'));
+            console.log(`  Nodes: ${chalk.white(stats.nodeCount.toString())}`);
+            console.log(`  Edges: ${chalk.white(stats.edgeCount.toString())}`);
+            console.log(`  Built: ${chalk.dim(stats.builtAt)}`);
+
+            if (Object.keys(stats.byType).length > 0) {
+                console.log(chalk.dim('  By type:'));
+                for (const [type, count] of Object.entries(stats.byType)) {
+                    console.log(`    ${type}: ${count}`);
+                }
+            }
+
+            client.disconnect();
+        } catch (error) {
+            console.error(chalk.red(getResponse('error')), error instanceof Error ? error.message : error);
+        }
+    });
+
+// dobbie index graph
+indexCommand
+    .command('graph')
+    .description('Show all entity relationships')
+    .action(async () => {
+        try {
+            const client = getServiceClient();
+            await client.connect();
+
+            const edges = await client.getIndexGraph();
+
+            if (edges.length === 0) {
+                console.log(chalk.gray('No relationships found.'));
+            } else {
+                console.log(chalk.cyan(`Entity Graph (${edges.length} edges):\n`));
+                for (const edge of edges) {
+                    const arrow = edge.edgeType === 'mention' ? chalk.magenta('@→') : chalk.blue('→');
+                    console.log(`  ${chalk.white(edge.source)} ${arrow} ${chalk.white(edge.target)}`);
+                }
+            }
+
+            client.disconnect();
+        } catch (error) {
+            console.error(chalk.red(getResponse('error')), error instanceof Error ? error.message : error);
+        }
+    });
+
+// dobbie index neighbors <key>
+indexCommand
+    .command('neighbors <key>')
+    .description('Show neighbors of an entity (e.g. "note:my-note" or "person:gary-clift")')
+    .action(async (key: string) => {
+        try {
+            const client = getServiceClient();
+            await client.connect();
+
+            const neighbors = await client.getIndexNeighbors(key);
+
+            if (neighbors.length === 0) {
+                console.log(chalk.gray(`No neighbors found for ${key}.`));
+            } else {
+                console.log(chalk.cyan(`Neighbors of ${chalk.white(key)}:\n`));
+                for (const n of neighbors) {
+                    const arrow = n.direction === 'out' ? '→' : '←';
+                    const edgeIcon = n.edgeType === 'mention' ? chalk.magenta('@') : chalk.blue('⟿');
+                    console.log(`  ${arrow} ${edgeIcon} ${chalk.white(`${n.node.type}:${n.node.id}`)} — ${n.node.title}`);
+                }
+            }
+
+            client.disconnect();
+        } catch (error) {
+            console.error(chalk.red(getResponse('error')), error instanceof Error ? error.message : error);
+        }
+    });
+
+// dobbie index rebuild
+indexCommand
+    .command('rebuild')
+    .description('Rebuild the entity index')
+    .action(async () => {
+        try {
+            const client = getServiceClient();
+            await client.connect();
+
+            console.log(chalk.cyan('Rebuilding entity index...'));
+            const stats = await client.rebuildIndex();
+
+            console.log(chalk.green(`✓ Index rebuilt: ${stats.nodeCount} nodes, ${stats.edgeCount} edges`));
 
             client.disconnect();
         } catch (error) {

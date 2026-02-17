@@ -106,6 +106,11 @@ export interface Task {
 export type QueryPayload =
     | { query: 'queue.size' }
     | { query: 'queue.status' }
+    | { query: 'service.memory' }
+    | { query: 'index.stats' }
+    | { query: 'index.graph' }
+    | { query: 'index.neighbors'; key: string }
+    | { query: 'index.rebuild' }
     | { query: 'task.status'; taskId: string };
 
 export type ControlPayload =
