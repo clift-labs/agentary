@@ -183,6 +183,62 @@ export class EntityIndex {
         await this.build();
     }
 
+    // ── Incremental mutations ────────────────────────────────────────────
+
+    get isBuilt(): boolean {
+        return this._builtAt !== null;
+    }
+
+    /**
+     * Add or update a single node and re-scan its content for edges.
+     * Avoids a full rebuild when a single entity is created or modified.
+     */
+    async addOrUpdate(type: EntityTypeName, id: string, title: string, filepath: string): Promise<void> {
+        const key = EntityIndex.key(type, id);
+
+        // Upsert node
+        this.nodes.set(key, { id, type, title, filepath });
+
+        // Remove old outbound edges from this node
+        this.edges = this.edges.filter(e => e.source !== key);
+
+        // Re-scan content for new edges
+        try {
+            const raw = await fs.readFile(filepath, 'utf-8');
+            const { content } = parseEntity(filepath, raw);
+
+            const peopleSlugs = extractPeopleMentions(content);
+            for (const slug of peopleSlugs) {
+                const targetKey = EntityIndex.key('person', slug);
+                if (this.nodes.has(targetKey)) {
+                    this.edges.push({ source: key, target: targetKey, edgeType: 'mention' });
+                }
+            }
+
+            const entityRefs = extractEntityRefs(content);
+            for (const ref of entityRefs) {
+                const targetKey = EntityIndex.key(ref.type, ref.slug);
+                if (this.nodes.has(targetKey)) {
+                    this.edges.push({ source: key, target: targetKey, edgeType: 'reference' });
+                }
+            }
+        } catch (err) {
+            debug('index', `Failed to scan edges for ${filepath}: ${err}`);
+        }
+
+        debug('index', `Index updated: ${type}:${id} (${this.nodes.size} nodes, ${this.edges.length} edges)`);
+    }
+
+    /**
+     * Remove a node and all its inbound/outbound edges.
+     */
+    remove(type: EntityTypeName, id: string): void {
+        const key = EntityIndex.key(type, id);
+        this.nodes.delete(key);
+        this.edges = this.edges.filter(e => e.source !== key && e.target !== key);
+        debug('index', `Index removed: ${type}:${id} (${this.nodes.size} nodes, ${this.edges.length} edges)`);
+    }
+
     // ── Queries ──────────────────────────────────────────────────────────
 
     getNode(key: string): IndexNode | undefined {

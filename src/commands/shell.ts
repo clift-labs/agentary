@@ -9,6 +9,8 @@ import { StatusPoller } from '../shell/status-poller.js';
 import { breadcrumbPrompt } from '../ui/breadcrumb.js';
 import { isInterviewComplete } from '../state/manager.js';
 import { runInterview } from './interview.js';
+import { getEntityIndex } from '../entities/entity-index.js';
+import type { EntityTypeName } from '../entities/entity.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMMAND TREE (for tab-completion)
@@ -22,15 +24,15 @@ const COMMAND_TREE: Record<string, string[]> = {
     config: ['add-provider', 'set-capability', 'list-capabilities', 'list-providers', 'set-name'],
     sync: [],
     week: ['--next'],
-    note: ['list'],
-    todo: ['list', 'done'],
-    task: ['list', 'done'],
-    event: ['list'],
+    note: ['list', 'remove'],
+    todo: ['list', 'done', 'remove'],
+    task: ['list', 'done', 'remove'],
+    event: ['list', 'remove'],
     research: ['list'],
     goal: ['list'],
     time: [],
-    recurrence: ['create', 'list', 'edit', 'delete', 'generate'],
-    person: ['list', 'edit', 'delete'],
+    recurrence: ['create', 'list', 'edit', 'delete', 'remove', 'generate'],
+    person: ['list', 'edit', 'delete', 'remove'],
     inbox: ['add'],
     service: ['start', 'stop', 'status'],
     queue: ['size', 'status', 'clear', 'pause', 'resume'],
@@ -46,6 +48,42 @@ const COMMAND_TREE: Record<string, string[]> = {
 };
 
 const TOP_LEVEL_COMMANDS = Object.keys(COMMAND_TREE);
+
+// ── Entity completion mapping ───────────────────────────────────────────
+// Maps (command, subcommand) → entity type for tab completion.
+// When subcommand is '*', any subcommand (or no subcommand) at arg 2+ triggers completion.
+
+interface EntityCompletion {
+    command: string;
+    subcommand: string | null;  // null = complete at arg position 2 (directly after command)
+    entityType: EntityTypeName;
+}
+
+const ENTITY_COMPLETIONS: EntityCompletion[] = [
+    { command: 'todo', subcommand: 'done', entityType: 'task' },
+    { command: 'task', subcommand: 'done', entityType: 'task' },
+    { command: 'todo', subcommand: 'remove', entityType: 'task' },
+    { command: 'task', subcommand: 'remove', entityType: 'task' },
+    { command: 'todo', subcommand: null, entityType: 'task' },
+    { command: 'task', subcommand: null, entityType: 'task' },
+    { command: 'note', subcommand: 'remove', entityType: 'note' },
+    { command: 'note', subcommand: null, entityType: 'note' },
+    { command: 'event', subcommand: 'remove', entityType: 'event' },
+    { command: 'event', subcommand: null, entityType: 'event' },
+    { command: 'person', subcommand: 'edit', entityType: 'person' },
+    { command: 'person', subcommand: 'delete', entityType: 'person' },
+    { command: 'person', subcommand: 'remove', entityType: 'person' },
+    { command: 'recurrence', subcommand: 'edit', entityType: 'recurrence' },
+    { command: 'recurrence', subcommand: 'delete', entityType: 'recurrence' },
+    { command: 'recurrence', subcommand: 'remove', entityType: 'recurrence' },
+    { command: 'index', subcommand: 'neighbors', entityType: 'task' },
+];
+
+function getEntityNames(entityType: EntityTypeName): string[] {
+    const index = getEntityIndex();
+    if (!index.isBuilt) return [];
+    return index.getNodes(entityType).map(n => n.id);
+}
 
 /**
  * Build a completer function for readline.
@@ -73,10 +111,35 @@ function buildCompleter(): (line: string) => [string[], string] {
             return [[], partial];
         }
 
+        // Subcommand completion (arg position 2)
         const subcommands = COMMAND_TREE[command];
         if (subcommands && subcommands.length > 0 && parts.length === 2) {
+            // Mix subcommands with entity names where applicable
             const hits = subcommands.filter(s => s.startsWith(partial));
+
+            // Also complete entity names at arg 2 for commands with null subcommand
+            const directCompletion = ENTITY_COMPLETIONS.find(
+                ec => ec.command === command && ec.subcommand === null,
+            );
+            if (directCompletion) {
+                const names = getEntityNames(directCompletion.entityType);
+                hits.push(...names.filter(n => n.startsWith(partial) && !hits.includes(n)));
+            }
+
             return [hits.map(h => h + ' '), partial];
+        }
+
+        // Entity name completion at arg position 3+ (after subcommand)
+        if (parts.length >= 3) {
+            const sub = parts[1];
+            const completion = ENTITY_COMPLETIONS.find(
+                ec => ec.command === command && ec.subcommand === sub,
+            );
+            if (completion) {
+                const names = getEntityNames(completion.entityType);
+                const hits = names.filter(n => n.startsWith(partial));
+                return [hits.map(h => h + ' '), partial];
+            }
         }
 
         return [[], partial];
@@ -131,6 +194,10 @@ export function createShellCommand(_program: Command): Command {
 
             // Start background polling (updates bar data silently)
             poller.start();
+
+            // Build entity index for tab-completion (fire-and-forget)
+            const entityIndex = getEntityIndex();
+            entityIndex.build().catch(() => { /* silent — index is optional for completions */ });
 
             await bar.printWelcome();
 

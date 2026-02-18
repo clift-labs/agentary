@@ -18,6 +18,7 @@ import {
     type EntityTypeName,
 } from '../../../entities/entity.js';
 import { getActiveProject } from '../../../state/manager.js';
+import { getEntityIndex } from '../../../entities/entity-index.js';
 
 /**
  * Custom result for duplicate detection.
@@ -87,6 +88,12 @@ export class CreateEntityNodeCode extends AbstractNodeCode {
 
         context.set('filepath', filepath);
         context.set('entity', { filepath, content, ...meta });
+
+        // Update entity index incrementally
+        const index = getEntityIndex();
+        if (index.isBuilt) {
+            await index.addOrUpdate(entityType, slug, title, filepath);
+        }
 
         return this.result(ResultStatus.OK, `Created ${entityType} "${title}" at ${filepath}.`);
     }

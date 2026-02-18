@@ -229,6 +229,40 @@ export async function writeEntity(
 }
 
 /**
+ * Move an entity file to the trash instead of permanently deleting it.
+ * Trash location: ~/.dobbie/.trash/<entity-dir>/<filename>
+ * If a file with the same name exists in trash, appends a timestamp.
+ */
+export async function trashEntity(filepath: string): Promise<string> {
+    const vaultRoot = await getVaultRoot();
+    const trashRoot = path.join(vaultRoot, '.trash');
+
+    // Derive the entity subdirectory from the filepath
+    // e.g. ~/.dobbie/projects/work/todos/foo.md → todos
+    const parentDir = path.basename(path.dirname(filepath));
+    const trashDir = path.join(trashRoot, parentDir);
+
+    await fs.mkdir(trashDir, { recursive: true });
+
+    const filename = path.basename(filepath);
+    let trashPath = path.join(trashDir, filename);
+
+    // Avoid collisions — append timestamp if file already exists in trash
+    try {
+        await fs.access(trashPath);
+        const stem = path.basename(filename, '.md');
+        const ts = Date.now();
+        trashPath = path.join(trashDir, `${stem}-${ts}.md`);
+    } catch {
+        // No collision — use original name
+    }
+
+    await fs.rename(filepath, trashPath);
+    debug('entities', `Trashed ${filepath} → ${trashPath}`);
+    return trashPath;
+}
+
+/**
  * Find an entity by title or filename within a directory.
  */
 export async function findEntityByTitle(

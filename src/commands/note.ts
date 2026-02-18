@@ -12,6 +12,8 @@ import { renderEntityHeader, entityPrompt, noteHeaderConfig } from '../ui/entity
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
+import { getEntityIndex } from '../entities/entity-index.js';
+import { findEntityByTitle, trashEntity } from '../entities/entity.js';
 
 interface NoteState {
     title: string;
@@ -205,6 +207,14 @@ ${finalContent}
 `;
 
     await fs.writeFile(filepath, markdown);
+
+    // Update entity index
+    const index = getEntityIndex();
+    if (index.isBuilt) {
+        const slug = path.basename(filepath, '.md');
+        await index.addOrUpdate('note', slug, state.title, filepath);
+    }
+
     return filepath;
 }
 
@@ -300,6 +310,29 @@ export const noteCommand = new Command('note')
             // Handle: dobbie note list
             if (words[0] === 'list') {
                 await listEntities('notes');
+                return;
+            }
+
+            // Handle: dobbie note remove <title>
+            if (words[0] === 'remove' || words[0] === 'delete') {
+                const removeTitle = words.slice(1).join(' ');
+                if (!removeTitle) {
+                    console.log(chalk.yellow('\n  Please specify which note to remove: note remove <title>\n'));
+                    return;
+                }
+                const found = await findEntityByTitle('note', removeTitle);
+                if (!found) {
+                    console.log(chalk.red(`\n  ✗ Note "${removeTitle}" not found\n`));
+                    return;
+                }
+                const trashPath = await trashEntity(found.filepath);
+                const idx = getEntityIndex();
+                if (idx.isBuilt) {
+                    const slug = path.basename(found.filepath, '.md');
+                    idx.remove('note', slug);
+                }
+                console.log(chalk.green(`\n  🗑  Moved to trash: ${found.meta.title}`));
+                console.log(chalk.gray(`    ${trashPath}\n`));
                 return;
             }
 

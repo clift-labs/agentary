@@ -9,7 +9,8 @@ import { ResultStatus } from '../../result/result.js';
 import type { ConfigurationDescription, ResultDescription } from '../../configuration/configuration-description.js';
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
-import { findEntityByTitle, type EntityTypeName } from '../../../entities/entity.js';
+import { findEntityByTitle, slugify, trashEntity, type EntityTypeName } from '../../../entities/entity.js';
+import { getEntityIndex } from '../../../entities/entity-index.js';
 
 const NOT_FOUND = 'not_found';
 
@@ -41,7 +42,14 @@ export class DeleteEntityNodeCode extends AbstractNodeCode {
             return this.result(NOT_FOUND, `${entityType} "${title}" not found.`);
         }
 
-        await fs.unlink(found.filepath);
+        await trashEntity(found.filepath);
+
+        // Update entity index incrementally
+        const index = getEntityIndex();
+        if (index.isBuilt) {
+            const slug = slugify(title);
+            index.remove(entityType, slug);
+        }
 
         context.set('deleted', {
             filepath: found.filepath,

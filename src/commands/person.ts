@@ -10,10 +10,12 @@ import {
     ensureEntityDir,
     writeEntity,
     findEntityByTitle,
+    trashEntity,
 } from '../entities/entity.js';
 import { listEntities } from './list.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
+import { getEntityIndex } from '../entities/entity-index.js';
 import { promises as fs } from 'fs';
 import matter from 'gray-matter';
 
@@ -55,6 +57,13 @@ async function savePerson(state: PersonState): Promise<string> {
     };
 
     await writeEntity(filepath, fullMeta, state.content);
+
+    // Update entity index
+    const index = getEntityIndex();
+    if (index.isBuilt) {
+        await index.addOrUpdate('person', slug, state.name, filepath);
+    }
+
     return filepath;
 }
 
@@ -95,6 +104,14 @@ async function editPerson(titleOrFilename: string): Promise<void> {
     };
 
     await writeEntity(filepath, updatedMeta, answers.content);
+
+    // Update entity index
+    const index = getEntityIndex();
+    if (index.isBuilt) {
+        const slug = path.basename(filepath, '.md');
+        await index.addOrUpdate('person', slug, answers.name, filepath);
+    }
+
     console.log(chalk.green(`\n✓ Person updated: ${answers.name}`));
 }
 
@@ -117,8 +134,17 @@ async function deletePerson(titleOrFilename: string): Promise<void> {
     }]);
 
     if (confirm) {
-        await fs.unlink(found.filepath);
-        console.log(chalk.green(`✓ Deleted: ${found.meta.title}`));
+        const trashPath = await trashEntity(found.filepath);
+
+        // Update entity index
+        const index = getEntityIndex();
+        if (index.isBuilt) {
+            const slug = path.basename(found.filepath, '.md');
+            index.remove('person', slug);
+        }
+
+        console.log(chalk.green(`🗑  Moved to trash: ${found.meta.title}`));
+        console.log(chalk.gray(`  ${trashPath}`));
     }
 }
 
@@ -150,7 +176,7 @@ export const personCommand = new Command('person')
                 return;
             }
 
-            if (action === 'delete') {
+            if (action === 'delete' || action === 'remove') {
                 const name = nameWords?.join(' ');
                 if (!name) {
                     console.log(chalk.red('Please provide a name: person delete <name>'));

@@ -12,6 +12,8 @@ import { renderEntityHeader, entityPrompt, eventHeaderConfig } from '../ui/entit
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
+import { getEntityIndex } from '../entities/entity-index.js';
+import { findEntityByTitle, trashEntity } from '../entities/entity.js';
 
 interface EventState {
     title: string;
@@ -198,6 +200,14 @@ ${state.description}
 `;
 
     await fs.writeFile(filepath, markdown);
+
+    // Update entity index
+    const index = getEntityIndex();
+    if (index.isBuilt) {
+        const slug = path.basename(filepath, '.md');
+        await index.addOrUpdate('event', slug, state.title, filepath);
+    }
+
     return filepath;
 }
 
@@ -261,6 +271,29 @@ export const eventCommand = new Command('event')
             // Handle: dobbie event list
             if (words[0] === 'list') {
                 await listEntities('events');
+                return;
+            }
+
+            // Handle: dobbie event remove <title>
+            if (words[0] === 'remove' || words[0] === 'delete') {
+                const removeTitle = words.slice(1).join(' ');
+                if (!removeTitle) {
+                    console.log(chalk.yellow('\n  Please specify which event to remove: event remove <title>\n'));
+                    return;
+                }
+                const found = await findEntityByTitle('event', removeTitle);
+                if (!found) {
+                    console.log(chalk.red(`\n  ✗ Event "${removeTitle}" not found\n`));
+                    return;
+                }
+                const trashPath = await trashEntity(found.filepath);
+                const idx = getEntityIndex();
+                if (idx.isBuilt) {
+                    const slug = path.basename(found.filepath, '.md');
+                    idx.remove('event', slug);
+                }
+                console.log(chalk.green(`\n  🗑  Moved to trash: ${found.meta.title}`));
+                console.log(chalk.gray(`    ${trashPath}\n`));
                 return;
             }
 

@@ -9,6 +9,7 @@ import {
     slugify,
     ensureEntityDir,
     getEntityDir,
+    trashEntity,
     type RecurrenceCadence,
     type RecurrenceTargetType,
     type BlackoutWindow,
@@ -17,6 +18,7 @@ import {
 import { listEntities as listEntitiesDisplay } from './list.js';
 import { getResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
+import { getEntityIndex } from '../entities/entity-index.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -61,6 +63,14 @@ async function saveRecurrence(state: RecurrenceState): Promise<string> {
 
     const fileContent = matter.stringify(state.body, meta);
     await fs.writeFile(filepath, fileContent);
+
+    // Update entity index
+    const index = getEntityIndex();
+    if (index.isBuilt) {
+        const slug = path.basename(filepath, '.md');
+        await index.addOrUpdate('recurrence', slug, state.title, filepath);
+    }
+
     return filepath;
 }
 
@@ -270,6 +280,15 @@ async function generateConcreteEntities(project: string, days: number): Promise<
 
             const fileContent = matter.stringify(rec.body, meta);
             await fs.writeFile(filepath, fileContent);
+
+            // Update entity index for generated entity
+            const index = getEntityIndex();
+            if (index.isBuilt) {
+                const entityType = rec.recurrenceType === 'todo' ? 'task' : 'event';
+                const slug = path.basename(filepath, '.md');
+                await index.addOrUpdate(entityType as any, slug, concreteTitle, filepath);
+            }
+
             totalCreated++;
         }
     }
@@ -551,8 +570,17 @@ async function deleteRecurrence(project: string, name: string): Promise<void> {
     }]);
 
     if (confirm && rec.filepath) {
-        await fs.unlink(rec.filepath);
-        console.log(chalk.green(`✓ Recurrence "${rec.title}" deleted.`));
+        const trashPath = await trashEntity(rec.filepath);
+
+        // Update entity index
+        const index = getEntityIndex();
+        if (index.isBuilt) {
+            const slug = path.basename(rec.filepath, '.md');
+            index.remove('recurrence', slug);
+        }
+
+        console.log(chalk.green(`🗑  Moved to trash: ${rec.title}`));
+        console.log(chalk.gray(`  ${trashPath}`));
     } else {
         console.log(chalk.gray('Cancelled.'));
     }
@@ -589,7 +617,8 @@ export const recurrenceCommand = new Command('recurrence')
                     break;
                 }
 
-                case 'delete': {
+                case 'delete':
+                case 'remove': {
                     const name = args?.join(' ');
                     if (!name) {
                         console.log(chalk.yellow('Usage: recurrence delete <name>'));

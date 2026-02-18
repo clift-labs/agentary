@@ -12,6 +12,8 @@ import { renderEntityHeader, entityPrompt, todoHeaderConfig } from '../ui/entity
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
+import { getEntityIndex } from '../entities/entity-index.js';
+import { findEntityByTitle, trashEntity } from '../entities/entity.js';
 
 interface TodoState {
     title: string;
@@ -276,6 +278,14 @@ ${finalContent}
 `;
 
     await fs.writeFile(filepath, markdown);
+
+    // Update entity index
+    const index = getEntityIndex();
+    if (index.isBuilt) {
+        const slug = path.basename(filepath, '.md');
+        await index.addOrUpdate('task', slug, state.title, filepath);
+    }
+
     return filepath;
 }
 
@@ -359,6 +369,31 @@ export const todoCommand = new Command('todo')
                 const msg = await getPersonalizedResponse('task_complete');
                 console.log(chalk.green(`\n  ✓ ${msg}`));
                 console.log(chalk.gray(`    ${filepath}\n`));
+                return;
+            }
+
+            // Handle: dobbie todo remove <title>
+            if (words[0] === 'remove' || words[0] === 'delete') {
+                const removeTitle = words.slice(1).join(' ');
+                if (!removeTitle) {
+                    console.log(chalk.yellow('\n  Please specify which task to remove: todo remove <title>\n'));
+                    return;
+                }
+                const project = await requireProject();
+                const existing = await findExistingTodo(project, removeTitle);
+                if (!existing) {
+                    console.log(chalk.red(`\n  ✗ Task "${removeTitle}" not found\n`));
+                    return;
+                }
+                const trashPath = await trashEntity(existing.filepath);
+                // Update entity index
+                const idx = getEntityIndex();
+                if (idx.isBuilt) {
+                    const slug = path.basename(existing.filepath, '.md');
+                    idx.remove('task', slug);
+                }
+                console.log(chalk.green(`\n  🗑  Moved to trash: ${existing.title}`));
+                console.log(chalk.gray(`    ${trashPath}\n`));
                 return;
             }
 

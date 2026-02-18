@@ -8,7 +8,8 @@ import { ResultStatus } from '../../result/result.js';
 import type { ConfigurationDescription, ResultDescription } from '../../configuration/configuration-description.js';
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
-import { findEntityByTitle, writeEntity, type EntityTypeName } from '../../../entities/entity.js';
+import { findEntityByTitle, writeEntity, slugify, type EntityTypeName } from '../../../entities/entity.js';
+import { getEntityIndex } from '../../../entities/entity-index.js';
 
 const NOT_FOUND = 'not_found';
 
@@ -67,6 +68,13 @@ export class UpdateEntityNodeCode extends AbstractNodeCode {
             content,
             ...found.meta,
         });
+
+        // Update entity index incrementally
+        const index = getEntityIndex();
+        if (index.isBuilt) {
+            const slug = slugify(title);
+            await index.addOrUpdate(entityType, slug, title, found.filepath);
+        }
 
         return this.result(ResultStatus.OK, `Updated ${entityType} "${title}".`);
     }
