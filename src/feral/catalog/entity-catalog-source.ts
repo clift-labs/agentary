@@ -84,6 +84,18 @@ export class EntityCatalogSource {
                 configuration: { entity_type: type },
             });
 
+            // Only entity types with a 'status' field get a complete node
+            if (['task', 'goal', 'research'].includes(type)) {
+                nodes.push({
+                    key: `complete_${type}`,
+                    nodeCodeKey: 'complete_entity',
+                    name: `Complete ${capitalize(type)}`,
+                    group: 'entity',
+                    description: `Finds a ${type} by title and marks it as complete.`,
+                    configuration: { entity_type: type },
+                });
+            }
+
             nodes.push({
                 key: `sort_${plural}`,
                 nodeCodeKey: 'sort_entities',

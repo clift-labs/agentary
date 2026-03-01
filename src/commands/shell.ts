@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import readline from 'readline';
 import { spawn } from 'child_process';
 import { listServiceTools } from '../tools/index.js';
-import { getPersonalizedResponse, getPersonalizedResponseWith } from '../responses.js';
+import { getResponse, getResponseWith } from '../responses.js';
 import { StatusBar } from '../shell/tui.js';
 import { StatusPoller } from '../shell/status-poller.js';
 import { breadcrumbPrompt } from '../ui/breadcrumb.js';
@@ -11,6 +11,7 @@ import { isInterviewComplete } from '../state/manager.js';
 import { runInterview } from './interview.js';
 import { getEntityIndex } from '../entities/entity-index.js';
 import type { EntityTypeName } from '../entities/entity.js';
+import { feralChat } from './chat.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMMAND TREE (for tab-completion)
@@ -26,10 +27,10 @@ const COMMAND_TREE: Record<string, string[]> = {
     week: ['--next'],
     note: ['list', 'remove'],
     todo: ['list', 'done', 'remove'],
-    task: ['list', 'done', 'remove'],
     event: ['list', 'remove'],
     research: ['list'],
     goal: ['list'],
+    todont: ['list', 'remove'],
     time: [],
     recurrence: ['create', 'list', 'edit', 'delete', 'remove', 'generate'],
     person: ['list', 'edit', 'delete', 'remove'],
@@ -41,6 +42,7 @@ const COMMAND_TREE: Record<string, string[]> = {
     tool: [],    // dynamically completed with tool names
     feral: ['nodes', 'catalog', 'process'],
     interview: [],
+    setup: [],
     shell: [],
     help: [],
     clear: [],
@@ -61,11 +63,8 @@ interface EntityCompletion {
 
 const ENTITY_COMPLETIONS: EntityCompletion[] = [
     { command: 'todo', subcommand: 'done', entityType: 'task' },
-    { command: 'task', subcommand: 'done', entityType: 'task' },
     { command: 'todo', subcommand: 'remove', entityType: 'task' },
-    { command: 'task', subcommand: 'remove', entityType: 'task' },
     { command: 'todo', subcommand: null, entityType: 'task' },
-    { command: 'task', subcommand: null, entityType: 'task' },
     { command: 'note', subcommand: 'remove', entityType: 'note' },
     { command: 'note', subcommand: null, entityType: 'note' },
     { command: 'event', subcommand: 'remove', entityType: 'event' },
@@ -76,6 +75,8 @@ const ENTITY_COMPLETIONS: EntityCompletion[] = [
     { command: 'recurrence', subcommand: 'edit', entityType: 'recurrence' },
     { command: 'recurrence', subcommand: 'delete', entityType: 'recurrence' },
     { command: 'recurrence', subcommand: 'remove', entityType: 'recurrence' },
+    { command: 'todont', subcommand: 'remove', entityType: 'todont' },
+    { command: 'todont', subcommand: null, entityType: 'todont' },
     { command: 'index', subcommand: 'neighbors', entityType: 'task' },
 ];
 
@@ -158,6 +159,7 @@ function buildCompleter(): (line: string) => [string[], string] {
  */
 function runCommand(args: string[]): Promise<'continue' | 'quit'> {
     return new Promise((resolve) => {
+        // Spawn dobbie as a subprocess: node <script> <args...>
         const child = spawn(process.argv[0], [process.argv[1], ...args], {
             stdio: 'inherit',
             cwd: process.cwd(),
@@ -232,7 +234,7 @@ export function createShellCommand(_program: Command): Command {
                     // Built-in shell commands
                     if (input === 'exit' || input === 'quit') {
                         poller.stop();
-                        const msg = await getPersonalizedResponse('farewell');
+                        const msg = getResponse('farewell');
                         console.log(chalk.cyan(`\n${msg}\n`));
                         process.exit(0);
                         return; // unreachable, but makes intent clear
@@ -256,7 +258,22 @@ export function createShellCommand(_program: Command): Command {
                     // Unknown command? Show a witty message + available commands
                     const command = args[0];
                     if (command && !TOP_LEVEL_COMMANDS.includes(command)) {
-                        const msg = await getPersonalizedResponseWith('unknown_command', { command });
+                        if (args.length >= 3) {
+                            // 3+ words that don't match a command → autonomous chat
+                            rl.pause();
+                            try {
+                                await feralChat(input);
+                            } finally {
+                                // Restore raw mode and resume readline
+                                if (process.stdin.isTTY) process.stdin.setRawMode(true);
+                                rl.resume();
+                            }
+                            await poller.pollNow();
+                            console.log('');
+                            showPrompt(rl, bar);
+                            return;
+                        }
+                        const msg = getResponseWith('unknown_command', { command });
                         console.log(chalk.yellow(`\n  ${msg}`));
                         printShellHelp();
                         showPrompt(rl, bar);
@@ -290,7 +307,7 @@ export function createShellCommand(_program: Command): Command {
             // Ctrl+D closes the readline — show farewell and exit
             rl.on('close', async () => {
                 poller.stop();
-                const msg = await getPersonalizedResponse('farewell');
+                const msg = getResponse('farewell');
                 console.log(chalk.cyan(`\n${msg}\n`));
                 process.exit(0);
             });
@@ -319,7 +336,7 @@ ${chalk.bold('Available Commands:')}
   ${chalk.bold('Queue:')}      queue [size|status|clear|pause|resume]
   ${chalk.bold('Tools:')}      tools, tool <name>
   ${chalk.bold('Feral:')}      feral [nodes|catalog|process]
-  ${chalk.bold('Other:')}      interview
+  ${chalk.bold('Other:')}      interview, setup
   ${chalk.bold('Shell:')}      help, clear, exit
 `));
 }

@@ -1,11 +1,11 @@
 /**
  * Dobbie's personality response catalog.
  * Each key maps to an array of possible responses.
- * Use getResponse(key) to get a random response.
+ * Use getResponse(key) to get a random response with {name} and {honorific} auto-substituted.
  *
  * Placeholders:
- *   {name}      — user's name (auto-substituted by getPersonalizedResponse)
- *   {honorific} — user's chosen honorific (auto-substituted by getPersonalizedResponse)
+ *   {name}      — user's name (auto-substituted by getResponse / getResponseWith)
+ *   {honorific} — random honorific from gender pool (auto-substituted by getResponse / getResponseWith)
  */
 
 export type ResponseKey =
@@ -66,7 +66,7 @@ const responses: Record<ResponseKey, string[]> = {
         'Until next time, {honorific}! Dobbie is honored to serve.',
         'Dobbie bids you farewell, {name}!',
         'Call on Dobbie anytime, {honorific}!',
-        'Dobbie is grateful to have helped, {honorific}!',
+        'Dobbie is grateful to have helped, {name}!',
     ],
     task_complete: [
         'Dobbie has completed the task, {name}!',
@@ -75,7 +75,7 @@ const responses: Record<ResponseKey, string[]> = {
         'All done, {honorific}! Dobbie worked very hard on this.',
         'Task complete, {honorific}! Dobbie is proud.',
         'Finished, {name}! Dobbie did it!',
-        'Dobbie has accomplished the task, {honorific}!',
+        'Dobbie has accomplished the task, {name}!',
     ],
     task_saved: [
         'Dobbie has saved everything, {name}!',
@@ -83,88 +83,88 @@ const responses: Record<ResponseKey, string[]> = {
         'Dobbie has stored this safely, {name}!',
         'It is saved, {honorific}! Dobbie made sure of it.',
         'Safely stored, {honorific}!',
-        'Dobbie has preserved it, {honorific}!',
+        'Dobbie has preserved it, {name}!',
         'Everything is saved, {name}! Dobbie double-checked.',
     ],
     task_discarded: [
         'Dobbie has discarded it, {honorific}.',
-        'Discarded as requested, {honorific}.',
+        'Discarded as requested, {name}.',
         'Dobbie has thrown it away, {honorific}.',
-        'Gone, {honorific}. Dobbie has removed it.',
+        'Gone, {name}. Dobbie has removed it.',
         'Dobbie has deleted it, {honorific}.',
-        'It is no more, {honorific}.',
+        'It is no more, {name}.',
         'Dobbie has disposed of it, {honorific}.',
     ],
     thinking: [
         'Dobbie is thinking, {honorific}...',
-        'One moment, {honorific}... Dobbie is pondering...',
+        'One moment, {name}... Dobbie is pondering...',
         'Dobbie is considering this carefully, {honorific}...',
-        'Let Dobbie think about this, {honorific}...',
+        'Let Dobbie think about this, {name}...',
         'Dobbie is contemplating, {honorific}...',
-        'Hmm, Dobbie is working this out, {honorific}...',
+        'Hmm, Dobbie is working this out, {name}...',
         'Dobbie needs a moment to think, {honorific}...',
     ],
     processing: [
         'Dobbie is working on it, {honorific}...',
-        'Dobbie is processing, {honorific}...',
+        'Dobbie is processing, {name}...',
         'One moment, {honorific}...',
-        'Dobbie is on it, {honorific}...',
+        'Dobbie is on it, {name}...',
         'Working, {honorific}...',
-        'Dobbie is handling this, {honorific}...',
+        'Dobbie is handling this, {name}...',
         'Please wait, {honorific}... Dobbie is busy...',
     ],
     error: [
-        'Dobbie encountered a problem, {honorific}.',
+        'Dobbie encountered a problem, {name}.',
         'Oh no, {honorific}! Dobbie ran into an error.',
-        'Dobbie is sorry, {honorific}. Something went wrong.',
+        'Dobbie is sorry, {name}. Something went wrong.',
         'Dobbie must report an error, {honorific}.',
-        'Dobbie has bad news, {honorific}. There was an error.',
+        'Dobbie has bad news, {name}. There was an error.',
         'Something failed, {honorific}. Dobbie apologizes.',
-        'Dobbie tried, {honorific}, but there was a problem.',
+        'Dobbie tried, {name}, but there was a problem.',
     ],
     no_vault: [
         'Dobbie cannot find a vault here, {honorific}.',
-        'This directory has no vault, {honorific}. Dobbie cannot proceed.',
+        'This directory has no vault, {name}. Dobbie cannot proceed.',
         '{honorific}, Dobbie needs a vault to work. Please run dobbie init.',
-        'No vault found, {honorific}. Dobbie is lost without one.',
+        'No vault found, {name}. Dobbie is lost without one.',
         'Dobbie requires a vault, {honorific}. This directory has none.',
-        '{honorific}, please create a vault first with dobbie init.',
+        '{name}, please create a vault first with dobbie init.',
         'Dobbie looked everywhere, {honorific}, but found no vault.',
     ],
     need_project: [
         'Dobbie needs to know which project, {honorific}.',
-        'Which project shall Dobbie work on, {honorific}?',
+        'Which project shall Dobbie work on, {name}?',
         'Please tell Dobbie which project, {honorific}.',
-        'Dobbie requires a project to be selected, {honorific}.',
+        'Dobbie requires a project to be selected, {name}.',
         '{honorific}, Dobbie needs a project to proceed.',
-        'Which project, {honorific}? Dobbie awaits your choice.',
+        'Which project, {name}? Dobbie awaits your choice.',
         'Dobbie cannot continue without knowing the project, {honorific}.',
     ],
     project_created: [
-        'Dobbie has created the project, {honorific}!',
+        'Dobbie has created the project, {name}!',
         'Project created successfully, {honorific}!',
-        'Your new project is ready, {honorific}!',
+        'Your new project is ready, {name}!',
         'Dobbie set up the project for you, {honorific}!',
-        'The project is now ready, {honorific}!',
+        'The project is now ready, {name}!',
         'Dobbie has prepared everything, {honorific}!',
-        'Project initialized, {honorific}! Ready to go!',
+        'Project initialized, {name}! Ready to go!',
     ],
     project_switched: [
         'Dobbie has switched to the project, {honorific}!',
-        'Now working on the project, {honorific}!',
+        'Now working on the project, {name}!',
         'Dobbie is ready to work on this project, {honorific}!',
-        'Switched successfully, {honorific}!',
+        'Switched successfully, {name}!',
         'Dobbie is now focused on this project, {honorific}!',
-        'Project changed, {honorific}! Dobbie is ready.',
+        'Project changed, {name}! Dobbie is ready.',
         'Dobbie has moved to the new project, {honorific}!',
     ],
     sync_start: [
         'Dobbie is syncing with GitHub, {honorific}...',
-        'Syncing everything now, {honorific}...',
+        'Syncing everything now, {name}...',
         'Dobbie is pushing to GitHub, {honorific}...',
-        'Starting sync, {honorific}...',
+        'Starting sync, {name}...',
         'Dobbie is connecting to GitHub, {honorific}...',
-        'Uploading changes, {honorific}...',
+        'Uploading changes, {name}...',
         'Dobbie is synchronizing, {honorific}...',
     ],
     sync_complete: [
@@ -172,162 +172,162 @@ const responses: Record<ResponseKey, string[]> = {
         'All synced up, {honorific}!',
         'GitHub sync complete, {name}!',
         'Everything is safely synced, {honorific}!',
-        'Sync successful, {honorific}!',
-        'Dobbie has pushed all changes, {name}!',
-        'Your work is backed up, {honorific}!',
+        'Sync successful, {name}!',
+        'Dobbie has pushed all changes, {honorific}!',
+        'Your work is backed up, {name}!',
     ],
     sync_error: [
         'Dobbie had trouble syncing, {honorific}.',
-        'The sync failed, {honorific}. Dobbie is sorry.',
+        'The sync failed, {name}. Dobbie is sorry.',
         'Dobbie could not complete the sync, {honorific}.',
-        'Sync encountered an error, {honorific}.',
+        'Sync encountered an error, {name}.',
         'GitHub rejected Dobbie, {honorific}. Something went wrong.',
-        'Dobbie failed to push, {honorific}.',
+        'Dobbie failed to push, {name}.',
         'There was a problem with the sync, {honorific}.',
     ],
     note_reviewing: [
         'Dobbie is reviewing your note, {honorific}...',
-        'Let Dobbie take a look at this, {honorific}...',
+        'Let Dobbie take a look at this, {name}...',
         'Dobbie is carefully reading this, {honorific}...',
-        'Reviewing now, {honorific}...',
+        'Reviewing now, {name}...',
         'Dobbie is examining your note, {honorific}...',
-        'Dobbie is studying this carefully, {honorific}...',
+        'Dobbie is studying this carefully, {name}...',
         'Reading through it now, {honorific}...',
     ],
     note_improved: [
-        'Dobbie has improved the note, {honorific}!',
+        'Dobbie has improved the note, {name}!',
         'The note is better now, {honorific}!',
-        'Dobbie has polished it up, {honorific}!',
+        'Dobbie has polished it up, {name}!',
         'Note enhanced, {honorific}!',
-        'Dobbie made it shine, {honorific}!',
+        'Dobbie made it shine, {name}!',
         'Improvements applied, {honorific}!',
-        'Dobbie has refined the note, {honorific}!',
+        'Dobbie has refined the note, {name}!',
     ],
     note_questions: [
-        'Dobbie has some questions about this, {honorific}:',
+        'Dobbie has some questions about this, {name}:',
         'Here are some things to consider, {honorific}:',
-        'Dobbie wonders about these points, {honorific}:',
+        'Dobbie wonders about these points, {name}:',
         'Some questions for you, {honorific}:',
-        'Dobbie is curious about these things, {honorific}:',
+        'Dobbie is curious about these things, {name}:',
         'These points need clarification, {honorific}:',
-        'Dobbie would like to ask, {honorific}:',
+        'Dobbie would like to ask, {name}:',
     ],
     note_modified: [
         'Dobbie has modified the note, {honorific}!',
-        'Changes applied, {honorific}!',
+        'Changes applied, {name}!',
         'The note has been updated, {honorific}!',
-        'Note modified successfully, {honorific}!',
+        'Note modified successfully, {name}!',
         'Dobbie has made the changes, {honorific}!',
-        'Updates complete, {honorific}!',
+        'Updates complete, {name}!',
         'Dobbie altered the note as requested, {honorific}!',
     ],
     note_formatted: [
         'Dobbie is formatting your note as markdown, {honorific}...',
-        'Making it look nice, {honorific}...',
+        'Making it look nice, {name}...',
         'Dobbie is tidying up the formatting, {honorific}...',
-        'Formatting now, {honorific}...',
+        'Formatting now, {name}...',
         'Dobbie is making it pretty, {honorific}...',
-        'Applying markdown formatting, {honorific}...',
+        'Applying markdown formatting, {name}...',
         'Dobbie is beautifying your note, {honorific}...',
     ],
     todo_breakdown: [
         'Dobbie is breaking down the task, {honorific}...',
-        'Let Dobbie split this into smaller pieces, {honorific}...',
+        'Let Dobbie split this into smaller pieces, {name}...',
         'Dobbie is creating subtasks, {honorific}...',
-        'Breaking it down now, {honorific}...',
+        'Breaking it down now, {name}...',
         'Dobbie is dividing the work, {honorific}...',
-        'Splitting into manageable parts, {honorific}...',
+        'Splitting into manageable parts, {name}...',
         'Dobbie is decomposing the task, {honorific}...',
     ],
     todo_clarified: [
-        'Dobbie has clarified the task, {honorific}!',
+        'Dobbie has clarified the task, {name}!',
         'The todo is clearer now, {honorific}!',
-        'Dobbie has made it more specific, {honorific}!',
+        'Dobbie has made it more specific, {name}!',
         'Task clarified, {honorific}!',
-        'Dobbie improved the description, {honorific}!',
+        'Dobbie improved the description, {name}!',
         'Much clearer now, {honorific}!',
-        'Dobbie has sharpened the details, {honorific}!',
+        'Dobbie has sharpened the details, {name}!',
     ],
     todo_estimated: [
         'Dobbie has analyzed the effort, {honorific}.',
-        'Here is Dobbie\'s estimate, {honorific}.',
+        'Here is Dobbie\'s estimate, {name}.',
         'Dobbie has assessed this task, {honorific}.',
-        'Estimation complete, {honorific}.',
+        'Estimation complete, {name}.',
         'Dobbie calculated the effort, {honorific}.',
-        'Here\'s what Dobbie thinks it will take, {honorific}.',
+        'Here\'s what Dobbie thinks it will take, {name}.',
         'Dobbie has evaluated the complexity, {honorific}.',
     ],
     todo_modified: [
-        'Dobbie has modified the todo, {honorific}!',
+        'Dobbie has modified the todo, {name}!',
         'Todo updated, {honorific}!',
-        'Changes applied to the todo, {honorific}!',
+        'Changes applied to the todo, {name}!',
         'Todo modified successfully, {honorific}!',
-        'Dobbie has updated the task, {honorific}!',
+        'Dobbie has updated the task, {name}!',
         'The todo has been changed, {honorific}!',
-        'Dobbie made the adjustments, {honorific}!',
+        'Dobbie made the adjustments, {name}!',
     ],
     event_clarified: [
         'Dobbie has clarified the event, {honorific}!',
-        'The event details are clearer now, {honorific}!',
+        'The event details are clearer now, {name}!',
         'Dobbie has improved the description, {honorific}!',
-        'Event clarified, {honorific}!',
+        'Event clarified, {name}!',
         'Dobbie enhanced the event details, {honorific}!',
-        'Much clearer now, {honorific}!',
+        'Much clearer now, {name}!',
         'Dobbie has sharpened the event info, {honorific}!',
     ],
     event_time_suggest: [
-        'Dobbie has some timing suggestions, {honorific}.',
+        'Dobbie has some timing suggestions, {name}.',
         'Here are Dobbie\'s thoughts on scheduling, {honorific}.',
-        'Dobbie analyzed the timing, {honorific}.',
+        'Dobbie analyzed the timing, {name}.',
         'Some scheduling ideas, {honorific}.',
-        'Dobbie has timing recommendations, {honorific}.',
+        'Dobbie has timing recommendations, {name}.',
         'Here\'s what Dobbie suggests for timing, {honorific}.',
-        'Dobbie considered the schedule, {honorific}.',
+        'Dobbie considered the schedule, {name}.',
     ],
     event_modified: [
         'Dobbie has modified the event, {honorific}!',
-        'Event updated, {honorific}!',
+        'Event updated, {name}!',
         'Changes applied to the event, {honorific}!',
-        'Event modified successfully, {honorific}!',
+        'Event modified successfully, {name}!',
         'Dobbie has updated the event, {honorific}!',
-        'The event has been changed, {honorific}!',
+        'The event has been changed, {name}!',
         'Dobbie made the adjustments, {honorific}!',
     ],
     inbox_empty: [
         'Inbox is empty, {honorific}. Nothing to process.',
-        'No items in the inbox, {honorific}!',
+        'No items in the inbox, {name}!',
         'The inbox is clear, {honorific}!',
-        'Nothing to process, {honorific}. Inbox is empty.',
+        'Nothing to process, {name}. Inbox is empty.',
         'Dobbie found nothing in the inbox, {honorific}.',
-        'All clear, {honorific}! No inbox items.',
+        'All clear, {name}! No inbox items.',
         'The inbox has no items, {honorific}.',
     ],
     inbox_processing: [
         'Dobbie is processing the inbox, {honorific}...',
-        'Let Dobbie sort through these, {honorific}...',
+        'Let Dobbie sort through these, {name}...',
         'Dobbie is organizing the inbox, {honorific}...',
-        'Processing inbox items, {honorific}...',
+        'Processing inbox items, {name}...',
         'Dobbie is categorizing everything, {honorific}...',
-        'Sorting through the inbox, {honorific}...',
+        'Sorting through the inbox, {name}...',
         'Dobbie is handling each item, {honorific}...',
     ],
     inbox_complete: [
-        'Dobbie has processed all inbox items, {honorific}!',
+        'Dobbie has processed all inbox items, {name}!',
         'Inbox cleared, {honorific}!',
-        'All items sorted, {honorific}!',
+        'All items sorted, {name}!',
         'Inbox processing complete, {honorific}!',
-        'Dobbie has organized everything, {honorific}!',
+        'Dobbie has organized everything, {name}!',
         'All items categorized, {honorific}!',
-        'Inbox is now empty, {honorific}!',
+        'Inbox is now empty, {name}!',
     ],
     remember_saved: [
         'Dobbie will remember that, {name}!',
         'Stored in memory, {honorific}!',
         'Dobbie has noted it down, {name}!',
         'Dobbie won\'t forget, {honorific}!',
-        'Committed to memory, {honorific}!',
-        'Dobbie has saved it, {name}!',
-        'Remembered, {honorific}!',
+        'Committed to memory, {name}!',
+        'Dobbie has saved it, {honorific}!',
+        'Remembered, {name}!',
     ],
     today_summary: [
         'Here\'s what Dobbie found for today, {name}.',
@@ -336,48 +336,48 @@ const responses: Record<ResponseKey, string[]> = {
         'Today\'s overview, {honorific}.',
         'Here is your day, {name}.',
         'Dobbie prepared today\'s summary, {honorific}.',
-        'What\'s ahead today, {honorific}:',
+        'What\'s ahead today, {name}:',
     ],
     config_show: [
         'Here is your configuration, {honorific}.',
-        'Dobbie\'s settings, {honorific}:',
+        'Dobbie\'s settings, {name}:',
         'Current configuration, {honorific}:',
-        'Your settings, {honorific}.',
+        'Your settings, {name}.',
         'Here are the configurations, {honorific}.',
-        'Dobbie\'s current setup, {honorific}:',
+        'Dobbie\'s current setup, {name}:',
         'Configuration details, {honorific}:',
     ],
     provider_added: [
-        'Dobbie has added the provider, {honorific}!',
+        'Dobbie has added the provider, {name}!',
         'Provider configured successfully, {honorific}!',
-        'The API key is saved, {honorific}!',
+        'The API key is saved, {name}!',
         'Provider added, {honorific}!',
-        'Dobbie has set up the provider, {honorific}!',
+        'Dobbie has set up the provider, {name}!',
         'Connection configured, {honorific}!',
-        'Provider is ready to use, {honorific}!',
+        'Provider is ready to use, {name}!',
     ],
     capability_set: [
         'Dobbie has set the capability, {honorific}!',
-        'Capability configured, {honorific}!',
+        'Capability configured, {name}!',
         'The model is now assigned, {honorific}!',
-        'Capability updated, {honorific}!',
+        'Capability updated, {name}!',
         'Dobbie has configured it, {honorific}!',
-        'Model assigned successfully, {honorific}!',
+        'Model assigned successfully, {name}!',
         'Capability is now active, {honorific}!',
     ],
     diagram_generating: [
         'Dobbie is generating a diagram, {honorific}...',
-        'Creating the diagram now, {honorific}...',
+        'Creating the diagram now, {name}...',
         'Dobbie is drawing this out, {honorific}...',
-        'Generating visualization, {honorific}...',
+        'Generating visualization, {name}...',
         'Dobbie is sketching the diagram, {honorific}...',
-        'Building the diagram, {honorific}...',
+        'Building the diagram, {name}...',
         'Dobbie is crafting a visual, {honorific}...',
     ],
     help_offer: [
         'Is there anything else Dobbie can help with, {name}?',
-        'Dobbie hopes this was helpful, {name}!',
-        'Let Dobbie know if you need anything else, {honorific}!',
+        'Dobbie hopes this was helpful, {honorific}!',
+        'Let Dobbie know if you need anything else, {name}!',
         'Dobbie is always happy to help, {honorific}!',
         'What else can Dobbie do for you, {name}?',
         'Dobbie remains at your service, {honorific}!',
@@ -385,8 +385,8 @@ const responses: Record<ResponseKey, string[]> = {
     ],
     startup_greeting: [
         '🧝 *yawns* Dobbie is awake and ready to serve, {name}!',
-        '🧝 Dobbie has polished his socks and is reporting for duty, {name}!',
-        '🧝 Systems online, {honorific}! Dobbie ran all the diagnostics twice... just to be safe.',
+        '🧝 Dobbie has polished his socks and is reporting for duty, {honorific}!',
+        '🧝 Systems online, {name}! Dobbie ran all the diagnostics twice... just to be safe.',
         '🧝 Dobbie is here, {name}! The socks are sorted and the quills are sharp!',
         '🧝 *cracks knuckles* Dobbie is warmed up and eager, {honorific}!',
         '🧝 Good day, {name}! Dobbie has been counting the seconds until your return.',
@@ -397,19 +397,78 @@ const responses: Record<ResponseKey, string[]> = {
     ],
     unknown_command: [
         'Dobbie does not know that spell, {honorific}. Perhaps try one of these?',
-        'Dobbie tilts his head... that is not a command Dobbie recognizes, {honorific}.',
+        'Dobbie tilts his head... that is not a command Dobbie recognizes, {name}.',
         'Dobbie checked all his scrolls — "{command}" is not among them, {honorific}.',
-        '*scratches ear* Dobbie is confused, {honorific}. Did you mean one of these?',
+        '*scratches ear* Dobbie is confused, {name}. Did you mean one of these?',
         'Dobbie has never heard of "{command}," {honorific}. Was it a sneeze?',
-        'That word is not in Dobbie\'s vocabulary, {honorific}. Try one of these!',
+        'That word is not in Dobbie\'s vocabulary, {name}. Try one of these!',
         'Dobbie squints at "{command}"... no, {honorific}, Dobbie cannot make sense of it.',
     ],
 };
 
-import { getUserName, getUserHonorific } from './state/manager.js';
+import os from 'os';
+import { getUserName, getUserGender } from './state/manager.js';
+
+// ── Honorific pools by gender ──────────────────────────────────────────────
+const HONORIFIC_POOLS: Record<string, string[]> = {
+    male: ['sir', 'boss', 'master', 'chief', 'captain', 'guv', 'my lord', 'good sir'],
+    female: ['ma\'am', 'miss', 'madam', 'my lady', 'boss', 'chief', 'mistress'],
+    other: ['boss', 'chief', 'captain', 'friend', 'guv', 'my liege', 'comrade'],
+};
+
+// ── Cached values for sync substitution ────────────────────────────────────
+let cachedName: string = os.userInfo().username || 'friend';
+let cachedHonorificPool: string[] = HONORIFIC_POOLS.other;
+let cacheLoaded = false;
+
+/** Pick a random honorific from the cached pool. */
+function randomHonorific(): string {
+    return cachedHonorificPool[Math.floor(Math.random() * cachedHonorificPool.length)];
+}
 
 /**
- * Get a random response for the given key (sync version, no substitutions).
+ * Pre-load the user's name and gender from state. Call once at startup.
+ * Safe to skip — falls back to OS username and neutral honorifics.
+ */
+export async function initResponseName(): Promise<void> {
+    if (cacheLoaded) return;
+    try {
+        cachedName = await getUserName();
+    } catch {
+        // keep OS fallback
+    }
+    try {
+        const gender = await getUserGender() || 'other';
+        cachedHonorificPool = HONORIFIC_POOLS[gender] || HONORIFIC_POOLS.other;
+    } catch {
+        // keep neutral pool
+    }
+    cacheLoaded = true;
+}
+
+/**
+ * Force refresh the cache (e.g. after saving new user settings).
+ */
+export async function refreshResponseCache(): Promise<void> {
+    cacheLoaded = false;
+    await initResponseName();
+}
+
+// Fire-and-forget on import — will resolve before most responses are needed
+initResponseName();
+
+/**
+ * Apply {name} and {honorific} substitution to a raw response string.
+ * {honorific} randomly picks from the gender pool each time.
+ */
+function substitute(raw: string): string {
+    return raw
+        .replace(/{name}/g, cachedName)
+        .replace(/{honorific}/g, randomHonorific());
+}
+
+/**
+ * Get a random response for the given key, with {name} and {honorific} auto-substituted.
  */
 export function getResponse(key: ResponseKey): string {
     const options = responses[key];
@@ -417,62 +476,26 @@ export function getResponse(key: ResponseKey): string {
         return '';
     }
     const index = Math.floor(Math.random() * options.length);
-    return options[index];
-}
-
-/**
- * Get a random response with {name} and {honorific} automatically substituted.
- * Use this for user-facing messages.
- */
-export async function getPersonalizedResponse(key: ResponseKey): Promise<string> {
-    let response = getResponse(key);
-    if (response.includes('{name}')) {
-        const name = await getUserName();
-        response = response.replace(/{name}/g, name);
-    }
-    if (response.includes('{honorific}')) {
-        const honorific = await getUserHonorific();
-        response = response.replace(/{honorific}/g, honorific);
-    }
-    return response;
+    return substitute(options[index]);
 }
 
 /**
  * Get a random response with custom placeholders replaced.
- * {honorific} is auto-injected if not explicitly provided.
+ * {name} and {honorific} are auto-substituted as well.
  * @param key Response key
  * @param replacements Object mapping placeholder names to values
  */
 export function getResponseWith(key: ResponseKey, replacements: Record<string, string>): string {
-    let response = getResponse(key);
+    const options = responses[key];
+    if (!options || options.length === 0) {
+        return '';
+    }
+    const index = Math.floor(Math.random() * options.length);
+    let response = options[index];
     for (const [placeholder, value] of Object.entries(replacements)) {
         response = response.replace(new RegExp(`\\{${placeholder}\\}`, 'g'), value);
     }
-    return response;
-}
-
-/**
- * Like getResponseWith but also auto-injects {name} and {honorific}.
- */
-export async function getPersonalizedResponseWith(key: ResponseKey, replacements: Record<string, string>): Promise<string> {
-    let response = getResponse(key);
-
-    // Apply explicit replacements first
-    for (const [placeholder, value] of Object.entries(replacements)) {
-        response = response.replace(new RegExp(`\\{${placeholder}\\}`, 'g'), value);
-    }
-
-    // Auto-inject name and honorific if still present
-    if (response.includes('{name}')) {
-        const name = await getUserName();
-        response = response.replace(/{name}/g, name);
-    }
-    if (response.includes('{honorific}')) {
-        const honorific = await getUserHonorific();
-        response = response.replace(/{honorific}/g, honorific);
-    }
-
-    return response;
+    return substitute(response);
 }
 
 export default responses;

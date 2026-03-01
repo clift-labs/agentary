@@ -30,6 +30,7 @@ import { ComparatorNodeCode } from './node-code/flow/comparator-node-code.js';
 import { ContextValueResultNodeCode } from './node-code/flow/context-value-result-node-code.js';
 import { ArrayIteratorNodeCode } from './node-code/flow/array-iterator-node-code.js';
 import { ThrowExceptionNodeCode } from './node-code/flow/throw-exception-node-code.js';
+import { SubProcessNodeCode } from './node-code/flow/sub-process-node-code.js';
 import { SetContextValueNodeCode } from './node-code/data/set-context-value-node-code.js';
 import { SetContextTableNodeCode } from './node-code/data/set-context-table-node-code.js';
 import { CalculationNodeCode } from './node-code/data/calculation-node-code.js';
@@ -66,6 +67,7 @@ import { FindEntityNodeCode } from './node-code/entity/find-entity-node-code.js'
 import { CreateEntityNodeCode } from './node-code/entity/create-entity-node-code.js';
 import { UpdateEntityNodeCode } from './node-code/entity/update-entity-node-code.js';
 import { DeleteEntityNodeCode } from './node-code/entity/delete-entity-node-code.js';
+import { CompleteEntityNodeCode } from './node-code/entity/complete-entity-node-code.js';
 import { SortEntitiesNodeCode } from './node-code/entity/sort-entities-node-code.js';
 import { LoadVaultContextNodeCode } from './node-code/entity/load-vault-context-node-code.js';
 
@@ -79,6 +81,10 @@ import { OutputCatalogSource } from './catalog/output-catalog-source.js';
 // System & output node codes
 import { CliCommandNodeCode } from './node-code/system/cli-command-node-code.js';
 import { DobbieSpeakNodeCode } from './node-code/output/dobbie-speak-node-code.js';
+
+// Input node codes
+import { PromptInputNodeCode } from './node-code/input/prompt-input-node-code.js';
+import { PromptSelectNodeCode } from './node-code/input/prompt-select-node-code.js';
 
 // Process sources
 import { JsonProcessSource } from './process/json-process-source.js';
@@ -96,6 +102,7 @@ function getBuiltInNodeCodes(): NodeCode[] {
         new ContextValueResultNodeCode(),
         new ArrayIteratorNodeCode(),
         new ThrowExceptionNodeCode(),
+        new SubProcessNodeCode(),
         // Data
         new SetContextValueNodeCode(),
         new SetContextTableNodeCode(),
@@ -130,11 +137,15 @@ function getBuiltInNodeCodes(): NodeCode[] {
         new CreateEntityNodeCode(),
         new UpdateEntityNodeCode(),
         new DeleteEntityNodeCode(),
+        new CompleteEntityNodeCode(),
         new SortEntitiesNodeCode(),
         new LoadVaultContextNodeCode(),
         // System & output
         new CliCommandNodeCode(),
         new DobbieSpeakNodeCode(),
+        // Input
+        new PromptInputNodeCode(),
+        new PromptSelectNodeCode(),
     ];
 }
 

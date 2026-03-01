@@ -136,6 +136,10 @@ export { SortEntitiesNodeCode } from './node-code/entity/sort-entities-node-code
 export type { TraceEntry, ProcessTrace, ProcessTraceCollector } from './trace/process-trace.js';
 export { DefaultProcessTraceCollector } from './trace/process-trace.js';
 
+// Input NodeCodes
+export { PromptInputNodeCode } from './node-code/input/prompt-input-node-code.js';
+export { PromptSelectNodeCode } from './node-code/input/prompt-select-node-code.js';
+
 // Slack SDK (re-export sub-module)
 export * as Slack from './slack/index.js';
 

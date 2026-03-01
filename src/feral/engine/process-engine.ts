@@ -7,8 +7,7 @@ import type { Catalog } from '../catalog/catalog.js';
 import type { NodeCodeFactory } from '../node-code/node-code-factory.js';
 import type { NodeCode } from '../node-code/node-code.js';
 import type { ConfigurationDescription } from '../configuration/configuration-description.js';
-import type { ConfigurationValue } from '../configuration/configuration-value.js';
-import { ConfigurationValueType } from '../configuration/configuration-value.js';
+import { type ConfigurationValue, ConfigurationValueType } from '../configuration/configuration-value.js';
 import type { Context } from '../context/context.js';
 import type { Result } from '../result/result.js';
 import { ResultStatus } from '../result/result.js';
@@ -98,23 +97,30 @@ export class ProcessEngine {
             }
         }
 
-        // Validate keys from catalog & process config
+        // Validate keys from catalog & process config (unless node allows extras)
         const validKeys = new Set(configValues.keys());
-        for (const k of Object.keys(catalogNode.configuration)) {
-            if (!validKeys.has(k)) {
-                throw new Error(`Catalog config key "${k}" invalid for node "${catalogNode.key}". Valid: ${[...validKeys].join(', ')}`);
+        if (!nodeCode.allowExtraConfig) {
+            for (const k of Object.keys(catalogNode.configuration)) {
+                if (!validKeys.has(k)) {
+                    throw new Error(`Catalog config key "${k}" invalid for node "${catalogNode.key}". Valid: ${[...validKeys].join(', ')}`);
+                }
             }
-        }
-        for (const k of Object.keys(node.configuration)) {
-            if (!validKeys.has(k)) {
-                throw new Error(`Process config key "${k}" invalid for node "${node.key}". Valid: ${[...validKeys].join(', ')}`);
+            for (const k of Object.keys(node.configuration)) {
+                if (!validKeys.has(k)) {
+                    throw new Error(`Process config key "${k}" invalid for node "${node.key}". Valid: ${[...validKeys].join(', ')}`);
+                }
             }
         }
 
         // Merge: catalog config, then process node config overrides
         const merged = { ...catalogNode.configuration, ...node.configuration };
         for (const [k, v] of Object.entries(merged)) {
-            const cv = configValues.get(k)!;
+            let cv = configValues.get(k);
+            if (!cv) {
+                // Extra key allowed by allowExtraConfig — create an OPTIONAL entry
+                cv = { key: k, type: ConfigurationValueType.OPTIONAL };
+                configValues.set(k, cv);
+            }
             configValues.set(k, { ...cv, value: v });
             requiredKeys.delete(k);
         }

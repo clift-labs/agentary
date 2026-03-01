@@ -43,7 +43,7 @@ export interface IndexStats {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ALL_ENTITY_TYPES: EntityTypeName[] = [
-    'note', 'task', 'event', 'research', 'goal', 'recurrence', 'person',
+    'note', 'task', 'event', 'research', 'goal', 'recurrence', 'person', 'todont',
 ];
 
 const DIR_MAP: Record<EntityTypeName, string> = {
@@ -54,6 +54,7 @@ const DIR_MAP: Record<EntityTypeName, string> = {
     goal: 'goals',
     recurrence: 'recurrences',
     person: 'people',
+    todont: 'todonts',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -170,7 +171,9 @@ export class EntityIndex {
         }
 
         this._builtAt = new Date();
-        debug('index', `Built index: ${this.nodes.size} nodes, ${this.edges.length} edges`);
+        if (process.env.DOBBIE_DEBUG === '1') {
+            console.debug(`[index] Built index: ${this.nodes.size} nodes, ${this.edges.length} edges`);
+        }
     }
 
     /**

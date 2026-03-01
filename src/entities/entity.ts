@@ -13,7 +13,7 @@ import { getVaultRoot, getActiveProject } from '../state/manager.js';
 // SHARED TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EntityTypeName = 'note' | 'task' | 'event' | 'research' | 'goal' | 'recurrence' | 'person';
+export type EntityTypeName = 'note' | 'task' | 'event' | 'research' | 'goal' | 'recurrence' | 'person' | 'todont';
 
 export type TaskStatus = 'open' | 'in-progress' | 'done' | 'blocked';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -181,6 +181,7 @@ export async function getEntityDir(entityType: EntityTypeName): Promise<string> 
         goal: 'goals',
         recurrence: 'recurrences',
         person: 'people',
+        todont: 'todonts',
     };
     return path.join(vaultRoot, 'projects', project, dirMap[entityType]);
 }

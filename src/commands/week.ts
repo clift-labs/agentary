@@ -6,6 +6,7 @@ import { getActiveProject, getVaultRoot } from '../state/manager.js';
 import { parseEntity } from '../entities/entity.js';
 import { debug } from '../utils/debug.js';
 import { getResponse } from '../responses.js';
+import { isTodontActive } from './todont.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -13,7 +14,7 @@ import { getResponse } from '../responses.js';
 
 interface DayItem {
     title: string;
-    type: 'todo' | 'event';
+    type: 'todo' | 'event' | 'todont';
     time?: string;        // HH:mm for events
     status?: string;
     priority?: string;
@@ -146,7 +147,23 @@ async function populateItems(days: DayColumn[]): Promise<void> {
         }
     }
 
-    // Sort items: events with time first (sorted by time), then todos
+    // Scan todonts — active for any day in the range
+    if (project) {
+        const todontDir = path.join(vaultRoot, 'projects', project, 'todonts');
+        const entities = await scanDir(todontDir);
+        for (const { meta } of entities) {
+            for (const day of days) {
+                if (isTodontActive(meta, day.date)) {
+                    day.items.push({
+                        title: (meta.title as string) || 'Untitled',
+                        type: 'todont',
+                    });
+                }
+            }
+        }
+    }
+
+    // Sort items: events with time first (sorted by time), then todos, then todonts
     for (const day of days) {
         day.items.sort((a, b) => {
             if (a.type === 'event' && b.type === 'event') {
@@ -154,6 +171,8 @@ async function populateItems(days: DayColumn[]): Promise<void> {
             }
             if (a.type === 'event') return -1;
             if (b.type === 'event') return 1;
+            if (a.type === 'todont' && b.type !== 'todont') return 1;
+            if (b.type === 'todont' && a.type !== 'todont') return -1;
             return 0;
         });
     }
@@ -166,6 +185,7 @@ async function populateItems(days: DayColumn[]): Promise<void> {
 const BOX_WIDTH = 24;
 
 function statusIcon(item: DayItem): string {
+    if (item.type === 'todont') return '🚫';
     if (item.type === 'event') return '📅';
     if (item.status === 'done') return '✅';
     if (item.status === 'in-progress') return '🔧';
@@ -288,8 +308,11 @@ export const weekCommand = new Command('week')
             // Summary
             const totalItems = days.reduce((sum, d) => sum + d.items.length, 0);
             const totalEvents = days.reduce((sum, d) => sum + d.items.filter(i => i.type === 'event').length, 0);
-            const totalTodos = totalItems - totalEvents;
-            console.log(chalk.dim(`\n  ${totalItems} items: ${totalTodos} todos, ${totalEvents} events\n`));
+            const totalTodonts = days.reduce((sum, d) => sum + d.items.filter(i => i.type === 'todont').length, 0);
+            const totalTodos = totalItems - totalEvents - totalTodonts;
+            const parts = [`${totalTodos} todos`, `${totalEvents} events`];
+            if (totalTodonts > 0) parts.push(`${totalTodonts} todonts`);
+            console.log(chalk.dim(`\n  ${totalItems} items: ${parts.join(', ')}\n`));
 
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error instanceof Error ? error.message : error);

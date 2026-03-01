@@ -15,13 +15,18 @@ const NOT_FOUND = 'not_found';
 
 export class UpdateEntityNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
-        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to update (task, note, event, research, goal).', type: 'string' },
+        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to update (task, note, event, research, goal, todont).', type: 'string' },
+        { key: 'entity_title', name: 'Entity Title', description: 'Title of the entity to update. Supports {context_key} interpolation. Sets "title" in context.', type: 'string', isOptional: true },
+        { key: 'entity_body', name: 'Entity Body', description: 'New body/content for the entity. Supports {context_key} interpolation. Sets "content" in context.', type: 'string', isOptional: true },
         { key: 'patch_fields', name: 'Patch Fields', description: 'Comma-separated context keys to merge into entity metadata (e.g. status,priority,dueDate).', type: 'string', default: '', isOptional: true },
     ];
     static readonly resultDescriptions: ResultDescription[] = [
         { status: ResultStatus.OK, description: 'Entity updated successfully.' },
         { status: NOT_FOUND, description: 'Entity not found.' },
     ];
+
+    /** Accept any extra config keys that match patch field names */
+    get allowExtraConfig(): boolean { return true; }
 
     constructor() {
         super('update_entity', 'Update Entity', 'Updates an existing entity by title.', NodeCodeCategory.DATA);
@@ -30,6 +35,28 @@ export class UpdateEntityNodeCode extends AbstractNodeCode {
     async process(context: Context): Promise<Result> {
         const entityType = this.getRequiredConfigValue('entity_type') as EntityTypeName;
         const patchFieldsStr = this.getOptionalConfigValue('patch_fields', '') as string;
+
+        // Bridge config → context: if entity_title/entity_body are set in config,
+        // interpolate and write them into context so the rest of the logic works.
+        const configTitle = this.getOptionalConfigValue('entity_title') as string | null;
+        const configBody = this.getOptionalConfigValue('entity_body') as string | null;
+        if (configTitle) {
+            context.set('title', this.interpolate(configTitle, context));
+        }
+        if (configBody) {
+            context.set('content', this.interpolate(configBody, context));
+        }
+
+        // Bridge patch field values from config → context
+        // e.g. config has patch_fields="status" and status="complete"
+        if (patchFieldsStr) {
+            for (const field of patchFieldsStr.split(',').map(f => f.trim()).filter(Boolean)) {
+                const configVal = this.getOptionalConfigValue(field) as string | null;
+                if (configVal && context.get(field) === undefined) {
+                    context.set(field, this.interpolate(configVal, context));
+                }
+            }
+        }
 
         const title = context.get('title') as string;
         if (!title) {
@@ -45,7 +72,7 @@ export class UpdateEntityNodeCode extends AbstractNodeCode {
 
         // Merge content if provided
         const newContent = context.get('content') as string | undefined;
-        const content = newContent !== undefined ? newContent : found.content;
+        const content = newContent !== undefined ? newContent : (found.content ?? '');
 
         // Merge patch fields from context into existing metadata
         if (patchFieldsStr) {
@@ -77,5 +104,14 @@ export class UpdateEntityNodeCode extends AbstractNodeCode {
         }
 
         return this.result(ResultStatus.OK, `Updated ${entityType} "${title}".`);
+    }
+
+    /**
+     * Replace {key} tokens in a template with context values.
+     */
+    private interpolate(template: string, context: Context): string {
+        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
+            return String(context.get(key) ?? '');
+        });
     }
 }

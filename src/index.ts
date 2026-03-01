@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+// Import service module — its own `if (DOBBIE_SERVICE)` guard starts
+// the daemon when re-spawned with that env var.
+import './service/index.js';
+
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { todayCommand } from './commands/today.js';
@@ -13,6 +17,7 @@ import { noteCommand } from './commands/note.js';
 import { todoCommand } from './commands/todo.js';
 import { eventCommand } from './commands/event.js';
 import { researchCommand } from './commands/research.js';
+import { goalCommand } from './commands/goal.js';
 import { recurrenceCommand } from './commands/recurrence.js';
 import { personCommand } from './commands/person.js';
 import { inboxCommand } from './commands/inbox.js';
@@ -20,16 +25,22 @@ import { serviceCommand, queueCommand, indexCommand } from './commands/service.j
 import { createShellCommand } from './commands/shell.js';
 import { feralCommand } from './commands/feral.js';
 import { interviewCommand } from './commands/interview.js';
+import { todontCommand } from './commands/todont.js';
+import { setupCommand } from './commands/setup.js';
 import { timeCommand } from './commands/time.js';
 import { listServiceTools, getServiceTool } from './tools/index.js';
 import { bootstrapFeral } from './feral/bootstrap.js';
+
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json');
 
 export const program = new Command();
 
 program
   .name('dobbie')
   .description(chalk.cyan('🧝 Dobbie - Your helpful AI notes assistant'))
-  .version('3.0.0');
+  .version(pkg.version);
 
 // Register commands
 program.addCommand(initCommand);
@@ -43,8 +54,10 @@ program.addCommand(noteCommand);
 program.addCommand(todoCommand);
 program.addCommand(eventCommand);
 program.addCommand(researchCommand);
+program.addCommand(goalCommand);
 program.addCommand(recurrenceCommand);
 program.addCommand(personCommand);
+program.addCommand(todontCommand);
 program.addCommand(inboxCommand);
 program.addCommand(serviceCommand);
 program.addCommand(queueCommand);
@@ -52,6 +65,7 @@ program.addCommand(indexCommand);
 program.addCommand(feralCommand);
 program.addCommand(interviewCommand);
 program.addCommand(timeCommand);
+program.addCommand(setupCommand);
 program.addCommand(createShellCommand(program));
 
 // Tool command - run any registered tool
@@ -136,4 +150,8 @@ program
     await program.parseAsync(['node', 'dobbie', 'shell']);
   });
 
-program.parse();
+// In service daemon mode, service/index.ts already started the server —
+// skip Commander parsing so we don't print help text or launch the shell.
+if (process.env.DOBBIE_SERVICE !== '1') {
+  program.parse();
+}

@@ -8,6 +8,7 @@ import { getContextString } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
+import { getActiveTodonts } from './todont.js';
 
 export const todayCommand = new Command('today')
     .description('Show daily todos and notes')
@@ -72,6 +73,15 @@ export const todayCommand = new Command('today')
                 }
             }
 
+            // Gather active todonts
+            const activeTodonts = await getActiveTodonts(today);
+            let todontSection = '';
+            for (const t of activeTodonts) {
+                const window = t.startDate && t.endDate ? ` (${t.startDate} → ${t.endDate})` : '';
+                todontSection += `- 🚫 ${t.title}${window}\n`;
+                if (t.content) todontSection += `  ${t.content}\n`;
+            }
+
             spinner.stop();
 
             // Display header
@@ -102,7 +112,9 @@ ${schedule || '(No scheduled events)'}
 
 ${activeProject ? `Project "${activeProject}" Todos:\n${projectTodos || '(No project todos)'}\n` : ''}
 
-Provide a prioritized summary of what the user should focus on today.`;
+${todontSection ? `🚫 Things to AVOID today:\n${todontSection}` : ''}
+
+Provide a prioritized summary of what the user should focus on today. If there are todonts (things to avoid), remind the user about them.`;
 
                 const spinner2 = ora(getResponse('thinking')).start();
                 const response = await llm.chat(
@@ -125,6 +137,15 @@ Provide a prioritized summary of what the user should focus on today.`;
                 if (projectTodos) {
                     console.log(chalk.bold(`📁 ${activeProject} Todos:`));
                     console.log(projectTodos);
+                }
+
+                if (activeTodonts.length > 0) {
+                    console.log(chalk.bold.red('🚫 Todonts (avoid today):'));
+                    for (const t of activeTodonts) {
+                        const window = t.startDate && t.endDate ? chalk.gray(` ${t.startDate} → ${t.endDate}`) : chalk.gray(' always');
+                        console.log(`  🚫 ${chalk.red(t.title)}${window}`);
+                    }
+                    console.log('');
                 }
 
                 console.log(chalk.gray('\n(Configure AI with `dobbie config add-provider claude` for smart summaries)'));

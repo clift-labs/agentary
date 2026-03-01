@@ -9,7 +9,6 @@ import type { ConfigurationDescription, ResultDescription } from '../../configur
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
 import { getResponseWith, type ResponseKey } from '../../../responses.js';
-import { getUserName, getUserHonorific } from '../../../state/manager.js';
 
 export class DobbieSpeakNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
@@ -32,20 +31,9 @@ export class DobbieSpeakNodeCode extends AbstractNodeCode {
         const extraTokens = this.getOptionalConfigValue('extra_tokens', '') as string;
 
         try {
-            // Build replacement map
+            // {name} is auto-substituted by getResponseWith
+            // Build replacement map for any extra tokens
             const replacements: Record<string, string> = {};
-
-            // Auto-inject name and honorific
-            try {
-                replacements.name = await getUserName() || 'friend';
-            } catch {
-                replacements.name = 'friend';
-            }
-            try {
-                replacements.honorific = await getUserHonorific() || 'sir';
-            } catch {
-                replacements.honorific = 'sir';
-            }
 
             // Parse extra_tokens: "title=entity_title,count=item_count"
             if (extraTokens) {

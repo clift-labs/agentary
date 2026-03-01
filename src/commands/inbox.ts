@@ -4,7 +4,7 @@ import inquirer from 'inquirer';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { requireProject, getVaultRoot } from '../state/manager.js';
-import { getPersonalizedResponse } from '../responses.js';
+import { getResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
 import { bootstrapFeral } from '../feral/bootstrap.js';
 import type { Context } from '../feral/context/context.js';
@@ -143,7 +143,7 @@ export const inboxCommand = new Command('inbox')
                         const ext = path.extname(content);
                         const destPath = path.join(inboxDir, `${today}-${timestamp}${ext}`);
                         await fs.copyFile(content, destPath);
-                        const msg = await getPersonalizedResponse('task_saved');
+                        const msg = getResponse('task_saved');
                         console.log(chalk.green(`\n${msg}`));
                         console.log(chalk.gray(`  Added file to inbox: ${path.basename(destPath)}`));
                         return;
@@ -155,7 +155,7 @@ export const inboxCommand = new Command('inbox')
                 // Add as text file
                 const textPath = path.join(inboxDir, `${today}-${timestamp}.txt`);
                 await fs.writeFile(textPath, content);
-                const msg = await getPersonalizedResponse('task_saved');
+                const msg = getResponse('task_saved');
                 console.log(chalk.green(`\n${msg}`));
                 console.log(chalk.gray(`  Added text to inbox: ${path.basename(textPath)}`));
                 return;
@@ -165,7 +165,7 @@ export const inboxCommand = new Command('inbox')
             const items = await listInboxItems(project);
 
             if (items.length === 0) {
-                const msg = await getPersonalizedResponse('inbox_empty');
+                const msg = getResponse('inbox_empty');
                 console.log(chalk.gray(`\n📥 ${msg}`));
                 console.log(chalk.gray('\nTo add items:'));
                 console.log(chalk.gray('  dobbie inbox add "Remember to call mom"'));
@@ -173,7 +173,7 @@ export const inboxCommand = new Command('inbox')
                 return;
             }
 
-            const processingMsg = await getPersonalizedResponse('inbox_processing');
+            const processingMsg = getResponse('inbox_processing');
             console.log(chalk.cyan(`\n📥 ${processingMsg}`));
             console.log(chalk.gray(`   ${items.length} file(s) found in inbox\n`));
 
@@ -214,12 +214,12 @@ export const inboxCommand = new Command('inbox')
                 }
             }
 
-            const doneMsg = await getPersonalizedResponse('inbox_complete');
+            const doneMsg = getResponse('inbox_complete');
             console.log(chalk.cyan(`\n✓ ${doneMsg}`));
             console.log(chalk.gray(`   ${totalEntities} entities created${skippedFiles > 0 ? `, ${skippedFiles} files skipped` : ''}`));
 
         } catch (error) {
-            const errMsg = await getPersonalizedResponse('error');
+            const errMsg = getResponse('error');
             console.error(chalk.red(`\n${errMsg}`), error);
         }
     });

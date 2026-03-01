@@ -20,6 +20,9 @@ export interface NodeCode {
     readonly description: string;
     readonly categoryKey: NodeCodeCategoryValue;
 
+    /** When true, skip strict config key validation (allows dynamic keys) */
+    readonly allowExtraConfig?: boolean;
+
     /** Merge configuration values into this node code */
     addConfiguration(values: ConfigurationValue[]): void;
 

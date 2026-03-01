@@ -123,11 +123,40 @@ export async function setUserName(name: string): Promise<void> {
 }
 
 /**
- * Gets the user's preferred honorific, falling back to 'sir'.
+ * Honorific pools by gender — Dobbie picks randomly from these each time.
+ */
+const HONORIFIC_POOLS: Record<string, string[]> = {
+    male: ['sir', 'boss', 'master', 'chief', 'captain', 'guv', 'my lord', 'good sir'],
+    female: ['ma\'am', 'miss', 'madam', 'my lady', 'boss', 'chief', 'mistress'],
+    other: ['boss', 'chief', 'captain', 'friend', 'guv', 'my liege', 'comrade'],
+};
+
+/**
+ * Gets a random honorific from the user's gender pool.
+ * Falls back to 'friend' if gender isn't set.
  */
 export async function getUserHonorific(): Promise<string> {
     const state = await loadState();
-    return state.honorific || 'sir';
+    const gender = state.gender || 'other';
+    const pool = HONORIFIC_POOLS[gender] || HONORIFIC_POOLS.other;
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * Gets the user's gender from state.
+ */
+export async function getUserGender(): Promise<string | undefined> {
+    const state = await loadState();
+    return state.gender;
+}
+
+/**
+ * Sets the user's gender in state.
+ */
+export async function setUserGender(gender: 'male' | 'female' | 'other'): Promise<void> {
+    const state = await loadState();
+    state.gender = gender;
+    await saveState(state);
 }
 
 /**
@@ -143,7 +172,8 @@ export async function isInterviewComplete(): Promise<boolean> {
  */
 export async function saveProfile(profile: {
     userName: string;
-    honorific: string;
+    honorific?: string;
+    gender?: 'male' | 'female' | 'other';
     workType?: string;
     familySituation?: string;
     hasCar?: boolean;
@@ -152,7 +182,8 @@ export async function saveProfile(profile: {
 }): Promise<void> {
     const state = await loadState();
     state.userName = profile.userName;
-    state.honorific = profile.honorific;
+    if (profile.honorific) state.honorific = profile.honorific;
+    if (profile.gender) state.gender = profile.gender;
     state.workType = profile.workType;
     state.familySituation = profile.familySituation;
     state.hasCar = profile.hasCar;

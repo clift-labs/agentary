@@ -7,7 +7,7 @@ import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getEnrichedContext } from '../context/reader.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
-import { getResponse, getPersonalizedResponse } from '../responses.js';
+import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, eventHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
@@ -456,7 +456,7 @@ export const eventCommand = new Command('event')
                             },
                         ]);
                         if (quitConfirm) {
-                            console.log(chalk.yellow(await getPersonalizedResponse('farewell')));
+                            console.log(chalk.yellow(getResponse('farewell')));
                             process.exit(42);
                         }
                         break;

@@ -7,15 +7,17 @@ import { requireProject, getVaultRoot } from '../state/manager.js';
 /**
  * Supported entity types and their corresponding subdirectory names.
  */
-export type EntityType = 'notes' | 'todos' | 'events' | 'research' | 'recurrences' | 'people';
+export type EntityType = 'notes' | 'todos' | 'events' | 'research' | 'goals' | 'recurrences' | 'people' | 'todonts';
 
 const ENTITY_ICONS: Record<EntityType, string> = {
     notes: '📝',
     todos: '✅',
     events: '📅',
     research: '📚',
+    goals: '🎯',
     recurrences: '🔄',
     people: '👤',
+    todonts: '🚫',
 };
 
 /**
@@ -66,6 +68,9 @@ export async function listEntities(entityType: EntityType, project?: string): Pr
             break;
         case 'people':
             printPeople(items);
+            break;
+        case 'todonts':
+            printTodonts(items);
             break;
         default:
             // notes & research share the same simple layout
@@ -154,6 +159,30 @@ function printPeople(items: { file: string; data: Record<string, any> }[]): void
             (company ? chalk.gray(`  🏢 ${company}`) : '') +
             (handle ? chalk.cyan(`  @${handle}`) : '') +
             (email ? chalk.gray(`  ✉ ${email}`) : ''),
+        );
+    }
+}
+
+function printTodonts(items: { file: string; data: Record<string, any> }[]): void {
+    const today = new Date().toISOString().split('T')[0];
+    for (const { file, data } of items) {
+        const title = data.title ?? file.replace('.md', '');
+        const start = data.startDate as string | undefined;
+        const end = data.endDate as string | undefined;
+
+        // Determine if active
+        let active = true;
+        if (start && today < start) active = false;
+        if (end && today > end) active = false;
+
+        const icon = active ? '🚫' : '⏸️';
+        let window = chalk.gray('always');
+        if (start && end) window = chalk.gray(`${start} → ${end}`);
+        else if (start) window = chalk.gray(`from ${start}`);
+        else if (end) window = chalk.gray(`until ${end}`);
+
+        console.log(
+            `  ${icon} ${active ? chalk.bold.red(title) : chalk.gray(title)}  ${window}`,
         );
     }
 }

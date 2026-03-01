@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import path from 'path';
 import { requireProject, getVaultRoot } from '../state/manager.js';
-import { getPersonalizedResponse } from '../responses.js';
+import { getResponse } from '../responses.js';
 import {
     slugify,
     createEntityMeta,
@@ -236,12 +236,12 @@ export const personCommand = new Command('person')
             };
 
             const filepath = await savePerson(state);
-            const msg = await getPersonalizedResponse('task_saved');
+            const msg = getResponse('task_saved');
             console.log(chalk.green(`\n${msg}`));
             console.log(chalk.gray(`  👤 ${personName} → ${path.basename(filepath)}`));
 
         } catch (error) {
-            const errMsg = await getPersonalizedResponse('error');
+            const errMsg = getResponse('error');
             console.error(chalk.red(`\n${errMsg}`), error);
         }
     });

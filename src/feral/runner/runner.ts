@@ -22,6 +22,10 @@ export class Runner {
             context.set(k, v);
         }
 
+        // Inject engine & factory so SubProcessNodeCode can call sub-processes
+        context.set('__process_engine', this.engine);
+        context.set('__process_factory', this.processFactory);
+
         const process = this.processFactory.build(processKey);
         await this.engine.process(process, context);
         return context;

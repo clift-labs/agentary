@@ -27,7 +27,9 @@ const ALREADY_EXISTS = 'already_exists';
 
 export class CreateEntityNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
-        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to create (task, note, event, research, goal).', type: 'string' },
+        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to create (task, note, event, research, goal, todont).', type: 'string' },
+        { key: 'entity_title', name: 'Entity Title', description: 'Title for the entity. Supports {context_key} interpolation. Sets "title" in context.', type: 'string', isOptional: true },
+        { key: 'entity_body', name: 'Entity Body', description: 'Body/content for the entity. Supports {context_key} interpolation. Sets "content" in context.', type: 'string', isOptional: true },
         { key: 'extra_fields', name: 'Extra Fields', description: 'Comma-separated list of extra context keys to include in metadata (e.g. status,priority,dueDate).', type: 'string', default: '', isOptional: true },
     ];
     static readonly resultDescriptions: ResultDescription[] = [
@@ -43,6 +45,17 @@ export class CreateEntityNodeCode extends AbstractNodeCode {
     async process(context: Context): Promise<Result> {
         const entityType = this.getRequiredConfigValue('entity_type') as EntityTypeName;
         const extraFieldsStr = this.getOptionalConfigValue('extra_fields', '') as string;
+
+        // Bridge config → context: if entity_title/entity_body are set in config,
+        // interpolate and write them into context so the rest of the logic works.
+        const configTitle = this.getOptionalConfigValue('entity_title') as string | null;
+        const configBody = this.getOptionalConfigValue('entity_body') as string | null;
+        if (configTitle) {
+            context.set('title', this.interpolate(configTitle, context));
+        }
+        if (configBody) {
+            context.set('content', this.interpolate(configBody, context));
+        }
 
         const title = context.get('title') as string;
         if (!title) {
@@ -96,5 +109,14 @@ export class CreateEntityNodeCode extends AbstractNodeCode {
         }
 
         return this.result(ResultStatus.OK, `Created ${entityType} "${title}" at ${filepath}.`);
+    }
+
+    /**
+     * Replace {key} tokens in a template with context values.
+     */
+    private interpolate(template: string, context: Context): string {
+        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
+            return String(context.get(key) ?? '');
+        });
     }
 }

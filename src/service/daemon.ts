@@ -109,29 +109,17 @@ export async function startDaemon(): Promise<DaemonStatus> {
         // Ignore
     }
 
-    // Start the service process
-    // In SEA binary mode, re-invoke ourselves; in dev mode, use node + script path
-    const isSEA = !process.execPath.endsWith('node') && !process.execPath.endsWith('node.exe');
+    // Start the service process.
+    // DOBBIE_SERVICE=1 triggers `service/index.ts` to boot the daemon.
+    const entryScript = path.join(import.meta.dirname, '..', 'index.js');
 
     const logStream = await fs.open(LOG_FILE, 'a');
 
-    let child: ChildProcess;
-    if (isSEA) {
-        // SEA binary: re-spawn the same executable
-        child = spawn(process.execPath, ['service', '_run'], {
-            detached: true,
-            stdio: ['ignore', logStream.fd, logStream.fd],
-            env: { ...process.env, DOBBIE_SERVICE: '1' },
-        });
-    } else {
-        // Dev mode: invoke node with the service entry point
-        const serviceScript = path.join(import.meta.dirname, 'index.js');
-        child = spawn('node', [serviceScript], {
-            detached: true,
-            stdio: ['ignore', logStream.fd, logStream.fd],
-            env: { ...process.env, DOBBIE_SERVICE: '1' },
-        });
-    }
+    const child = spawn('node', [entryScript], {
+        detached: true,
+        stdio: ['ignore', logStream.fd, logStream.fd],
+        env: { ...process.env, DOBBIE_SERVICE: '1' },
+    });
 
     child.unref();
 

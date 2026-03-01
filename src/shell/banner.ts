@@ -8,7 +8,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-import { getPersonalizedResponse } from '../responses.js';
+import { getResponse } from '../responses.js';
 import { getDaemonStatus } from '../service/daemon.js';
 import { findVaultRoot, getActiveProject } from '../state/manager.js';
 
@@ -58,7 +58,7 @@ export async function printStartupBanner(): Promise<void> {
     // Kick off everything in parallel
     const [art, greeting, state] = await Promise.all([
         loadAsciiArt(),
-        getPersonalizedResponse('startup_greeting'),
+        Promise.resolve(getResponse('startup_greeting')),
         gatherState(),
     ]);
 

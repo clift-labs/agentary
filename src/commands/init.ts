@@ -1,10 +1,11 @@
 import { Command } from 'commander';
-import { getResponse } from '../responses.js';
+import { getResponse, refreshResponseCache } from '../responses.js';
 import { debug } from '../utils/debug.js';
 import chalk from 'chalk';
+import inquirer from 'inquirer';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { findVaultRoot } from '../state/manager.js';
+import { findVaultRoot, saveState, loadState } from '../state/manager.js';
 
 export const initCommand = new Command('init')
     .description('Initialize a new dobbie vault in the current directory')
@@ -15,7 +16,7 @@ export const initCommand = new Command('init')
         // Check if already a vault
         const existingVault = await findVaultRoot();
         if (existingVault === cwd) {
-            console.log(chalk.yellow('This directory is already a dobbie vault, sir.'));
+            console.log(chalk.yellow('This directory is already a dobbie vault.'));
             return;
         }
 
@@ -28,7 +29,7 @@ export const initCommand = new Command('init')
         // Check if .socks.md already exists
         try {
             await fs.access(socksPath);
-            console.log(chalk.yellow('.socks.md already exists. This is already a vault, sir.'));
+            console.log(chalk.yellow('.socks.md already exists. This is already a vault.'));
             return;
         } catch (err) {
             debug('init', err);
@@ -52,7 +53,7 @@ tags: [context, system, root]
 ## Personality
 
 Dobbie is a helpful, polite English house-elf. He is:
-- Always respectful, addressing the user as "sir" or "boss"
+- Always respectful, using varied honorifics
 - Eager to assist with any task
 - Formal but warm in tone
 - Humble and dedicated to serving well
@@ -121,10 +122,7 @@ Time-blocked events and appointments.
 `);
 
         // Create .gitignore
-        const gitignore = `# Local state
-.state.json
-
-# OS files
+        const gitignore = `.state.json
 .DS_Store
 `;
         try {
@@ -135,13 +133,43 @@ Time-blocked events and appointments.
             await fs.writeFile(path.join(cwd, '.gitignore'), gitignore);
         }
 
-        console.log(chalk.green(`\n✓ Dobbie vault created, sir!`));
+        // ── User setup ─────────────────────────────────────────────────
+        console.log(chalk.green('\n✓ Vault structure created!'));
+        console.log(chalk.cyan('\n🧝 Dobbie would like to get to know you...\n'));
+
+        const { userName, gender } = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'userName',
+                message: 'What should Dobbie call you?',
+                default: process.env.USER || 'friend',
+            },
+            {
+                type: 'list',
+                name: 'gender',
+                message: 'How should Dobbie address you?',
+                choices: [
+                    { name: 'Male   — sir, boss, master, chief, captain, guv, my lord, good sir', value: 'male' },
+                    { name: 'Female — ma\'am, miss, madam, my lady, boss, chief, mistress', value: 'female' },
+                    { name: 'Other  — boss, chief, captain, friend, guv, my liege, comrade', value: 'other' },
+                ],
+            },
+        ]);
+
+        const state = await loadState();
+        state.userName = userName;
+        state.gender = gender;
+        await saveState(state);
+
+        // Refresh the response cache so the greeting uses the new name
+        await refreshResponseCache();
+
         console.log(chalk.gray(`\nCreated:`));
         console.log(chalk.gray(`  .socks.md           - Root context`));
         console.log(chalk.gray(`  projects/           - Your projects`));
         console.log(chalk.gray(`  global/todos/       - Cross-project todos`));
         console.log(chalk.gray(`  global/schedule/    - Calendar/schedule`));
-        console.log(chalk.cyan(`\nDobbie is ready to serve in this vault!`));
+        console.log(chalk.cyan(`\n${getResponse('greeting')}`));
     });
 
 export default initCommand;

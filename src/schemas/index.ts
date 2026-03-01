@@ -59,6 +59,7 @@ export const StateSchema = z.object({
     lastUsed: z.string().optional(),
     userName: z.string().optional(),
     honorific: z.string().optional(),
+    gender: z.enum(['male', 'female', 'other']).optional(),
     workType: z.string().optional(),
     familySituation: z.string().optional(),
     hasCar: z.boolean().optional(),
