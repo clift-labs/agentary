@@ -3,7 +3,7 @@ import { QueueManager, getQueueManager } from './manager.js';
 import { getServiceTool, type ServiceToolExecutionContext, type ServiceTool, type LLMProxy } from '../../tools/types.js';
 import { bootstrapFeral } from '../../feral/bootstrap.js';
 import { ContextProvider } from '../context/provider.js';
-import { getModelForCapability, createDobbieSystemPrompt } from '../../llm/router.js';
+import { getModelForCapability, createDobbiSystemPrompt } from '../../llm/router.js';
 import { z, type ZodTypeAny } from 'zod';
 
 /**
@@ -42,7 +42,7 @@ function createLLMProxy(tool: { capability?: string }): LLMProxy {
             // Build system prompt
             let systemPrompt = options?.systemPrompt || '';
             if (!systemPrompt) {
-                systemPrompt = createDobbieSystemPrompt('');
+                systemPrompt = createDobbiSystemPrompt('');
             }
 
             const response = await model.chat(

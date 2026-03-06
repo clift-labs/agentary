@@ -4,8 +4,8 @@ import { DefaultContext } from '../../src/feral/context/context.js';
 describe('DefaultContext', () => {
     it('should set and get values', () => {
         const ctx = new DefaultContext();
-        ctx.set('name', 'Dobbie');
-        expect(ctx.get('name')).toBe('Dobbie');
+        ctx.set('name', 'Dobbi');
+        expect(ctx.get('name')).toBe('Dobbi');
     });
 
     it('should return null for missing keys', () => {

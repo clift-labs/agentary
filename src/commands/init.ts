@@ -9,7 +9,7 @@ import { findVaultRoot, saveState, loadState } from '../state/manager.js';
 import { initEntityTypes } from '../entities/entity-type-config.js';
 
 export const initCommand = new Command('init')
-    .description('Initialize a new dobbie vault in the current directory')
+    .description('Initialize a new dobbi vault in the current directory')
     .action(async () => {
         const cwd = process.cwd();
         const socksPath = path.join(cwd, '.socks.md');
@@ -17,7 +17,7 @@ export const initCommand = new Command('init')
         // Check if already a vault
         const existingVault = await findVaultRoot();
         if (existingVault === cwd) {
-            console.log(chalk.yellow('This directory is already a dobbie vault.'));
+            console.log(chalk.yellow('This directory is already a dobbi vault.'));
             return;
         }
 
@@ -37,7 +37,7 @@ export const initCommand = new Command('init')
             // Good, doesn't exist
         }
 
-        console.log(chalk.gray('Creating a new dobbie vault...'));
+        console.log(chalk.gray('Creating a new dobbi vault...'));
 
         const today = new Date().toISOString().split('T')[0];
         const vaultName = path.basename(cwd);
@@ -53,7 +53,7 @@ tags: [context, system, root]
 
 ## Personality
 
-Dobbie is a helpful, polite English house-elf. He is:
+Dobbi is a helpful, polite English house-elf. He is:
 - Always respectful, using varied honorifics
 - Eager to assist with any task
 - Formal but warm in tone
@@ -72,7 +72,7 @@ Dobbie is a helpful, polite English house-elf. He is:
 `;
         await fs.writeFile(socksPath, rootSocks);
 
-        // Seed entity-types.json in ~/.dobbie/
+        // Seed entity-types.json in ~/.dobbi/
         await initEntityTypes();
 
         // Create projects folder
@@ -139,19 +139,19 @@ Time-blocked events and appointments.
 
         // ── User setup ─────────────────────────────────────────────────
         console.log(chalk.green('\n✓ Vault structure created!'));
-        console.log(chalk.cyan('\n🤖 Dobbie would like to get to know you...\n'));
+        console.log(chalk.cyan('\n🤖 Dobbi would like to get to know you...\n'));
 
         const { userName, gender } = await inquirer.prompt([
             {
                 type: 'input',
                 name: 'userName',
-                message: 'What should Dobbie call you?',
+                message: 'What should Dobbi call you?',
                 default: process.env.USER || 'friend',
             },
             {
                 type: 'list',
                 name: 'gender',
-                message: 'How does Dobbie see you?',
+                message: 'How does Dobbi see you?',
                 choices: [
                     { name: 'Male', value: 'male' },
                     { name: 'Female', value: 'female' },

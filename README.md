@@ -1,6 +1,6 @@
-# Dobbie
+# Dobbi
 
-An AI-powered personal assistant that lives in your terminal. Dobbie manages your todos, events, notes, goals, people, and more — all stored as plain Markdown files in a local "vault" folder.
+An AI-powered personal assistant that lives in your terminal. Dobbi manages your todos, events, notes, goals, people, and more — all stored as plain Markdown files in a local "vault" folder.
 
 Think of it as a loyal house-elf for your digital life: polite, eager, and surprisingly capable.
 
@@ -19,26 +19,26 @@ Think of it as a loyal house-elf for your digital life: polite, eager, and surpr
                       .. ..-=+++*****+++=:.
                            ..-=========-....
                             ..+*++++++==:.....
-                               D O B B I E
+                               D O B B I
 ```
 
 ## Quick Start
 
 ```bash
-# Install globally (one command, just like Claude Code)
-npm install -g dobbie
+# Install globally
+npm install -g dobbi
 
 # Initialize your vault
-dobbie init
+dobbi init
 
 # Add an API key (OpenAI or Anthropic)
-dobbie config add-provider openai
+dobbi config add-provider openai
 
 # Launch the interactive shell
-dobbie
+dobbi
 ```
 
-That's it. Dobbie is ready to serve.
+That's it. Dobbi is ready to serve.
 
 ## Requirements
 
@@ -50,16 +50,16 @@ That's it. Dobbie is ready to serve.
 If you prefer to build from source:
 
 ```bash
-git clone https://github.com/clift-labs/dobbie.git
-cd dobbie
+git clone https://github.com/clift-labs/dobbi.git
+cd dobbi
 npm install
 npm run build
 npm link
 ```
 
-## What Dobbie Does
+## What Dobbi Does
 
-Dobbie manages **entities** — structured Markdown files with YAML frontmatter — organized into projects inside your vault (`~/.dobbie/` by default).
+Dobbi manages **entities** — structured Markdown files with YAML frontmatter — organized into projects inside your vault (`~/.dobbi/` by default).
 
 ### Entity Types
 
@@ -78,7 +78,7 @@ You can also define your own custom entity types.
 
 ### Natural Language Chat
 
-Just type naturally and Dobbie figures out what to do:
+Just type naturally and Dobbi figures out what to do:
 
 ```
 > remind me to call the dentist tomorrow
@@ -87,51 +87,61 @@ Just type naturally and Dobbie figures out what to do:
 > add a note about the meeting with Sarah
 ```
 
-Under the hood, Dobbie uses a **Flow-Based Programming engine** (Feral) that dynamically builds and executes process graphs to fulfill your requests — selecting capabilities, chaining nodes, and synthesizing a response.
+### Dynamic Process Generation
+
+What sets Dobbi apart from other personal agents is that it **writes a unique software process for every request**. Instead of following rigid, pre-built workflows, Dobbi dynamically assembles a process graph tailored to exactly what you asked for.
+
+This is powered by the **FeralCCF** (Feral Catalog-Code Framework) library, which has three layers:
+
+- **NodeCode** — reusable logic templates (e.g., "query todos", "format as markdown", "call LLM")
+- **CatalogNodes** — configured instances of NodeCode with default settings
+- **ProcessNodes** — the actual nodes wired together into a directed graph for a specific request
+
+When you say "show me my high-priority tasks due this week", Dobbi doesn't run a canned query — it builds a process that selects the right nodes, connects them, and executes the graph. The **Web UI** visualizes the process that was created for each action, so you can see exactly what Dobbi did and how.
 
 ## Commands
 
-Run `dobbie` with no arguments to enter the interactive shell, or use commands directly:
+Run `dobbi` with no arguments to enter the interactive shell, or use commands directly:
 
 | Command | Description |
 |---------|-------------|
-| `dobbie` | Launch interactive shell |
-| `dobbie init` | Initialize a new vault |
-| `dobbie setup` | Change your name/gender preferences |
-| `dobbie today` | Show today's tasks and schedule |
-| `dobbie todo [title]` | Create or list tasks |
-| `dobbie todo done <title>` | Mark a task complete |
-| `dobbie event [title]` | Create or list events |
-| `dobbie note [title]` | Create or list notes |
-| `dobbie goal [title]` | Create or list goals |
-| `dobbie person [name]` | Create or list people |
-| `dobbie todont [title]` | Create or list todonts |
-| `dobbie remember <text>` | Quick-capture to inbox |
-| `dobbie cal` | Calendar view |
-| `dobbie project` | Manage projects |
-| `dobbie config` | View/manage LLM configuration |
-| `dobbie service start` | Start the background service + web UI |
-| `dobbie shell` | Enter interactive mode (same as no args) |
+| `dobbi` | Launch interactive shell |
+| `dobbi init` | Initialize a new vault |
+| `dobbi setup` | Change your name/gender preferences |
+| `dobbi today` | Show today's tasks and schedule |
+| `dobbi todo [title]` | Create or list tasks |
+| `dobbi todo done <title>` | Mark a task complete |
+| `dobbi event [title]` | Create or list events |
+| `dobbi note [title]` | Create or list notes |
+| `dobbi goal [title]` | Create or list goals |
+| `dobbi person [name]` | Create or list people |
+| `dobbi todont [title]` | Create or list todonts |
+| `dobbi remember <text>` | Quick-capture to inbox |
+| `dobbi cal` | Calendar view |
+| `dobbi project` | Manage projects |
+| `dobbi config` | View/manage LLM configuration |
+| `dobbi service start` | Start the background service + web UI |
+| `dobbi shell` | Enter interactive mode (same as no args) |
 
 ## Configuration
 
 ### API Keys
 
-Dobbie needs at least one LLM provider. Add your key and Dobbie auto-selects the best model for each task:
+Dobbi needs at least one LLM provider. Add your key and Dobbi auto-selects the best model for each task:
 
 ```bash
 # Option A: OpenAI
-dobbie config add-provider openai
+dobbi config add-provider openai
 
 # Option B: Anthropic
-dobbie config add-provider anthropic
+dobbi config add-provider anthropic
 
-# Or both — Dobbie will use each provider's strengths
+# Or both — Dobbi will use each provider's strengths
 ```
 
 ### How Model Selection Works
 
-Dobbie maps six **capabilities** to the optimal model per provider:
+Dobbi maps six **capabilities** to the optimal model per provider:
 
 | Capability | What it does | OpenAI default | Anthropic default |
 |------------|-------------|----------------|-------------------|
@@ -142,23 +152,23 @@ Dobbie maps six **capabilities** to the optimal model per provider:
 | format | Text formatting | gpt-4o-mini | claude-haiku-4-5 |
 | embed | Vector embeddings | text-embedding-3-small | *(not supported)* |
 
-When both providers are configured, Dobbie picks the best provider per capability automatically. You can override any mapping:
+When both providers are configured, Dobbi picks the best provider per capability automatically. You can override any mapping:
 
 ```bash
-dobbie config set-capability reason anthropic claude-sonnet-4-6
-dobbie config reset-capability reason   # restore auto-selection
+dobbi config set-capability reason anthropic claude-sonnet-4-6
+dobbi config reset-capability reason   # restore auto-selection
 ```
 
 View your current configuration:
 
 ```bash
-dobbie config
+dobbi config
 ```
 
 ### Where Things Live
 
 ```
-~/.dobbie/
+~/.dobbi/
   .state.json         # User profile (name, gender, active project)
   secrets.json         # API keys (never committed)
   config.json          # LLM capability overrides
@@ -182,10 +192,10 @@ Every entity is a plain `.md` file. You can edit them with any text editor, sync
 
 ## Web UI
 
-Dobbie includes a browser-based dashboard:
+Dobbi includes a browser-based dashboard:
 
 ```bash
-dobbie service start
+dobbi service start
 ```
 
 This starts a background daemon with a web UI (default: `http://localhost:3001`) that shows:
@@ -193,11 +203,11 @@ This starts a background daemon with a web UI (default: `http://localhost:3001`)
 - Today's tasks with priority badges
 - 3-day calendar view
 - Chat interface with the same natural language capabilities as the CLI
-- Interactive Q&A when Dobbie needs clarification during a process
+- Interactive Q&A when Dobbi needs clarification during a process
 
 ## The Interactive Shell
 
-When you run `dobbie` with no arguments, you get a full interactive shell with:
+When you run `dobbi` with no arguments, you get a full interactive shell with:
 
 - **Tab completion** for commands
 - **Up/Down arrow** history

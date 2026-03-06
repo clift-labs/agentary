@@ -5,13 +5,13 @@ import inquirer from 'inquirer';
 import { loadState, saveState, getUserName, getUserGender } from '../state/manager.js';
 
 export const setupCommand = new Command('setup')
-    .description('Update your name and how Dobbie addresses you')
+    .description('Update your name and how Dobbi addresses you')
     .action(async () => {
         const currentName = await getUserName();
         const currentGender = await getUserGender() || 'other';
         const state = await loadState();
 
-        console.log(chalk.cyan('\n🤖 Dobbie would like to update your preferences...\n'));
+        console.log(chalk.cyan('\n🤖 Dobbi would like to update your preferences...\n'));
         console.log(chalk.gray(`  Current name:   ${currentName}`));
         console.log(chalk.gray(`  Current gender: ${currentGender}\n`));
 
@@ -19,13 +19,13 @@ export const setupCommand = new Command('setup')
             {
                 type: 'input',
                 name: 'userName',
-                message: 'What should Dobbie call you?',
+                message: 'What should Dobbi call you?',
                 default: currentName,
             },
             {
                 type: 'list',
                 name: 'gender',
-                message: 'How does Dobbie see you?',
+                message: 'How does Dobbi see you?',
                 default: currentGender,
                 choices: [
                     { name: 'Male', value: 'male' },

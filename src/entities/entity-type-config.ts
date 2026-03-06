@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ENTITY TYPE CONFIG
-// Loads entity type definitions from ~/.dobbie/entity-types.json.
+// Loads entity type definitions from ~/.dobbi/entity-types.json.
 // Falls back to built-in defaults if the file doesn't exist.
 // Users can add, modify, or extend entity types by editing the JSON file.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -11,8 +11,8 @@ import os from 'os';
 import { DEFAULT_ENTITY_TYPES, BUILT_IN_TYPE_NAMES } from './entity-types-defaults.js';
 import { debug } from '../utils/debug.js';
 
-const DOBBIE_DIR = path.join(os.homedir(), '.dobbie');
-const ENTITY_TYPES_PATH = path.join(DOBBIE_DIR, 'entity-types.json');
+const DOBBI_DIR = path.join(os.homedir(), '.dobbi');
+const ENTITY_TYPES_PATH = path.join(DOBBI_DIR, 'entity-types.json');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -111,7 +111,7 @@ export async function loadEntityTypes(): Promise<EntityTypeConfig[]> {
  * Save entity type configs to the vault file.
  */
 export async function saveEntityTypes(types: EntityTypeConfig[]): Promise<void> {
-    await fs.mkdir(DOBBIE_DIR, { recursive: true });
+    await fs.mkdir(DOBBI_DIR, { recursive: true });
     const file: EntityTypesFile = { version: 1, entityTypes: types };
     await fs.writeFile(ENTITY_TYPES_PATH, JSON.stringify(file, null, 2));
     invalidateCache();
@@ -119,7 +119,7 @@ export async function saveEntityTypes(types: EntityTypeConfig[]): Promise<void> 
 
 /**
  * Write entity-types.json with built-in defaults if it doesn't already exist.
- * Called by `dobbie init`.
+ * Called by `dobbi init`.
  */
 export async function initEntityTypes(): Promise<void> {
     try {

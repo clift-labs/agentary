@@ -2,7 +2,7 @@
 // Feral Autonomous Chat
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// When the user types 3+ words that don't match a known command, Dobbie
+// When the user types 3+ words that don't match a known command, Dobbi
 // "thinks for himself" — a 3-step LLM pipeline that:
 //   1. Selects catalog nodes relevant to the user's request
 //   2. Generates a Feral process JSON using those nodes
@@ -16,7 +16,7 @@ import { bootstrapFeral } from '../feral/bootstrap.js';
 import { hydrateProcessFromString } from '../feral/process/process-json-hydrator.js';
 import type { ProcessSource } from '../feral/process/process-factory.js';
 import type { Process } from '../feral/process/process.js';
-import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
 import { debug } from '../utils/debug.js';
 import { loadEntityTypes } from '../entities/entity-type-config.js';
 import { getActiveProject, getUserName } from '../state/manager.js';
@@ -119,7 +119,7 @@ export async function feralChatHeadless(
 ): Promise<string> {
     const status = (s: string) => onStatus?.(s);
 
-    status('Dobbie is thinking…');
+    status('Dobbi is thinking…');
 
     // ── Bootstrap Feral + load entity types + vault context ────────
     const inMemorySource = new InMemoryProcessSource();
@@ -167,8 +167,8 @@ export async function feralChatHeadless(
 GLOBAL VARIABLES:
 ${globalsBlock}
 
-${vaultContext ? `VAULT CONTEXT (from .socks.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}DOBBIE'S ENTITY TYPES:
-Dobbie manages these entity types. When the user mentions something that maps to an entity, prefer creating it:
+${vaultContext ? `VAULT CONTEXT (from .socks.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}DOBBI'S ENTITY TYPES:
+Dobbi manages these entity types. When the user mentions something that maps to an entity, prefer creating it:
 ${entityTypes.map(t => {
     const fieldDesc = t.fields.length > 0
         ? ` Fields: ${t.fields.map(f => `${f.key}${f.type === 'enum' && f.values ? ` (${f.values.join('|')})` : ''}`).join(', ')}.`
@@ -439,7 +439,7 @@ Return ONLY the JSON object, no markdown fences.`,
     // ── STEP 5: Synthesize response ──────────────────────────────────
     status('Composing response…');
 
-    const synthesisPrompt = `You are Dobbie, a helpful personal assistant. The user said: "${userInput}"
+    const synthesisPrompt = `You are Dobbi, a helpful personal assistant. The user said: "${userInput}"
 
 To answer, I selected these capabilities:
 ${nodeSelection.reasoning}
@@ -460,7 +460,7 @@ Now compose a helpful, natural response to the user. Be concise and friendly. If
     const step5Response = await llm.chat(
         [{ role: 'user' as const, content: synthesisPrompt }],
         {
-            systemPrompt: createDobbieSystemPrompt('You are responding to a natural language request from your user. Be helpful, concise, and warm.'),
+            systemPrompt: createDobbiSystemPrompt('You are responding to a natural language request from your user. Be helpful, concise, and warm.'),
             temperature: 0.7,
         },
     );
@@ -473,7 +473,7 @@ Now compose a helpful, natural response to the user. Be concise and friendly. If
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function feralChat(userInput: string): Promise<void> {
-    const spinner = ora({ text: chalk.dim('Dobbie is thinking…'), color: 'cyan' }).start();
+    const spinner = ora({ text: chalk.dim('Dobbi is thinking…'), color: 'cyan' }).start();
 
     try {
         const response = await feralChatHeadless(userInput, (s) => {
@@ -487,10 +487,10 @@ export async function feralChat(userInput: string): Promise<void> {
         const msg = error instanceof Error ? error.message : String(error);
         debug('chat', `Autonomous chat failed: ${msg}`);
         if (msg.includes('credit balance') || msg.includes('too low') || msg.includes('billing')) {
-            console.log(chalk.red('\n  Dobbie\'s AI provider is out of credits.'));
+            console.log(chalk.red('\n  Dobbi\'s AI provider is out of credits.'));
             console.log(chalk.dim('  Top up at: https://console.anthropic.com/settings/billing\n'));
         } else {
-            console.log(chalk.yellow(`\n  Hmm, Dobbie tried to think about that but got confused: ${msg}`));
+            console.log(chalk.yellow(`\n  Hmm, Dobbi tried to think about that but got confused: ${msg}`));
             console.log(chalk.dim('  Try rephrasing, or use a specific command like "todo", "note", "today".\n'));
         }
     }

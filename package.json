@@ -1,6 +1,6 @@
 {
-  "name": "dobbie",
-  "version": "3.0.3",
+  "name": "dobbi",
+  "version": "3.0.2",
   "description": "An AI-powered Personal Assistant",
   "type": "module",
   "engines": {
@@ -8,10 +8,31 @@
   },
   "main": "dist/index.js",
   "bin": {
-    "dobbie": "./dist/index.js"
+    "dobbi": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "ai",
+    "assistant",
+    "cli",
+    "todo",
+    "notes",
+    "personal-assistant",
+    "openai",
+    "anthropic",
+    "claude"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clift-labs/dobbi.git"
+  },
+  "license": "MIT",
   "scripts": {
-    "build": "tsc && cp src/dobbie.txt dist/dobbie.txt && cp src/service/web-client.html dist/service/web-client.html",
+    "prepublishOnly": "npm run build",
+    "build": "tsc && cp src/dobbi.txt dist/dobbi.txt && cp src/service/web-client.html dist/service/web-client.html",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run --exclude='tests/integration/**'",

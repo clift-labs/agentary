@@ -169,14 +169,14 @@ function buildCompleter(): (line: string) => [string[], string] {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Run a dobbie command in a subprocess.
+ * Run a dobbi command in a subprocess.
  *
  * This completely isolates Commander from readline — the child process has its
  * own stdin/stdout and can never interfere with the shell's character echo.
  */
 function runCommand(args: string[]): Promise<'continue' | 'quit'> {
     return new Promise((resolve) => {
-        // Spawn dobbie as a subprocess: node <script> <args...>
+        // Spawn dobbi as a subprocess: node <script> <args...>
         const child = spawn(process.argv[0], [process.argv[1], ...args], {
             stdio: 'inherit',
             cwd: process.cwd(),

@@ -4,12 +4,12 @@ import os from 'os';
 import { SecretsSchema, ConfigSchema, LLM_CAPABILITIES, type Secrets, type Config, type LLMCapability, type CapabilityModelMapping } from './schemas/index.js';
 import { debug } from './utils/debug.js';
 
-const DOBBIE_DIR = path.join(os.homedir(), '.dobbie');
-const SECRETS_PATH = path.join(DOBBIE_DIR, 'secrets.json');
-const CONFIG_PATH = path.join(DOBBIE_DIR, 'config.json');
+const DOBBI_DIR = path.join(os.homedir(), '.dobbi');
+const SECRETS_PATH = path.join(DOBBI_DIR, 'secrets.json');
+const CONFIG_PATH = path.join(DOBBI_DIR, 'config.json');
 
-// Dobbie's built-in knowledge: the best model per provider per capability.
-// Users only need to add their API key — Dobbie picks the right model automatically.
+// Dobbi's built-in knowledge: the best model per provider per capability.
+// Users only need to add their API key — Dobbi picks the right model automatically.
 //
 // OpenAI pricing notes:
 //   gpt-4o:       ~$2.50/1M input, $10/1M output  (reasoning & chat)
@@ -43,7 +43,7 @@ export const PROVIDER_MODELS: Record<string, Partial<Record<LLMCapability, strin
 // First available provider with a model for the capability wins.
 const CAPABILITY_PREFERRED_PROVIDERS: Record<LLMCapability, string[]> = {
     reason: ['anthropic', 'openai'],      // Claude Opus excels at complex reasoning
-    chat: ['anthropic', 'openai'],        // Claude Sonnet has the best personality for Dobbie
+    chat: ['anthropic', 'openai'],        // Claude Sonnet has the best personality for Dobbi
     summarize: ['openai', 'anthropic'],   // GPT-4o-mini is very cost-effective for this
     categorize: ['openai', 'anthropic'],  // GPT-4o-mini is very cost-effective for this
     format: ['openai', 'anthropic'],      // GPT-4o-mini is very cost-effective for this
@@ -60,13 +60,13 @@ const DEFAULT_SECRETS: Secrets = {
     providers: {},
 };
 
-async function ensureDobbieDir(): Promise<void> {
-    await fs.mkdir(DOBBIE_DIR, { recursive: true });
+async function ensureDobbiDir(): Promise<void> {
+    await fs.mkdir(DOBBI_DIR, { recursive: true });
 }
 
 export async function loadSecrets(): Promise<Secrets> {
     try {
-        await ensureDobbieDir();
+        await ensureDobbiDir();
         const data = await fs.readFile(SECRETS_PATH, 'utf-8');
         return SecretsSchema.parse(JSON.parse(data));
     } catch (err) {
@@ -76,13 +76,13 @@ export async function loadSecrets(): Promise<Secrets> {
 }
 
 export async function saveSecrets(secrets: Secrets): Promise<void> {
-    await ensureDobbieDir();
+    await ensureDobbiDir();
     await fs.writeFile(SECRETS_PATH, JSON.stringify(secrets, null, 2));
 }
 
 export async function loadConfig(): Promise<Config> {
     try {
-        await ensureDobbieDir();
+        await ensureDobbiDir();
         const data = await fs.readFile(CONFIG_PATH, 'utf-8');
         return ConfigSchema.parse(JSON.parse(data));
     } catch (err) {
@@ -92,7 +92,7 @@ export async function loadConfig(): Promise<Config> {
 }
 
 export async function saveConfig(config: Config): Promise<void> {
-    await ensureDobbieDir();
+    await ensureDobbiDir();
     await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2));
 }
 
@@ -157,4 +157,4 @@ export async function getConfiguredProviders(): Promise<string[]> {
     return Object.keys(secrets.providers);
 }
 
-export { DOBBIE_DIR, SECRETS_PATH, CONFIG_PATH };
+export { DOBBI_DIR, SECRETS_PATH, CONFIG_PATH };

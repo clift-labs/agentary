@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Web Server — HTTP + WebSocket for the Dobbie browser client
+// Web Server — HTTP + WebSocket for the Dobbi browser client
 // ─────────────────────────────────────────────────────────────────────────────
 
 import http from 'http';

@@ -5,10 +5,10 @@ import path from 'path';
 import os from 'os';
 import { spawn, ChildProcess } from 'child_process';
 
-const DOBBIE_DIR = path.join(os.homedir(), '.dobbie');
-const PID_FILE = path.join(DOBBIE_DIR, 'dobbie.pid');
-const SOCKET_PATH = path.join(DOBBIE_DIR, 'dobbie.sock');
-const LOG_FILE = path.join(DOBBIE_DIR, 'dobbie.log');
+const DOBBI_DIR = path.join(os.homedir(), '.dobbi');
+const PID_FILE = path.join(DOBBI_DIR, 'dobbi.pid');
+const SOCKET_PATH = path.join(DOBBI_DIR, 'dobbi.sock');
+const LOG_FILE = path.join(DOBBI_DIR, 'dobbi.log');
 
 export interface DaemonStatus {
     running: boolean;
@@ -17,10 +17,10 @@ export interface DaemonStatus {
 }
 
 /**
- * Ensures the .dobbie directory exists.
+ * Ensures the .dobbi directory exists.
  */
-async function ensureDobbieDir(): Promise<void> {
-    await fs.mkdir(DOBBIE_DIR, { recursive: true });
+async function ensureDobbiDir(): Promise<void> {
+    await fs.mkdir(DOBBI_DIR, { recursive: true });
 }
 
 /**
@@ -41,7 +41,7 @@ export async function readPid(): Promise<number | null> {
  * Write the PID to the pid file.
  */
 async function writePid(pid: number): Promise<void> {
-    await ensureDobbieDir();
+    await ensureDobbiDir();
     await fs.writeFile(PID_FILE, pid.toString());
 }
 
@@ -99,7 +99,7 @@ export async function startDaemon(): Promise<DaemonStatus> {
         return status;
     }
 
-    await ensureDobbieDir();
+    await ensureDobbiDir();
 
     // Remove stale socket
     try {
@@ -110,7 +110,7 @@ export async function startDaemon(): Promise<DaemonStatus> {
     }
 
     // Start the service process.
-    // DOBBIE_SERVICE=1 triggers `service/index.ts` to boot the daemon.
+    // DOBBI_SERVICE=1 triggers `service/index.ts` to boot the daemon.
     const entryScript = path.join(import.meta.dirname, '..', 'index.js');
 
     const logStream = await fs.open(LOG_FILE, 'a');
@@ -118,7 +118,7 @@ export async function startDaemon(): Promise<DaemonStatus> {
     const child = spawn('node', [entryScript], {
         detached: true,
         stdio: ['ignore', logStream.fd, logStream.fd],
-        env: { ...process.env, DOBBIE_SERVICE: '1' },
+        env: { ...process.env, DOBBI_SERVICE: '1' },
     });
 
     child.unref();
@@ -179,4 +179,4 @@ export async function stopDaemon(): Promise<DaemonStatus> {
     return { running: false, pid: null, socketPath: SOCKET_PATH };
 }
 
-export { SOCKET_PATH, PID_FILE, LOG_FILE, DOBBIE_DIR };
+export { SOCKET_PATH, PID_FILE, LOG_FILE, DOBBI_DIR };

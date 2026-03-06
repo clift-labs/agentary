@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ENTITY MODEL
-// All records in Dobbie are Entities — markdown files with gray-matter frontmatter.
+// All records in Dobbi are Entities — markdown files with gray-matter frontmatter.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { promises as fs } from 'fs';
@@ -199,7 +199,7 @@ export async function getEntityDir(entityType: EntityTypeName): Promise<string> 
     }
     const typeConfig = await getEntityType(entityType);
     if (!typeConfig) {
-        throw new Error(`Unknown entity type: "${entityType}". Check ~/.dobbie/entity-types.json.`);
+        throw new Error(`Unknown entity type: "${entityType}". Check ~/.dobbi/entity-types.json.`);
     }
     return path.join(vaultRoot, 'projects', project, typeConfig.directory);
 }
@@ -257,7 +257,7 @@ export async function trashEntity(filepath: string): Promise<string> {
     const trashRoot = path.join(vaultRoot, '.trash');
 
     // Derive the entity subdirectory from the filepath
-    // e.g. ~/.dobbie/projects/work/todos/foo.md → todos
+    // e.g. ~/.dobbi/projects/work/todos/foo.md → todos
     const parentDir = path.basename(path.dirname(filepath));
     const trashDir = path.join(trashRoot, parentDir);
 

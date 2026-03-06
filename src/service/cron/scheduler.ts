@@ -17,8 +17,8 @@ import { requireProject } from '../../state/manager.js';
 // CONFIG
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DOBBIE_DIR = path.join(os.homedir(), '.dobbie');
-const CRON_CONFIG_PATH = path.join(DOBBIE_DIR, 'cron-config.json');
+const DOBBI_DIR = path.join(os.homedir(), '.dobbi');
+const CRON_CONFIG_PATH = path.join(DOBBI_DIR, 'cron-config.json');
 
 export interface CronJobConfig {
     enabled: boolean;
@@ -51,7 +51,7 @@ export async function loadCronConfig(): Promise<CronConfig> {
 }
 
 export async function saveCronConfig(config: CronConfig): Promise<void> {
-    await fs.mkdir(DOBBIE_DIR, { recursive: true });
+    await fs.mkdir(DOBBI_DIR, { recursive: true });
     await fs.writeFile(CRON_CONFIG_PATH, JSON.stringify(config, null, 2));
 }
 

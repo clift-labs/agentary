@@ -2,8 +2,8 @@
 // Feral CCF — Output Catalog Source
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Auto-generates a speak_* CatalogNode for every Dobbie ResponseKey.
-// Each node binds the dobbie_speak NodeCode with a specific response_key.
+// Auto-generates a speak_* CatalogNode for every Dobbi ResponseKey.
+// Each node binds the dobbi_speak NodeCode with a specific response_key.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { CatalogNode } from './catalog-node.js';
@@ -23,10 +23,10 @@ export class OutputCatalogSource {
     getCatalogNodes(): CatalogNode[] {
         return RESPONSE_KEYS.map(key => ({
             key: `speak_${key}`,
-            nodeCodeKey: 'dobbie_speak',
+            nodeCodeKey: 'dobbi_speak',
             name: `Speak — ${humanize(key)}`,
             group: 'output',
-            description: `Outputs a random Dobbie "${key}" response with token replacement.`,
+            description: `Outputs a random Dobbi "${key}" response with token replacement.`,
             configuration: {
                 response_key: key,
                 context_path: 'output',

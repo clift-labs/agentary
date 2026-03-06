@@ -8,8 +8,8 @@ import type { Task } from '../protocol.js';
 // QUEUE PERSISTENCE
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DOBBIE_DIR = path.join(os.homedir(), '.dobbie');
-const QUEUE_STATE_FILE = path.join(DOBBIE_DIR, 'queue-state.json');
+const DOBBI_DIR = path.join(os.homedir(), '.dobbi');
+const QUEUE_STATE_FILE = path.join(DOBBI_DIR, 'queue-state.json');
 
 interface PersistedQueueState {
     queue: { task: Task; addedAt: string }[];
@@ -27,7 +27,7 @@ export async function saveQueueState(
     errorCount: number,
 ): Promise<void> {
     try {
-        await fs.mkdir(DOBBIE_DIR, { recursive: true });
+        await fs.mkdir(DOBBI_DIR, { recursive: true });
         const state: PersistedQueueState = {
             queue: queue.map(e => ({
                 task: e.task,
@@ -39,7 +39,7 @@ export async function saveQueueState(
         };
         await fs.writeFile(QUEUE_STATE_FILE, JSON.stringify(state, null, 2));
     } catch (err) {
-        console.debug('[dobbie:queue-persistence] Failed to save state:', (err as Error).message);
+        console.debug('[dobbi:queue-persistence] Failed to save state:', (err as Error).message);
     }
 }
 

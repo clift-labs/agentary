@@ -1,5 +1,5 @@
 /**
- * TUI status bar for the Dobbie interactive shell.
+ * TUI status bar for the Dobbi interactive shell.
  *
  * Simple inline approach: prints a status divider line before each prompt.
  * No alternate screen, no cursor tricks — just works with readline.

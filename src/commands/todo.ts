@@ -6,7 +6,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getEnrichedContext } from '../context/reader.js';
-import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, todoHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
@@ -46,7 +46,7 @@ async function breakdownTodo(state: TodoState): Promise<string> {
 
     const context = await getEnrichedContext(state.project, 'todos', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -79,7 +79,7 @@ async function clarifyTodo(state: TodoState): Promise<string> {
 
     const context = await getEnrichedContext(state.project, 'todos', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -114,7 +114,7 @@ async function estimateTodo(state: TodoState): Promise<string> {
 
     const context = await getEnrichedContext(state.project, 'todos', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -144,7 +144,7 @@ async function modifyTodo(state: TodoState, feedback: string): Promise<string> {
 
     const context = await getEnrichedContext(state.project, 'todos', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -180,7 +180,7 @@ async function formatTodo(state: TodoState): Promise<string> {
     try {
         const context = await getEnrichedContext(state.project, 'todos', state.content);
         const llm = await getModelForCapability('format');
-        const systemPrompt = createDobbieSystemPrompt(context);
+        const systemPrompt = createDobbiSystemPrompt(context);
 
         const response = await llm.chat([
             {
@@ -298,7 +298,7 @@ Commands:
   ${chalk.bold('exit')}       - Save and go back
   ${chalk.bold('back')}       - Save and go back
   ${chalk.bold('abort')}      - Discard changes and go back
-  ${chalk.bold('quit')}       - Quit Dobbie entirely
+  ${chalk.bold('quit')}       - Quit Dobbi entirely
   ${chalk.bold('help')}       - Show this help
 `));
 }
@@ -308,13 +308,13 @@ export const todoCommand = new Command('todo')
     .argument('[words...]', 'Title and optional inline description (e.g. "fix-login The login 500s with plus signs")')
     .action(async (words: string[]) => {
         try {
-            // Handle: dobbie todo list
+            // Handle: dobbi todo list
             if (words[0] === 'list') {
                 await listEntities('todos');
                 return;
             }
 
-            // Handle: dobbie todo done <title>
+            // Handle: dobbi todo done <title>
             if (words[0] === 'done') {
                 const doneTitle = words.slice(1).join(' ');
                 if (!doneTitle) {
@@ -344,7 +344,7 @@ export const todoCommand = new Command('todo')
                 return;
             }
 
-            // Handle: dobbie todo remove <title>
+            // Handle: dobbi todo remove <title>
             if (words[0] === 'remove' || words[0] === 'delete') {
                 const removeTitle = words.slice(1).join(' ');
                 if (!removeTitle) {
@@ -382,7 +382,7 @@ export const todoCommand = new Command('todo')
                     {
                         type: 'input',
                         name: 'todoTitle',
-                        message: 'What task shall Dobbie track, sir?',
+                        message: 'What task shall Dobbi track, sir?',
                         validate: (input: string) => input.length > 0 || 'Title is required',
                     },
                 ]);
@@ -538,7 +538,7 @@ export const todoCommand = new Command('todo')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbie notices unsaved work, sir. Discard changes?',
+                                message: 'Dobbi notices unsaved work, sir. Discard changes?',
                                 default: false,
                             },
                         ]);
@@ -555,7 +555,7 @@ export const todoCommand = new Command('todo')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbie notices unsaved work, sir. Quit Dobbie entirely?',
+                                message: 'Dobbi notices unsaved work, sir. Quit Dobbi entirely?',
                                 default: false,
                             },
                         ]);
@@ -607,7 +607,7 @@ export const todoCommand = new Command('todo')
                                 {
                                     type: 'input',
                                     name: 'feedback',
-                                    message: 'How should Dobbie modify the todo?',
+                                    message: 'How should Dobbi modify the todo?',
                                 },
                             ]);
                             if (feedback) {

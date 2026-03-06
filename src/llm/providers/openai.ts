@@ -19,7 +19,7 @@ export class OpenAIProvider implements LLMProvider {
         const apiKey = await getApiKey('openai');
         if (!apiKey) {
             throw new Error(
-                "Dobbie needs an API key for OpenAI, sir. Please run 'dobbie config add-provider openai'"
+                "Dobbi needs an API key for OpenAI, sir. Please run 'dobbi config add-provider openai'"
             );
         }
 

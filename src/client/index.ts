@@ -7,7 +7,7 @@ import type { ServiceRequest, ServiceResponse, Task } from '../service/protocol.
 import { ServiceNotRunningError } from '../service/protocol.js';
 
 /**
- * Client for communicating with the Dobbie service.
+ * Client for communicating with the Dobbi service.
  */
 export class ServiceClient {
     private socket: net.Socket | null = null;

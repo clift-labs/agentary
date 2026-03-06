@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ICS PARSER
 // Thin wrapper around node-ical that converts ICS VEVENT objects into
-// Dobbie's CalendarEvent shape for the `cal sync` command.
+// Dobbi's CalendarEvent shape for the `cal sync` command.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import ical, { type VEvent } from 'node-ical';

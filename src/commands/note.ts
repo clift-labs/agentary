@@ -6,7 +6,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getEnrichedContext } from '../context/reader.js';
-import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, noteHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
@@ -39,7 +39,7 @@ async function reviewNote(state: NoteState): Promise<string> {
 
     const context = await getEnrichedContext(state.project, 'notes', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -58,7 +58,7 @@ async function generateQuestions(state: NoteState): Promise<string[]> {
 
     const context = await getEnrichedContext(state.project, 'notes', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -82,7 +82,7 @@ async function modifyNote(state: NoteState, feedback: string): Promise<string> {
 
     const context = await getEnrichedContext(state.project, 'notes', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -107,7 +107,7 @@ async function formatAsMarkdown(state: NoteState): Promise<string> {
     try {
         const context = await getEnrichedContext(state.project, 'notes', state.content);
         const llm = await getModelForCapability('format');
-        const systemPrompt = createDobbieSystemPrompt(context);
+        const systemPrompt = createDobbiSystemPrompt(context);
 
         const response = await llm.chat([
             {
@@ -205,7 +205,7 @@ async function generateDiagram(state: NoteState, diagramType: DiagramType): Prom
 
     const context = await getEnrichedContext(state.project, 'notes', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const diagramInstructions: Record<DiagramType, string> = {
         flowchart: `Create a mermaid flowchart diagram that visualizes the process or flow described in the note. Use:
@@ -269,7 +269,7 @@ Commands:
   ${chalk.bold('exit')}       - Save and go back
   ${chalk.bold('back')}       - Save and go back
   ${chalk.bold('abort')}      - Discard changes and go back
-  ${chalk.bold('quit')}       - Quit Dobbie entirely
+  ${chalk.bold('quit')}       - Quit Dobbi entirely
   ${chalk.bold('help')}       - Show this help
 `));
 }
@@ -279,13 +279,13 @@ export const noteCommand = new Command('note')
     .argument('[words...]', 'Title and optional inline body (e.g. "my-idea Use the Ferral CCI system")')
     .action(async (words: string[]) => {
         try {
-            // Handle: dobbie note list
+            // Handle: dobbi note list
             if (words[0] === 'list') {
                 await listEntities('notes');
                 return;
             }
 
-            // Handle: dobbie note remove <title>
+            // Handle: dobbi note remove <title>
             if (words[0] === 'remove' || words[0] === 'delete') {
                 const removeTitle = words.slice(1).join(' ');
                 if (!removeTitle) {
@@ -321,7 +321,7 @@ export const noteCommand = new Command('note')
                     {
                         type: 'input',
                         name: 'noteTitle',
-                        message: 'What shall Dobbie call this note, sir?',
+                        message: 'What shall Dobbi call this note, sir?',
                         validate: (input: string) => input.length > 0 || 'Title is required',
                     },
                 ]);
@@ -440,7 +440,7 @@ export const noteCommand = new Command('note')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbie notices unsaved work, sir. Discard changes?',
+                                message: 'Dobbi notices unsaved work, sir. Discard changes?',
                                 default: false,
                             },
                         ]);
@@ -457,7 +457,7 @@ export const noteCommand = new Command('note')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbie notices unsaved work, sir. Quit Dobbie entirely?',
+                                message: 'Dobbi notices unsaved work, sir. Quit Dobbi entirely?',
                                 default: false,
                             },
                         ]);
@@ -502,7 +502,7 @@ export const noteCommand = new Command('note')
                                 {
                                     type: 'list',
                                     name: 'selectedType',
-                                    message: 'What type of diagram shall Dobbie create?',
+                                    message: 'What type of diagram shall Dobbi create?',
                                     choices: [
                                         { name: 'Flowchart - Process or workflow visualization', value: 'flowchart' },
                                         { name: 'Class - Entities and relationships', value: 'class' },
@@ -530,7 +530,7 @@ export const noteCommand = new Command('note')
                                 {
                                     type: 'input',
                                     name: 'feedback',
-                                    message: 'How should Dobbie modify the note?',
+                                    message: 'How should Dobbi modify the note?',
                                 },
                             ]);
                             if (feedback) {

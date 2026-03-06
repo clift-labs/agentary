@@ -1,13 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Feral CCF — Catalog Configuration (JSON file at ~/.dobbie/feral-catalog.json)
+// Feral CCF — Catalog Configuration (JSON file at ~/.dobbi/feral-catalog.json)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 
-const DOBBIE_DIR = path.join(os.homedir(), '.dobbie');
-const FERAL_CATALOG_PATH = path.join(DOBBIE_DIR, 'feral-catalog.json');
+const DOBBI_DIR = path.join(os.homedir(), '.dobbi');
+const FERAL_CATALOG_PATH = path.join(DOBBI_DIR, 'feral-catalog.json');
 
 /**
  * JSON shape for a single user-defined CatalogNode.
@@ -49,7 +49,7 @@ export async function loadFeralCatalogConfig(): Promise<FeralCatalogConfigJson> 
  * Save the catalog config to disk.
  */
 export async function saveFeralCatalogConfig(config: FeralCatalogConfigJson): Promise<void> {
-    await fs.mkdir(DOBBIE_DIR, { recursive: true });
+    await fs.mkdir(DOBBI_DIR, { recursive: true });
     await fs.writeFile(FERAL_CATALOG_PATH, JSON.stringify(config, null, 2));
 }
 

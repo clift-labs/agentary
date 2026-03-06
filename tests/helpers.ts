@@ -1,5 +1,5 @@
 /**
- * Shared test helpers and mock factories for Dobbie tests.
+ * Shared test helpers and mock factories for Dobbi tests.
  */
 import { vi } from 'vitest';
 import type { Task, TaskStep, TaskContext, TaskLogger, Canvas } from '../src/service/protocol.js';

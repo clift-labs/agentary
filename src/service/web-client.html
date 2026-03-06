@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dobbie</title>
+<title>Dobbi</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -560,7 +560,7 @@
 
 <div class="app">
   <div class="header">
-    <h1>Dobbie</h1>
+    <h1>Dobbi</h1>
     <div class="header-stats" id="header-stats">
       <div class="stat"><span class="stat-label">Queue</span><span class="stat-value" id="stat-queue">--</span></div>
       <div class="stat"><span class="stat-label">Graph</span><span class="stat-value" id="stat-graph">--</span></div>
@@ -594,13 +594,13 @@
     <div class="panel-title">Chat</div>
     <div class="chat-messages" id="chat-messages">
       <div class="chat-msg bot">
-        <div class="chat-bubble">Dobbie is ready to serve, sir.</div>
+        <div class="chat-bubble">Dobbi is ready to serve, sir.</div>
       </div>
     </div>
     <div class="chat-input-wrap">
       <form id="chat-form">
         <input class="chat-input" id="chat-input" type="text"
-               placeholder="Ask Dobbie anything…" autocomplete="off">
+               placeholder="Ask Dobbi anything…" autocomplete="off">
         <button class="chat-send" id="chat-send" type="submit">Send</button>
       </form>
     </div>
@@ -705,7 +705,7 @@
 
   function renderToday(data) {
     if (!data.tasks || data.tasks.length === 0) {
-      todayBody.innerHTML = '<div class="empty-state">No open tasks. Dobbie is pleased, sir!</div>';
+      todayBody.innerHTML = '<div class="empty-state">No open tasks. Dobbi is pleased, sir!</div>';
       return;
     }
 
@@ -746,7 +746,7 @@
           if (res.ok) {
             item.remove();
             if (!todayBody.querySelector('.task-item')) {
-              todayBody.innerHTML = '<div class="empty-state">No open tasks. Dobbie is pleased, sir!</div>';
+              todayBody.innerHTML = '<div class="empty-state">No open tasks. Dobbi is pleased, sir!</div>';
             }
           } else {
             item.style.opacity = '1';
@@ -922,7 +922,7 @@
 
     const qText = document.createElement('div');
     qText.className = 'question-text';
-    qText.textContent = question || 'Dobbie has a question:';
+    qText.textContent = question || 'Dobbi has a question:';
     bubble.appendChild(qText);
 
     function sendAnswer(answer) {

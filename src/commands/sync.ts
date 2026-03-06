@@ -10,7 +10,7 @@ const execAsync = promisify(exec);
 
 export const syncCommand = new Command('sync')
     .description('Sync with GitHub')
-    .option('-m, --message <message>', 'Commit message', 'Dobbie synced notes')
+    .option('-m, --message <message>', 'Commit message', 'Dobbi synced notes')
     .action(async (options: { message: string }) => {
         const spinner = ora(getResponse('sync_start')).start();
 

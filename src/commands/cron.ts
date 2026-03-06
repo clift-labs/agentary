@@ -130,7 +130,7 @@ cronCommand
             console.log('');
         } catch (err) {
             console.log(chalk.red(`\n  ${err instanceof Error ? err.message : err}`));
-            console.log(chalk.gray('  Is the service running? Try "dobbie service start".\n'));
+            console.log(chalk.gray('  Is the service running? Try "dobbi service start".\n'));
         }
     });
 
@@ -150,7 +150,7 @@ cronCommand
             console.log(chalk.green(`  Done: ${result.summary}\n`));
         } catch (err) {
             console.log(chalk.red(`\n  ${err instanceof Error ? err.message : err}`));
-            console.log(chalk.gray('  Is the service running? Try "dobbie service start".\n'));
+            console.log(chalk.gray('  Is the service running? Try "dobbi service start".\n'));
         }
     });
 

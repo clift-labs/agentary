@@ -54,9 +54,9 @@ export async function getVaultRoot(): Promise<string> {
     const root = await findVaultRoot();
 
     if (!root) {
-        console.error(chalk.red('\n🤖 Dobbie cannot find a vault here, sir.'));
+        console.error(chalk.red('\n🤖 Dobbi cannot find a vault here, sir.'));
         console.error(chalk.gray('This directory does not contain a .socks.md file.'));
-        console.error(chalk.gray('\nTo create a new vault, run: dobbie init'));
+        console.error(chalk.gray('\nTo create a new vault, run: dobbi init'));
         throw new Error('No vault found in current directory tree');
     }
 
@@ -124,7 +124,7 @@ export async function setUserName(name: string): Promise<void> {
 }
 
 /**
- * Honorific pools by gender — Dobbie picks randomly from these each time.
+ * Honorific pools by gender — Dobbi picks randomly from these each time.
  */
 export const HONORIFIC_POOLS: Record<string, string[]> = {
     male: ['sir', 'boss', 'master', 'chief', 'captain', 'guv', 'my lord', 'good sir'],
@@ -214,17 +214,17 @@ export async function requireProject(): Promise<string> {
     }
 
     // Prompt the user for a project
-    console.log(chalk.yellow("\nDobbie needs to know which project, sir."));
+    console.log(chalk.yellow("\nDobbi needs to know which project, sir."));
 
     const projects = await listProjects();
 
     if (projects.length === 0) {
-        console.log(chalk.gray("No projects exist yet. Dobbie will create one for you, sir."));
+        console.log(chalk.gray("No projects exist yet. Dobbi will create one for you, sir."));
         const { projectName } = await inquirer.prompt([
             {
                 type: 'input',
                 name: 'projectName',
-                message: 'What shall Dobbie call this project, sir?',
+                message: 'What shall Dobbi call this project, sir?',
                 validate: (input: string) => input.length > 0 || 'Please enter a project name',
             },
         ]);
@@ -267,7 +267,7 @@ export async function createProject(name: string): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
 
     // New projects start with only the two built-in entity types (task + note).
-    // Users can add more types later via `dobbie type add`.
+    // Users can add more types later via `dobbi type add`.
     const folders = DEFAULT_ENTITY_TYPES.map(t => t.directory);
     // Always include inbox (not an entity type but used for quick capture)
     if (!folders.includes('inbox')) folders.push('inbox');
@@ -330,6 +330,6 @@ export async function projectExists(name: string): Promise<boolean> {
 /**
  * @deprecated Use getVaultRoot() instead
  */
-export async function getDobbieRootPath(): Promise<string> {
+export async function getDobbiRootPath(): Promise<string> {
     return getVaultRoot();
 }

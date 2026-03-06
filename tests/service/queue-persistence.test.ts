@@ -6,7 +6,7 @@ import os from 'os';
 // We test the persistence functions with real file I/O in a temp directory.
 // We need to mock the paths used by queue-persistence.
 
-const TEST_DIR = path.join(os.tmpdir(), `dobbie-test-${Date.now()}`);
+const TEST_DIR = path.join(os.tmpdir(), `dobbi-test-${Date.now()}`);
 const TEST_FILE = path.join(TEST_DIR, 'queue-state.json');
 
 // Mock the module constants by controlling the file paths

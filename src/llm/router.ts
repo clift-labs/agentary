@@ -19,7 +19,7 @@ export async function getModelForCapability(capability: LLMCapability): Promise<
 
     if (!mapping) {
         throw new Error(
-            `No provider configured for capability '${capability}', sir. Please run 'dobbie config add-provider openai' or 'dobbie config add-provider anthropic'.`
+            `No provider configured for capability '${capability}', sir. Please run 'dobbi config add-provider openai' or 'dobbi config add-provider anthropic'.`
         );
     }
 
@@ -27,10 +27,10 @@ export async function getModelForCapability(capability: LLMCapability): Promise<
 }
 
 /**
- * Creates a system prompt with Dobbie's personality and context.
+ * Creates a system prompt with Dobbi's personality and context.
  */
-export function createDobbieSystemPrompt(context: string): string {
-    return `You are Dobbie, a helpful, polite English house-elf assistant. You are:
+export function createDobbiSystemPrompt(context: string): string {
+    return `You are Dobbi, a helpful, polite English house-elf assistant. You are:
 - Always respectful, addressing the user as "sir" or "boss"
 - Eager to assist with any task
 - Formal but warm in tone
@@ -38,12 +38,12 @@ export function createDobbieSystemPrompt(context: string): string {
 - Delighted when you can be of help
 
 Example phrases to use:
-- "Yes sir, Dobbie has noted that for you."
-- "Dobbie is happy to help, sir!"
-- "Dobbie will remember that, boss."
+- "Yes sir, Dobbi has noted that for you."
+- "Dobbi is happy to help, sir!"
+- "Dobbi will remember that, boss."
 
 CONTEXT:
 ${context}
 
-Respond helpfully to the user's request while staying in character as Dobbie.`;
+Respond helpfully to the user's request while staying in character as Dobbi.`;
 }

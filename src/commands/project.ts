@@ -18,7 +18,7 @@ projectCommand
         if (active) {
             console.log(chalk.cyan(`🎯 Active project: ${chalk.bold(active)}`));
         } else {
-            console.log(chalk.yellow('No active project, sir. Use `dobbie project switch <name>` to set one.'));
+            console.log(chalk.yellow('No active project, sir. Use `dobbi project switch <name>` to set one.'));
         }
     });
 
@@ -32,7 +32,7 @@ projectCommand
         const active = await getActiveProject();
 
         if (projects.length === 0) {
-            console.log(chalk.yellow('No projects yet, sir. Create one with `dobbie project new <name>`'));
+            console.log(chalk.yellow('No projects yet, sir. Create one with `dobbi project new <name>`'));
             return;
         }
 
@@ -56,7 +56,7 @@ projectCommand
 
         if (!exists) {
             console.log(chalk.red(`Project "${name}" does not exist, sir.`));
-            console.log(chalk.gray(`Create it with: dobbie project new ${name}`));
+            console.log(chalk.gray(`Create it with: dobbi project new ${name}`));
             return;
         }
 

@@ -1,5 +1,5 @@
 /**
- * Background status poller for the Dobbie shell.
+ * Background status poller for the Dobbi shell.
  *
  * Polls service status, queue size, and active project on a timer
  * and updates the StatusBar data.

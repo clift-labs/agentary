@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // CAL COMMAND
-// Google Calendar ICS feed sync — read-only, one-way: Google Calendar → Dobbie.
+// Google Calendar ICS feed sync — read-only, one-way: Google Calendar → Dobbi.
 // Supports multiple named calendar feeds.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import path from 'path';
 import { promises as fsPromises } from 'fs';
-import { loadConfig, saveConfig, DOBBIE_DIR } from '../config.js';
+import { loadConfig, saveConfig, DOBBI_DIR } from '../config.js';
 import { requireProject } from '../state/manager.js';
 import { parseIcsFeed } from '../utils/ics-parser.js';
 import {
@@ -25,7 +25,7 @@ import { getEntityIndex } from '../entities/entity-index.js';
 // CONFIG HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CAL_CONFIG_PATH = path.join(DOBBIE_DIR, 'cal-config.json');
+const CAL_CONFIG_PATH = path.join(DOBBI_DIR, 'cal-config.json');
 
 export interface CalendarEntry {
     id: string;
@@ -59,7 +59,7 @@ export async function loadCalConfig(): Promise<CalConfig> {
 }
 
 export async function saveCalConfig(cfg: CalConfig): Promise<void> {
-    await fsPromises.mkdir(DOBBIE_DIR, { recursive: true });
+    await fsPromises.mkdir(DOBBI_DIR, { recursive: true });
     await fsPromises.writeFile(CAL_CONFIG_PATH, JSON.stringify(cfg, null, 2));
 }
 
@@ -106,14 +106,14 @@ calCommand
 
         if (cfg.calendars.some(c => c.id === id)) {
             console.log(chalk.yellow(`\n  A calendar with id "${id}" already exists, sir.`));
-            console.log(chalk.gray(`  Use ${chalk.bold(`dobbie cal set-url ${id} <url>`)} to update it.\n`));
+            console.log(chalk.gray(`  Use ${chalk.bold(`dobbi cal set-url ${id} <url>`)} to update it.\n`));
             return;
         }
 
         cfg.calendars.push({ id, name, url });
         await saveCalConfig(cfg);
         console.log(chalk.green(`\n  Calendar "${name}" (${id}) added, sir.`));
-        console.log(chalk.gray(`  Run ${chalk.bold('dobbie cal sync')} to pull events.\n`));
+        console.log(chalk.gray(`  Run ${chalk.bold('dobbi cal sync')} to pull events.\n`));
     });
 
 // ── remove ────────────────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ calCommand
 
         if (cfg.calendars.length === 0) {
             console.log(chalk.yellow('\n  No calendars configured.'));
-            console.log(chalk.gray(`  Use ${chalk.bold('dobbie cal add <name> <url>')} to add one.\n`));
+            console.log(chalk.gray(`  Use ${chalk.bold('dobbi cal add <name> <url>')} to add one.\n`));
             return;
         }
 
@@ -174,7 +174,7 @@ calCommand
         cal.url = url;
         await saveCalConfig(cfg);
         console.log(chalk.green(`\n  URL updated for "${cal.name}" (${cal.id}), sir.`));
-        console.log(chalk.gray(`  Run ${chalk.bold('dobbie cal sync')} to pull events.\n`));
+        console.log(chalk.gray(`  Run ${chalk.bold('dobbi cal sync')} to pull events.\n`));
     });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -303,7 +303,7 @@ export async function syncCalendar(opts?: { days?: number; calendarId?: string }
     const cfg = await loadCalConfig();
 
     if (cfg.calendars.length === 0) {
-        throw new Error('No calendars configured. Use "dobbie cal add <name> <url>" first.');
+        throw new Error('No calendars configured. Use "dobbi cal add <name> <url>" first.');
     }
 
     const project = await requireProject();

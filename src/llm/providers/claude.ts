@@ -19,7 +19,7 @@ export class ClaudeProvider implements LLMProvider {
         const apiKey = await getApiKey('anthropic');
         if (!apiKey) {
             throw new Error(
-                "Dobbie needs an Anthropic API key, sir. Please run 'dobbie config add-provider anthropic'"
+                "Dobbi needs an Anthropic API key, sir. Please run 'dobbi config add-provider anthropic'"
             );
         }
 

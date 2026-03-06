@@ -1,8 +1,8 @@
 /**
- * Dobbie's onboarding interview — a fun, interactive conversation
+ * Dobbi's onboarding interview — a fun, interactive conversation
  * to learn about the user and personalise responses.
  *
- * Run automatically on first launch, or manually via `dobbie interview`.
+ * Run automatically on first launch, or manually via `dobbi interview`.
  */
 
 import { Command } from 'commander';
@@ -17,70 +17,70 @@ import { loadCalConfig, saveCalConfig } from './cal.js';
 
 const INTRO_LINES = [
     `\n🤖 ${chalk.cyan('*peeks out from behind a stack of scrolls*')}`,
-    `\n   Oh! A new face! Dobbie is ${chalk.bold('so')} excited!`,
-    `   Dobbie has never had a proper introduction, you see.`,
+    `\n   Oh! A new face! Dobbi is ${chalk.bold('so')} excited!`,
+    `   Dobbi has never had a proper introduction, you see.`,
     `   ${chalk.gray('*clears throat and stands up very straight*')}\n`,
-    `   Let Dobbie ask a few questions so Dobbie can serve you better!\n`,
+    `   Let Dobbi ask a few questions so Dobbi can serve you better!\n`,
 ];
 
 const REACTIONS = {
     name: [
-        (n: string) => `   ${chalk.cyan(`*bounces with joy*`)} What a wonderful name! ${chalk.bold(n)}! Dobbie will remember it forever!`,
-        (n: string) => `   ${chalk.cyan(`*scribbles furiously on parchment*`)} ${chalk.bold(n)}... got it! Dobbie has excellent penmanship!`,
+        (n: string) => `   ${chalk.cyan(`*bounces with joy*`)} What a wonderful name! ${chalk.bold(n)}! Dobbi will remember it forever!`,
+        (n: string) => `   ${chalk.cyan(`*scribbles furiously on parchment*`)} ${chalk.bold(n)}... got it! Dobbi has excellent penmanship!`,
         (n: string) => `   ${chalk.cyan(`*whispers reverently*`)} ${chalk.bold(n)}... a fine name indeed!`,
     ],
     gender: [
-        `   ${chalk.cyan(`*nods solemnly*`)} Noted! Dobbie will address you properly from now on.`,
-        `   ${chalk.cyan(`*updates the scrolls*`)} Very good! Dobbie has made a note of it.`,
-        `   ${chalk.cyan(`*bows respectfully*`)} Understood! Dobbie shall address you accordingly.`,
+        `   ${chalk.cyan(`*nods solemnly*`)} Noted! Dobbi will address you properly from now on.`,
+        `   ${chalk.cyan(`*updates the scrolls*`)} Very good! Dobbi has made a note of it.`,
+        `   ${chalk.cyan(`*bows respectfully*`)} Understood! Dobbi shall address you accordingly.`,
     ],
     work: [
-        (w: string) => `   ${chalk.cyan(`*eyes go wide*`)} ${chalk.bold(w)}?! That sounds fascinating! Dobbie wishes he could do that too!`,
-        (w: string) => `   ${chalk.cyan(`*adjusts spectacles*`)} Ah, ${chalk.bold(w)}! Dobbie has heard of such noble work!`,
-        (w: string) => `   ${chalk.cyan(`*takes careful notes*`)} ${chalk.bold(w)}... Dobbie will keep this in mind when helping you!`,
+        (w: string) => `   ${chalk.cyan(`*eyes go wide*`)} ${chalk.bold(w)}?! That sounds fascinating! Dobbi wishes he could do that too!`,
+        (w: string) => `   ${chalk.cyan(`*adjusts spectacles*`)} Ah, ${chalk.bold(w)}! Dobbi has heard of such noble work!`,
+        (w: string) => `   ${chalk.cyan(`*takes careful notes*`)} ${chalk.bold(w)}... Dobbi will keep this in mind when helping you!`,
     ],
     family: [
-        () => `   ${chalk.cyan(`*wipes a tear*`)} How lovely! Dobbie is touched you shared that!`,
-        () => `   ${chalk.cyan(`*clutches heart*`)} Family is important! Dobbie knows this well.`,
-        () => `   ${chalk.cyan(`*smiles warmly*`)} Dobbie will remember this. Family context helps Dobbie help you!`,
+        () => `   ${chalk.cyan(`*wipes a tear*`)} How lovely! Dobbi is touched you shared that!`,
+        () => `   ${chalk.cyan(`*clutches heart*`)} Family is important! Dobbi knows this well.`,
+        () => `   ${chalk.cyan(`*smiles warmly*`)} Dobbi will remember this. Family context helps Dobbi help you!`,
     ],
     car: {
         yes: [
-            `   ${chalk.cyan(`*pretends to drive*`)} Vroom vroom! Dobbie has always wanted to ride in one!`,
+            `   ${chalk.cyan(`*pretends to drive*`)} Vroom vroom! Dobbi has always wanted to ride in one!`,
             `   ${chalk.cyan(`*nods approvingly*`)} A chariot of steel! Very practical, very practical.`,
         ],
         no: [
-            `   ${chalk.cyan(`*nods wisely*`)} No car! Dobbie respects that. Dobbie gets everywhere by apparition anyway.`,
-            `   ${chalk.cyan(`*taps chin*`)} Public transport or teleportation? Either way, Dobbie approves!`,
+            `   ${chalk.cyan(`*nods wisely*`)} No car! Dobbi respects that. Dobbi gets everywhere by apparition anyway.`,
+            `   ${chalk.cyan(`*taps chin*`)} Public transport or teleportation? Either way, Dobbi approves!`,
         ],
     },
     city_live: [
-        (c: string) => `   ${chalk.cyan(`*pulls out a tiny map*`)} ${chalk.bold(c)}! Dobbie has heard stories about that place!`,
-        (c: string) => `   ${chalk.cyan(`*marks it on his scroll*`)} ${chalk.bold(c)}... noted! Dobbie will factor this in.`,
+        (c: string) => `   ${chalk.cyan(`*pulls out a tiny map*`)} ${chalk.bold(c)}! Dobbi has heard stories about that place!`,
+        (c: string) => `   ${chalk.cyan(`*marks it on his scroll*`)} ${chalk.bold(c)}... noted! Dobbi will factor this in.`,
     ],
     city_work: [
-        (c: string) => `   ${chalk.cyan(`*calculates on fingers*`)} And you work in ${chalk.bold(c)}! Dobbie sees, Dobbie sees.`,
-        (c: string) => `   ${chalk.cyan(`*draws a line on his map*`)} ${chalk.bold(c)} for work! Dobbie has the full picture now!`,
+        (c: string) => `   ${chalk.cyan(`*calculates on fingers*`)} And you work in ${chalk.bold(c)}! Dobbi sees, Dobbi sees.`,
+        (c: string) => `   ${chalk.cyan(`*draws a line on his map*`)} ${chalk.bold(c)} for work! Dobbi has the full picture now!`,
     ],
     cal_personal: [
-        `   ${chalk.cyan(`*carefully copies the link*`)} Personal calendar! Dobbie will keep an eye on it!`,
-        `   ${chalk.cyan(`*pins it to the notice board*`)} Splendid! Dobbie loves knowing what's coming up!`,
+        `   ${chalk.cyan(`*carefully copies the link*`)} Personal calendar! Dobbi will keep an eye on it!`,
+        `   ${chalk.cyan(`*pins it to the notice board*`)} Splendid! Dobbi loves knowing what's coming up!`,
     ],
     cal_work: [
-        `   ${chalk.cyan(`*files it under "important"*`)} Work calendar too! Dobbie will track both, sir!`,
-        `   ${chalk.cyan(`*nods professionally*`)} Two calendars! Dobbie is very thorough.`,
+        `   ${chalk.cyan(`*files it under "important"*`)} Work calendar too! Dobbi will track both, sir!`,
+        `   ${chalk.cyan(`*nods professionally*`)} Two calendars! Dobbi is very thorough.`,
     ],
     project: [
         (p: string) => `   ${chalk.cyan(`*labels a fresh folder*`)} "${chalk.bold(p)}" — what a fine name for a project!`,
-        (p: string) => `   ${chalk.cyan(`*writes it in big letters*`)} ${chalk.bold(p)}! Dobbie will set everything up!`,
+        (p: string) => `   ${chalk.cyan(`*writes it in big letters*`)} ${chalk.bold(p)}! Dobbi will set everything up!`,
     ],
 };
 
 const OUTRO_LINES = [
     `\n🤖 ${chalk.cyan(`*rolls up parchment and stores it carefully*`)}`,
-    `   Splendid! Dobbie knows everything Dobbie needs to know!`,
-    `   Dobbie is now ${chalk.bold('fully calibrated')} and ready to serve.`,
-    `   ${chalk.gray(`(You can update your profile anytime with: dobbie interview)`)}\n`,
+    `   Splendid! Dobbi knows everything Dobbi needs to know!`,
+    `   Dobbi is now ${chalk.bold('fully calibrated')} and ready to serve.`,
+    `   ${chalk.gray(`(You can update your profile anytime with: dobbi interview)`)}\n`,
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ export async function runInterview(): Promise<void> {
         type: 'input',
         name: 'name',
         message: chalk.cyan('🤖 What is your name?'),
-        validate: (v: string) => v.trim().length > 0 || 'Dobbie needs at least one letter!',
+        validate: (v: string) => v.trim().length > 0 || 'Dobbi needs at least one letter!',
     }]);
     console.log(pick(REACTIONS.name)(name.trim()));
     await pause();
@@ -123,7 +123,7 @@ export async function runInterview(): Promise<void> {
     const { gender } = await inquirer.prompt([{
         type: 'list',
         name: 'gender',
-        message: chalk.cyan('🤖 How does Dobbie see you?'),
+        message: chalk.cyan('🤖 How does Dobbi see you?'),
         choices: [
             { name: 'Male', value: 'male' },
             { name: 'Female', value: 'female' },
@@ -149,7 +149,7 @@ export async function runInterview(): Promise<void> {
     const { familySituation } = await inquirer.prompt([{
         type: 'input',
         name: 'familySituation',
-        message: chalk.cyan('🤖 Tell Dobbie about your family! (or press Enter to skip)'),
+        message: chalk.cyan('🤖 Tell Dobbi about your family! (or press Enter to skip)'),
         default: '',
     }]);
     if (familySituation.trim()) {
@@ -219,7 +219,7 @@ export async function runInterview(): Promise<void> {
     const { firstProject } = await inquirer.prompt([{
         type: 'input',
         name: 'firstProject',
-        message: chalk.cyan('🤖 What shall Dobbie call your first project?'),
+        message: chalk.cyan('🤖 What shall Dobbi call your first project?'),
         default: 'personal',
     }]);
     console.log(pick(REACTIONS.project)(firstProject.trim()));
@@ -271,7 +271,7 @@ export async function runInterview(): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const interviewCommand = new Command('interview')
-    .description('Run (or re-run) the Dobbie onboarding interview')
+    .description('Run (or re-run) the Dobbi onboarding interview')
     .action(async () => {
         await runInterview();
     });

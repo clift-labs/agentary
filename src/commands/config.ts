@@ -26,7 +26,7 @@ configCommand
         ]);
         const config = await loadConfig();
 
-        console.log(chalk.cyan('\n  Dobbie Configuration\n'));
+        console.log(chalk.cyan('\n  Dobbi Configuration\n'));
 
         // Providers
         console.log(chalk.bold('API Keys:'));
@@ -34,7 +34,7 @@ configCommand
         for (const provider of knownProviders) {
             const configured = configuredProviders.includes(provider);
             const tick = configured ? chalk.green('✓') : chalk.gray('○');
-            const hint = configured ? '' : chalk.gray('  run: dobbie config add-provider ' + provider);
+            const hint = configured ? '' : chalk.gray('  run: dobbi config add-provider ' + provider);
             console.log(`  ${tick} ${provider}${hint}`);
         }
         console.log('');
@@ -66,7 +66,7 @@ configCommand
         console.log('');
 
         if (Object.keys(config.capabilityMapping).length > 0) {
-            console.log(chalk.gray('  Capabilities marked [override] have manual settings. Run `dobbie config reset-capability <cap>` to restore auto-selection.'));
+            console.log(chalk.gray('  Capabilities marked [override] have manual settings. Run `dobbi config reset-capability <cap>` to restore auto-selection.'));
             console.log('');
         }
     });
@@ -78,7 +78,7 @@ configCommand
     .action(async (name: string) => {
         const knownProviders = Object.keys(PROVIDER_MODELS);
         if (!knownProviders.includes(name)) {
-            console.log(chalk.yellow(`\nDobbie doesn't recognise "${name}" as a built-in provider, sir.`));
+            console.log(chalk.yellow(`\nDobbi doesn't recognise "${name}" as a built-in provider, sir.`));
             console.log(chalk.gray(`Known providers: ${knownProviders.join(', ')}`));
             const { proceed } = await inquirer.prompt([{
                 type: 'confirm', name: 'proceed',
@@ -108,15 +108,15 @@ configCommand
         await setApiKey(name, apiKey);
         console.log(chalk.green(`\n✓ ${name} API key saved, sir!\n`));
 
-        // Show what Dobbie will use with this provider
+        // Show what Dobbi will use with this provider
         const providerModels = PROVIDER_MODELS[name];
         if (providerModels) {
-            console.log(chalk.bold(`Dobbie will automatically use these ${name} models:\n`));
+            console.log(chalk.bold(`Dobbi will automatically use these ${name} models:\n`));
             for (const [cap, model] of Object.entries(providerModels)) {
                 console.log(`  ${chalk.gray(cap.padEnd(12))} ${model}`);
             }
             console.log('');
-            console.log(chalk.gray('Run `dobbie config` to see the full effective configuration.'));
+            console.log(chalk.gray('Run `dobbi config` to see the full effective configuration.'));
             console.log('');
         }
     });
@@ -133,7 +133,7 @@ configCommand
         }
         await setCapabilityModel(capability as LLMCapability, provider, model);
         console.log(chalk.green(`✓ Capability "${capability}" will now use ${provider}/${model}, sir!`));
-        console.log(chalk.gray(`  Run 'dobbie config reset-capability ${capability}' to restore auto-selection.`));
+        console.log(chalk.gray(`  Run 'dobbi config reset-capability ${capability}' to restore auto-selection.`));
     });
 
 // Reset a capability override back to auto-selection
@@ -194,7 +194,7 @@ configCommand
             console.log('');
         }
 
-        console.log(chalk.gray('Add a key: dobbie config add-provider <name>'));
+        console.log(chalk.gray('Add a key: dobbi config add-provider <name>'));
         console.log('');
     });
 
@@ -205,7 +205,7 @@ configCommand
     .action(async (name: string) => {
         const { setUserName } = await import('../state/manager.js');
         await setUserName(name);
-        console.log(chalk.green(`\n✓ Dobbie will call you "${name}" from now on!`));
+        console.log(chalk.green(`\n✓ Dobbi will call you "${name}" from now on!`));
     });
 
 export default configCommand;

@@ -221,7 +221,7 @@ export class QueueManager {
         this.errorCount = saved.errorCount;
 
         if (this.queue.length > 0) {
-            console.debug(`[dobbie:queue] Restored ${this.queue.length} pending tasks from disk`);
+            console.debug(`[dobbi:queue] Restored ${this.queue.length} pending tasks from disk`);
         }
     }
 }

@@ -6,7 +6,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getEnrichedContext } from '../context/reader.js';
-import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, eventHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
@@ -63,11 +63,11 @@ async function findExistingEvent(project: string, titleOrFilename: string): Prom
 }
 
 async function clarifyEvent(state: EventState): Promise<string> {
-    console.log(chalk.gray('\nDobbie is clarifying the event, sir...'));
+    console.log(chalk.gray('\nDobbi is clarifying the event, sir...'));
 
     const context = await getEnrichedContext(state.project, 'events', state.description);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -91,11 +91,11 @@ ${state.description || '(No description yet)'}`,
 }
 
 async function suggestTime(state: EventState): Promise<void> {
-    console.log(chalk.gray('\nDobbie is analyzing timing, sir...'));
+    console.log(chalk.gray('\nDobbi is analyzing timing, sir...'));
 
     const context = await getEnrichedContext(state.project, 'events', state.description);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -122,11 +122,11 @@ ${state.description || '(No description)'}`,
 }
 
 async function modifyEvent(state: EventState, feedback: string): Promise<string> {
-    console.log(chalk.gray('\nDobbie is modifying the event, sir...'));
+    console.log(chalk.gray('\nDobbi is modifying the event, sir...'));
 
     const context = await getEnrichedContext(state.project, 'events', state.description);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbieSystemPrompt(context);
+    const systemPrompt = createDobbiSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -215,7 +215,7 @@ Commands:
   ${chalk.bold('exit')}         - Save and go back
   ${chalk.bold('back')}         - Save and go back
   ${chalk.bold('abort')}        - Discard changes and go back
-  ${chalk.bold('quit')}         - Quit Dobbie entirely
+  ${chalk.bold('quit')}         - Quit Dobbi entirely
   ${chalk.bold('help')}         - Show this help
 `));
 }
@@ -242,13 +242,13 @@ export const eventCommand = new Command('event')
     .argument('[words...]', 'Title and optional inline description (e.g. "dentist Need to schedule cleaning")')
     .action(async (words: string[]) => {
         try {
-            // Handle: dobbie event list
+            // Handle: dobbi event list
             if (words[0] === 'list') {
                 await listEntities('events');
                 return;
             }
 
-            // Handle: dobbie event remove <title>
+            // Handle: dobbi event remove <title>
             if (words[0] === 'remove' || words[0] === 'delete') {
                 const removeTitle = words.slice(1).join(' ');
                 if (!removeTitle) {
@@ -282,7 +282,7 @@ export const eventCommand = new Command('event')
                     {
                         type: 'input',
                         name: 'eventTitle',
-                        message: 'What event shall Dobbie schedule, sir?',
+                        message: 'What event shall Dobbi schedule, sir?',
                         validate: (input: string) => input.length > 0 || 'Title is required',
                     },
                 ]);
@@ -408,7 +408,7 @@ export const eventCommand = new Command('event')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbie notices unsaved work, sir. Discard changes?',
+                                message: 'Dobbi notices unsaved work, sir. Discard changes?',
                                 default: false,
                             },
                         ]);
@@ -425,7 +425,7 @@ export const eventCommand = new Command('event')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbie notices unsaved work, sir. Quit Dobbie entirely?',
+                                message: 'Dobbi notices unsaved work, sir. Quit Dobbi entirely?',
                                 default: false,
                             },
                         ]);
@@ -462,7 +462,7 @@ export const eventCommand = new Command('event')
                                 {
                                     type: 'input',
                                     name: 'feedback',
-                                    message: 'How should Dobbie modify the event?',
+                                    message: 'How should Dobbi modify the event?',
                                 },
                             ]);
                             if (feedback) {
@@ -568,7 +568,7 @@ export const eventCommand = new Command('event')
             popCrumb();
 
         } catch (error) {
-            console.error(chalk.red('Dobbie encountered an error, sir:'), error);
+            console.error(chalk.red('Dobbi encountered an error, sir:'), error);
         }
     });
 

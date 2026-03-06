@@ -1,5 +1,5 @@
 /**
- * Startup banner for the Dobbie interactive shell.
+ * Startup banner for the Dobbi interactive shell.
  *
  * Displays ASCII art, a randomised greeting, and current state
  * (service, project, vault) every time the shell boots.
@@ -13,16 +13,16 @@ import { getDaemonStatus } from '../service/daemon.js';
 import { findVaultRoot, getActiveProject } from '../state/manager.js';
 
 /**
- * Load the ASCII art from dobbie.txt (bundled alongside the source).
+ * Load the ASCII art from dobbi.txt (bundled alongside the source).
  */
 async function loadAsciiArt(): Promise<string> {
     // In dev mode, read from disk
     try {
-        const artPath = path.join(import.meta.dirname, '..', 'dobbie.txt');
+        const artPath = path.join(import.meta.dirname, '..', 'dobbi.txt');
         return await fs.readFile(artPath, 'utf-8');
     } catch {
         // Fallback if the file cannot be found (e.g. in a binary bundle)
-        return '🤖 Dobbie';
+        return '🤖 Dobbi';
     }
 }
 
@@ -80,7 +80,7 @@ export async function printStartupBanner(): Promise<void> {
 
     const vaultLabel = state.vault
         ? chalk.white(`🏠 ${path.basename(state.vault)}`)
-        : chalk.yellow('🏠 no vault (run dobbie init)');
+        : chalk.yellow('🏠 no vault (run dobbi init)');
 
     console.log(`  ${serviceIcon}  │  ${projectLabel}  │  ${vaultLabel}`);
     console.log(chalk.gray('  Tab-complete commands • Up/Down for history • Type "exit" or Ctrl+D to leave\n'));

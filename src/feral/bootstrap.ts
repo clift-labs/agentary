@@ -88,7 +88,7 @@ import { OutputCatalogSource } from './catalog/output-catalog-source.js';
 
 // System & output node codes
 import { CliCommandNodeCode } from './node-code/system/cli-command-node-code.js';
-import { DobbieSpeakNodeCode } from './node-code/output/dobbie-speak-node-code.js';
+import { DobbiSpeakNodeCode } from './node-code/output/dobbi-speak-node-code.js';
 
 // Input node codes
 import { PromptInputNodeCode } from './node-code/input/prompt-input-node-code.js';
@@ -161,7 +161,7 @@ function getBuiltInNodeCodes(): NodeCode[] {
         new SearchEntitiesNodeCode(),
         // System & output
         new CliCommandNodeCode(),
-        new DobbieSpeakNodeCode(),
+        new DobbiSpeakNodeCode(),
         // Input
         new PromptInputNodeCode(),
         new PromptSelectNodeCode(),
@@ -184,7 +184,7 @@ export interface FeralRuntime {
 /**
  * Bootstrap the full Feral runtime:
  * 1. Creates NodeCodeFactory with all built-in node codes
- * 2. Loads user-defined catalog config from ~/.dobbie/feral-catalog.json
+ * 2. Loads user-defined catalog config from ~/.dobbi/feral-catalog.json
  * 3. Builds Catalog from built-in + user-defined sources
  * 4. Wires EventDispatcher, ProcessEngine, ProcessFactory, Runner
  */
@@ -213,8 +213,8 @@ export async function bootstrapFeral(
         new OutputCatalogSource(),
     ]);
 
-    // 4. Load process definitions from ~/.dobbie/processes/
-    const processDir = path.join(os.homedir(), '.dobbie', 'processes');
+    // 4. Load process definitions from ~/.dobbi/processes/
+    const processDir = path.join(os.homedir(), '.dobbi', 'processes');
     const jsonProcessSource = new JsonProcessSource(processDir);
     await jsonProcessSource.load();
 

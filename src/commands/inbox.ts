@@ -202,8 +202,8 @@ export const inboxCommand = new Command('inbox')
                 const msg = getResponse('inbox_empty');
                 console.log(chalk.gray(`\n📥 ${msg}`));
                 console.log(chalk.gray('\nTo add items:'));
-                console.log(chalk.gray('  dobbie inbox add "Remember to call mom"'));
-                console.log(chalk.gray('  dobbie inbox add /path/to/file.txt'));
+                console.log(chalk.gray('  dobbi inbox add "Remember to call mom"'));
+                console.log(chalk.gray('  dobbi inbox add /path/to/file.txt'));
                 return;
             }
 
@@ -228,7 +228,7 @@ export const inboxCommand = new Command('inbox')
                         const { userAction } = await inquirer.prompt([{
                             type: 'list',
                             name: 'userAction',
-                            message: `Could not process "${filename}". What should Dobbie do?`,
+                            message: `Could not process "${filename}". What should Dobbi do?`,
                             choices: [
                                 { name: 'Skip (keep in inbox)', value: 'skip' },
                                 { name: 'Delete from inbox', value: 'delete' },

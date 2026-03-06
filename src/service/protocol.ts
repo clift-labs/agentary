@@ -161,7 +161,7 @@ export class QueueFullError extends Error {
 
 export class ServiceNotRunningError extends Error {
     constructor() {
-        super('Dobbie service is not running. Start it with: dobbie start');
+        super('Dobbi service is not running. Start it with: dobbi start');
         this.name = 'ServiceNotRunningError';
     }
 }

@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { getActiveProject, getVaultRoot } from '../state/manager.js';
 import { getContextString } from '../context/reader.js';
-import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
 import { getActiveTodonts } from './todont.js';
@@ -91,14 +91,14 @@ export const todayCommand = new Command('today')
             if (activeProject) {
                 console.log(chalk.bold.yellow(`🎯 Active Project: ${activeProject}\n`));
             } else {
-                console.log(chalk.gray('No active project set. Use `dobbie project switch <name>` to set one.\n'));
+                console.log(chalk.gray('No active project set. Use `dobbi project switch <name>` to set one.\n'));
             }
 
             // Try to use AI to summarize
             try {
                 const context = await getContextString(vaultRoot);
                 const llm = await getModelForCapability('summarize');
-                const systemPrompt = createDobbieSystemPrompt(context);
+                const systemPrompt = createDobbiSystemPrompt(context);
 
                 const prompt = `Please provide a helpful summary of today's tasks and schedule for the user. Be concise and prioritize the most important items.
 
@@ -148,7 +148,7 @@ Provide a prioritized summary of what the user should focus on today. If there a
                     console.log('');
                 }
 
-                console.log(chalk.gray('\n(Configure AI with `dobbie config add-provider anthropic` for smart summaries)'));
+                console.log(chalk.gray('\n(Configure AI with `dobbi config add-provider anthropic` for smart summaries)'));
             }
 
         } catch (error) {
