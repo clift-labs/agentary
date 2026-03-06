@@ -70,13 +70,9 @@ All of your information stays **local** — stored as plain Markdown files with 
 | **todo** | Tasks with priority, status, and due dates |
 | **event** | Calendar events with start/end times and locations |
 | **note** | Freeform notes |
-| **goal** | Long-term objectives |
-| **person** | Contact details and relationship notes |
-| **recurrence** | Recurring task templates |
 | **todont** | Things you're deliberately *not* doing |
-| **research** | Research topics and findings |
 
-You can also define your own custom entity types.
+Dobbi creates new content types as needed — just ask him to track something new and he'll figure out the right structure.
 
 ### Natural Language Chat
 
