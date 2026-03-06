@@ -1,27 +1,58 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
-import { SecretsSchema, ConfigSchema, type Secrets, type Config, type LLMCapability, type CapabilityModelMapping } from './schemas/index.js';
+import { SecretsSchema, ConfigSchema, LLM_CAPABILITIES, type Secrets, type Config, type LLMCapability, type CapabilityModelMapping } from './schemas/index.js';
 import { debug } from './utils/debug.js';
 
 const DOBBIE_DIR = path.join(os.homedir(), '.dobbie');
 const SECRETS_PATH = path.join(DOBBIE_DIR, 'secrets.json');
 const CONFIG_PATH = path.join(DOBBIE_DIR, 'config.json');
 
-// Default configuration with capability-based mapping
-// Using OpenAI models with cost-conscious selection:
-// - GPT-4o: Complex reasoning, general chat (~$2.50/1M input, $10/1M output)
-// - GPT-4o-mini: Simple tasks (~$0.15/1M input, $0.60/1M output) - 15x cheaper!
-// - text-embedding-3-small: Embeddings (~$0.02/1M tokens)
-const DEFAULT_CONFIG: Config = {
-    capabilityMapping: {
-        reason: { provider: 'openai', model: 'gpt-4o' },           // Complex thinking needs full power
-        summarize: { provider: 'openai', model: 'gpt-4o-mini' },   // Summarizing is straightforward
-        categorize: { provider: 'openai', model: 'gpt-4o-mini' },  // Classification is simple
-        format: { provider: 'openai', model: 'gpt-4o-mini' },      // Text formatting is simple
-        chat: { provider: 'openai', model: 'gpt-4o' },             // General chat, good quality
-        embed: { provider: 'openai', model: 'text-embedding-3-small' },
+// Dobbie's built-in knowledge: the best model per provider per capability.
+// Users only need to add their API key — Dobbie picks the right model automatically.
+//
+// OpenAI pricing notes:
+//   gpt-4o:       ~$2.50/1M input, $10/1M output  (reasoning & chat)
+//   gpt-4o-mini:  ~$0.15/1M input, $0.60/1M output (fast tasks, 15x cheaper)
+//   text-embedding-3-small: ~$0.02/1M tokens
+//
+// Anthropic pricing notes:
+//   claude-opus-4-6:          most capable, best reasoning
+//   claude-sonnet-4-6:        excellent balance of quality & cost
+//   claude-haiku-4-5-20251001: fastest & cheapest for simple tasks
+export const PROVIDER_MODELS: Record<string, Partial<Record<LLMCapability, string>>> = {
+    openai: {
+        reason: 'gpt-4o',
+        summarize: 'gpt-4o-mini',
+        categorize: 'gpt-4o-mini',
+        format: 'gpt-4o-mini',
+        chat: 'gpt-4o',
+        embed: 'text-embedding-3-small',
     },
+    anthropic: {
+        reason: 'claude-opus-4-6',
+        summarize: 'claude-haiku-4-5-20251001',
+        categorize: 'claude-haiku-4-5-20251001',
+        format: 'claude-haiku-4-5-20251001',
+        chat: 'claude-sonnet-4-6',
+        // embed: not supported by Anthropic
+    },
+};
+
+// Preferred provider order per capability when multiple providers are configured.
+// First available provider with a model for the capability wins.
+const CAPABILITY_PREFERRED_PROVIDERS: Record<LLMCapability, string[]> = {
+    reason: ['anthropic', 'openai'],      // Claude Opus excels at complex reasoning
+    chat: ['anthropic', 'openai'],        // Claude Sonnet has the best personality for Dobbie
+    summarize: ['openai', 'anthropic'],   // GPT-4o-mini is very cost-effective for this
+    categorize: ['openai', 'anthropic'],  // GPT-4o-mini is very cost-effective for this
+    format: ['openai', 'anthropic'],      // GPT-4o-mini is very cost-effective for this
+    embed: ['openai'],                    // Anthropic does not support embeddings
+};
+
+// Config stores only explicit user overrides; everything else is auto-resolved.
+const DEFAULT_CONFIG: Config = {
+    capabilityMapping: {},
     defaultProvider: 'openai',
 };
 
@@ -76,15 +107,54 @@ export async function setApiKey(provider: string, apiKey: string): Promise<void>
     await saveSecrets(secrets);
 }
 
+// Returns the effective provider+model for a capability.
+// Checks explicit user overrides first, then auto-resolves based on configured providers.
 export async function getCapabilityModel(capability: LLMCapability): Promise<CapabilityModelMapping | null> {
-    const config = await loadConfig();
-    return config.capabilityMapping[capability] ?? null;
+    const [config, secrets] = await Promise.all([loadConfig(), loadSecrets()]);
+
+    // 1. Explicit user override takes priority
+    const override = config.capabilityMapping[capability];
+    if (override) return override;
+
+    // 2. Auto-resolve: try preferred providers in order
+    const available = new Set(Object.keys(secrets.providers));
+    for (const provider of CAPABILITY_PREFERRED_PROVIDERS[capability]) {
+        const model = PROVIDER_MODELS[provider]?.[capability];
+        if (model && available.has(provider)) {
+            return { provider, model };
+        }
+    }
+
+    return null;
+}
+
+// Returns the effective mapping for every capability — useful for display.
+export async function getEffectiveConfig(): Promise<Record<LLMCapability, CapabilityModelMapping | null>> {
+    const result = {} as Record<LLMCapability, CapabilityModelMapping | null>;
+    await Promise.all(
+        LLM_CAPABILITIES.map(async (cap) => {
+            result[cap] = await getCapabilityModel(cap);
+        })
+    );
+    return result;
 }
 
 export async function setCapabilityModel(capability: LLMCapability, provider: string, model: string): Promise<void> {
     const config = await loadConfig();
     config.capabilityMapping[capability] = { provider, model };
     await saveConfig(config);
+}
+
+export async function removeCapabilityOverride(capability: LLMCapability): Promise<void> {
+    const config = await loadConfig();
+    delete config.capabilityMapping[capability];
+    await saveConfig(config);
+}
+
+// Returns the list of providers that have an API key configured.
+export async function getConfiguredProviders(): Promise<string[]> {
+    const secrets = await loadSecrets();
+    return Object.keys(secrets.providers);
 }
 
 export { DOBBIE_DIR, SECRETS_PATH, CONFIG_PATH };

@@ -13,7 +13,7 @@ import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
 import { getEntityIndex } from '../entities/entity-index.js';
-import { findEntityByTitle, trashEntity } from '../entities/entity.js';
+import { findEntityByTitle, trashEntity, generateEntityId } from '../entities/entity.js';
 
 interface TodoState {
     title: string;
@@ -27,43 +27,18 @@ interface TodoState {
 }
 
 async function findExistingTodo(project: string, titleOrFilename: string): Promise<{ filepath: string; title: string; content: string; priority: string; dueDate?: string; completed: boolean } | null> {
-    const vaultRoot = await getVaultRoot();
-    const todosDir = path.join(vaultRoot, 'projects', project, 'todos');
-
-    try {
-        const files = await fs.readdir(todosDir);
-
-        // Convert title to expected filename
-        const expectedFilename = titleOrFilename
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '') + '.md';
-
-        // Also check without .md extension
-        const filenameWithMd = titleOrFilename.endsWith('.md') ? titleOrFilename : titleOrFilename + '.md';
-
-        for (const file of files) {
-            if (file === expectedFilename || file === filenameWithMd || file === titleOrFilename) {
-                const filepath = path.join(todosDir, file);
-                const rawContent = await fs.readFile(filepath, 'utf-8');
-                const parsed = matter(rawContent);
-
-                return {
-                    filepath,
-                    title: parsed.data.title || file.replace('.md', ''),
-                    content: parsed.content.trim(),
-                    priority: parsed.data.priority || 'medium',
-                    dueDate: parsed.data.dueDate,
-                    completed: parsed.data.completed || false,
-                };
-            }
-        }
-    } catch (err) {
-        debug('todo', err);
-        // Todos directory doesn't exist yet
-    }
-
-    return null;
+    const found = await findEntityByTitle('task', titleOrFilename);
+    if (!found) return null;
+    // Filter to current project
+    if (found.meta.project && found.meta.project !== project) return null;
+    return {
+        filepath: found.filepath,
+        title: found.meta.title as string,
+        content: found.content,
+        priority: (found.meta.priority as string) || 'medium',
+        dueDate: found.meta.dueDate as string | undefined,
+        completed: (found.meta.status as string) === 'done',
+    };
 }
 
 async function breakdownTodo(state: TodoState): Promise<string> {
@@ -251,12 +226,9 @@ async function saveTodo(state: TodoState): Promise<string> {
 
     // Use existing filepath or create new one
     let filepath = state.filepath;
+    const entityId = filepath ? path.basename(filepath, '.md') : generateEntityId('task');
     if (!filepath) {
-        const filename = state.title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '') + '.md';
-        filepath = path.join(todosDir, filename);
+        filepath = path.join(todosDir, `${entityId}.md`);
     }
 
     // Format content before saving
@@ -265,6 +237,7 @@ async function saveTodo(state: TodoState): Promise<string> {
     // Create markdown with frontmatter
     const today = new Date().toISOString().split('T')[0];
     const markdown = `---
+id: ${entityId}
 title: "${state.title}"
 created: ${today}
 project: ${state.project}

@@ -8,10 +8,12 @@
  */
 
 import { ServiceServer } from './server.js';
+import { WebServer } from './web-server.js';
 import { getQueueManager } from './queue/manager.js';
 import { getQueueProcessor } from './queue/processor.js';
 import { SOCKET_PATH } from './daemon.js';
 import { getEntityIndex } from '../entities/entity-index.js';
+import { getCronScheduler } from './cron/scheduler.js';
 import type { ServiceRequest, ServiceResponse, Task } from './protocol.js';
 
 // Only run if this is the service process
@@ -104,6 +106,38 @@ async function handleRequest(request: ServiceRequest): Promise<ServiceResponse> 
                             result: getEntityIndex().getStats(),
                         };
 
+                    case 'cron.status':
+                        return {
+                            requestId: request.id,
+                            status: 'completed',
+                            result: getCronScheduler().getStatus(),
+                        };
+
+                    case 'cron.run': {
+                        const jobName = (payload as unknown as { job: string }).job;
+                        if (!jobName) {
+                            return {
+                                requestId: request.id,
+                                status: 'error',
+                                error: 'Missing job name',
+                            };
+                        }
+                        try {
+                            const summary = await getCronScheduler().runJob(jobName);
+                            return {
+                                requestId: request.id,
+                                status: 'completed',
+                                result: { job: jobName, summary },
+                            };
+                        } catch (err) {
+                            return {
+                                requestId: request.id,
+                                status: 'error',
+                                error: err instanceof Error ? err.message : String(err),
+                            };
+                        }
+                    }
+
                     default:
                         return {
                             requestId: request.id,
@@ -177,7 +211,9 @@ async function main(): Promise<void> {
     console.log('Dobbie service starting...');
 
     const server = new ServiceServer();
+    const webServer = new WebServer();
     const processor = getQueueProcessor();
+    const cron = getCronScheduler();
 
     // Set up request handler
     server.onRequest(handleRequest);
@@ -185,7 +221,9 @@ async function main(): Promise<void> {
     // Handle shutdown signals
     const shutdown = async () => {
         console.log('Shutting down...');
+        cron.stop();
         processor.stop();
+        await webServer.stop();
         await server.stop();
         process.exit(0);
     };
@@ -197,6 +235,13 @@ async function main(): Promise<void> {
     await server.start(SOCKET_PATH);
     await processor.start();
 
+    // Start cron scheduler
+    try {
+        await cron.start();
+    } catch (err) {
+        console.error('Failed to start cron scheduler:', err);
+    }
+
     // Build entity index
     try {
         const index = getEntityIndex();
@@ -205,6 +250,14 @@ async function main(): Promise<void> {
         console.log(`Entity index: ${stats.nodeCount} nodes, ${stats.edgeCount} edges`);
     } catch (err) {
         console.error('Failed to build entity index:', err);
+    }
+
+    // Start web server
+    try {
+        await webServer.start(3737);
+        console.log('Web client at http://localhost:3737');
+    } catch (err) {
+        console.error('Failed to start web server:', err);
     }
 
     console.log(`Dobbie service running on ${SOCKET_PATH}`);

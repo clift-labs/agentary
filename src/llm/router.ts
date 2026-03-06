@@ -19,7 +19,7 @@ export async function getModelForCapability(capability: LLMCapability): Promise<
 
     if (!mapping) {
         throw new Error(
-            `No model configured for capability '${capability}', sir. Please run 'dobbie config set-capability ${capability} <provider> <model>'`
+            `No provider configured for capability '${capability}', sir. Please run 'dobbie config add-provider openai' or 'dobbie config add-provider anthropic'.`
         );
     }
 

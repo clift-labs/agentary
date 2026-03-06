@@ -5,7 +5,7 @@ import { createOpenAIProvider } from './openai.js';
 const providers: Map<string, (modelId?: string) => LLMProvider> = new Map();
 
 // Register built-in providers
-providers.set('claude', createClaudeProvider);
+providers.set('anthropic', createClaudeProvider);
 providers.set('openai', createOpenAIProvider);
 
 export function registerProvider(

@@ -5,7 +5,6 @@ import path from 'path';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import { getResponse } from '../responses.js';
 import {
-    slugify,
     createEntityMeta,
     ensureEntityDir,
     writeEntity,
@@ -39,16 +38,16 @@ interface PersonState {
 
 async function savePerson(state: PersonState): Promise<string> {
     const dir = await ensureEntityDir('person');
-    const slug = slugify(state.name);
-    const filepath = state.filepath ?? path.join(dir, `${slug}.md`);
-
     const meta = createEntityMeta('person', state.name, {
         tags: state.tags,
         project: state.project,
     });
+    const id = state.filepath ? path.basename(state.filepath, '.md') : meta.id;
+    const filepath = state.filepath ?? path.join(dir, `${id}.md`);
 
     const fullMeta: Record<string, unknown> = {
         ...meta,
+        id,
         company: state.company || undefined,
         group: state.group || undefined,
         phone: state.phone || undefined,
@@ -61,7 +60,7 @@ async function savePerson(state: PersonState): Promise<string> {
     // Update entity index
     const index = getEntityIndex();
     if (index.isBuilt) {
-        await index.addOrUpdate('person', slug, state.name, filepath);
+        await index.addOrUpdate('person', id, state.name, filepath);
     }
 
     return filepath;

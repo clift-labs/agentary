@@ -148,7 +148,7 @@ Provide a prioritized summary of what the user should focus on today. If there a
                     console.log('');
                 }
 
-                console.log(chalk.gray('\n(Configure AI with `dobbie config add-provider claude` for smart summaries)'));
+                console.log(chalk.gray('\n(Configure AI with `dobbie config add-provider anthropic` for smart summaries)'));
             }
 
         } catch (error) {

@@ -3,10 +3,13 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import {
     loadConfig,
-    loadSecrets,
     setApiKey,
     setCapabilityModel,
+    removeCapabilityOverride,
     getApiKey,
+    getEffectiveConfig,
+    getConfiguredProviders,
+    PROVIDER_MODELS,
 } from '../config.js';
 import { listProviders } from '../llm/providers/index.js';
 import { LLM_CAPABILITIES, type LLMCapability } from '../schemas/index.js';
@@ -14,77 +17,114 @@ import { LLM_CAPABILITIES, type LLMCapability } from '../schemas/index.js';
 export const configCommand = new Command('config')
     .description('Manage configuration and secrets');
 
-// Default action - show config
+// Default action - show effective config
 configCommand
     .action(async () => {
+        const [effective, configuredProviders] = await Promise.all([
+            getEffectiveConfig(),
+            getConfiguredProviders(),
+        ]);
         const config = await loadConfig();
-        const secrets = await loadSecrets();
 
-        console.log(chalk.cyan('\n⚙️  Dobbie Configuration\n'));
+        console.log(chalk.cyan('\n  Dobbie Configuration\n'));
 
-        console.log(chalk.bold('Default Provider:'), config.defaultProvider);
-        console.log('');
-
-        console.log(chalk.bold('Capability → Model Mapping:'));
-        for (const [capability, mapping] of Object.entries(config.capabilityMapping)) {
-            const m = mapping as { provider: string; model: string };
-            console.log(chalk.gray(`  ${capability}: ${m.provider}/${m.model}`));
+        // Providers
+        console.log(chalk.bold('API Keys:'));
+        const knownProviders = ['openai', 'anthropic'];
+        for (const provider of knownProviders) {
+            const configured = configuredProviders.includes(provider);
+            const tick = configured ? chalk.green('✓') : chalk.gray('○');
+            const hint = configured ? '' : chalk.gray('  run: dobbie config add-provider ' + provider);
+            console.log(`  ${tick} ${provider}${hint}`);
         }
         console.log('');
 
-        console.log(chalk.bold('Configured Providers:'));
-        const providers = Object.keys(secrets.providers);
-        if (providers.length === 0) {
-            console.log(chalk.yellow('  No providers configured. Run `dobbie config add-provider <name>`'));
-        } else {
-            for (const provider of providers) {
-                console.log(chalk.green(`  ✓ ${provider}`));
+        // Effective capability → model mapping
+        console.log(chalk.bold('Effective Capability → Model:'));
+        const capDescriptions: Record<string, string> = {
+            reason: 'complex reasoning',
+            chat: 'conversation',
+            summarize: 'summarising',
+            categorize: 'classification',
+            format: 'text formatting',
+            embed: 'embeddings',
+        };
+        for (const cap of LLM_CAPABILITIES) {
+            const mapping = effective[cap];
+            const override = config.capabilityMapping[cap];
+            if (mapping) {
+                const overrideTag = override ? chalk.yellow(' [override]') : '';
+                console.log(
+                    `  ${chalk.bold(cap.padEnd(12))} ${chalk.gray(capDescriptions[cap].padEnd(18))} ${mapping.provider}/${mapping.model}${overrideTag}`
+                );
+            } else {
+                console.log(
+                    `  ${chalk.bold(cap.padEnd(12))} ${chalk.gray(capDescriptions[cap].padEnd(18))} ${chalk.red('no provider configured')}`
+                );
             }
         }
         console.log('');
+
+        if (Object.keys(config.capabilityMapping).length > 0) {
+            console.log(chalk.gray('  Capabilities marked [override] have manual settings. Run `dobbie config reset-capability <cap>` to restore auto-selection.'));
+            console.log('');
+        }
     });
 
 // Add provider
 configCommand
     .command('add-provider <name>')
-    .description('Add or update an LLM provider API key')
+    .description('Add or update an API key (openai, anthropic)')
     .action(async (name: string) => {
-        console.log(chalk.cyan(`\nConfiguring ${name} provider, sir.\n`));
+        const knownProviders = Object.keys(PROVIDER_MODELS);
+        if (!knownProviders.includes(name)) {
+            console.log(chalk.yellow(`\nDobbie doesn't recognise "${name}" as a built-in provider, sir.`));
+            console.log(chalk.gray(`Known providers: ${knownProviders.join(', ')}`));
+            const { proceed } = await inquirer.prompt([{
+                type: 'confirm', name: 'proceed',
+                message: 'Add it anyway as a custom provider?',
+                default: false,
+            }]);
+            if (!proceed) { console.log(chalk.gray('Cancelled.')); return; }
+        }
 
         const existing = await getApiKey(name);
         if (existing) {
-            const { confirm } = await inquirer.prompt([
-                {
-                    type: 'confirm',
-                    name: 'confirm',
-                    message: `API key for ${name} already exists. Replace it?`,
-                    default: false,
-                },
-            ]);
-            if (!confirm) {
-                console.log(chalk.gray('Cancelled.'));
-                return;
-            }
+            const { confirm } = await inquirer.prompt([{
+                type: 'confirm', name: 'confirm',
+                message: `API key for ${name} already exists. Replace it?`,
+                default: false,
+            }]);
+            if (!confirm) { console.log(chalk.gray('Cancelled.')); return; }
         }
 
-        const { apiKey } = await inquirer.prompt([
-            {
-                type: 'password',
-                name: 'apiKey',
-                message: `Enter API key for ${name}:`,
-                mask: '*',
-                validate: (input: string) => input.length > 0 || 'API key is required',
-            },
-        ]);
+        const { apiKey } = await inquirer.prompt([{
+            type: 'password', name: 'apiKey',
+            message: `Enter ${name} API key:`,
+            mask: '*',
+            validate: (input: string) => input.length > 0 || 'API key is required',
+        }]);
 
         await setApiKey(name, apiKey);
-        console.log(chalk.green(`\n✓ API key for ${name} saved, sir!`));
+        console.log(chalk.green(`\n✓ ${name} API key saved, sir!\n`));
+
+        // Show what Dobbie will use with this provider
+        const providerModels = PROVIDER_MODELS[name];
+        if (providerModels) {
+            console.log(chalk.bold(`Dobbie will automatically use these ${name} models:\n`));
+            for (const [cap, model] of Object.entries(providerModels)) {
+                console.log(`  ${chalk.gray(cap.padEnd(12))} ${model}`);
+            }
+            console.log('');
+            console.log(chalk.gray('Run `dobbie config` to see the full effective configuration.'));
+            console.log('');
+        }
     });
 
-// Set capability model
+// Override a capability (advanced)
 configCommand
     .command('set-capability <capability> <provider> <model>')
-    .description('Set which model to use for a capability (reason, summarize, categorize, format, chat, embed)')
+    .description('Advanced: override the auto-selected model for a capability')
     .action(async (capability: string, provider: string, model: string) => {
         if (!LLM_CAPABILITIES.includes(capability as LLMCapability)) {
             console.log(chalk.red(`Unknown capability: ${capability}`));
@@ -93,6 +133,21 @@ configCommand
         }
         await setCapabilityModel(capability as LLMCapability, provider, model);
         console.log(chalk.green(`✓ Capability "${capability}" will now use ${provider}/${model}, sir!`));
+        console.log(chalk.gray(`  Run 'dobbie config reset-capability ${capability}' to restore auto-selection.`));
+    });
+
+// Reset a capability override back to auto-selection
+configCommand
+    .command('reset-capability <capability>')
+    .description('Remove a manual override and restore auto-selection for a capability')
+    .action(async (capability: string) => {
+        if (!LLM_CAPABILITIES.includes(capability as LLMCapability)) {
+            console.log(chalk.red(`Unknown capability: ${capability}`));
+            console.log(chalk.gray(`Valid capabilities: ${LLM_CAPABILITIES.join(', ')}`));
+            return;
+        }
+        await removeCapabilityOverride(capability as LLMCapability);
+        console.log(chalk.green(`✓ "${capability}" will now be auto-selected based on your configured providers, sir!`));
     });
 
 // List capabilities
@@ -120,17 +175,26 @@ configCommand
 // List providers
 configCommand
     .command('list-providers')
-    .description('List available providers')
+    .description('List supported providers and their models')
     .action(async () => {
-        const providers = listProviders();
-        const secrets = await loadSecrets();
+        const configuredProviders = await getConfiguredProviders();
 
-        console.log(chalk.cyan('\n📡 Available Providers:\n'));
+        console.log(chalk.cyan('\n  Supported Providers\n'));
 
-        for (const provider of providers) {
-            const configured = secrets.providers[provider] ? chalk.green('✓') : chalk.gray('○');
-            console.log(`  ${configured} ${provider}`);
+        for (const provider of listProviders()) {
+            const configured = configuredProviders.includes(provider);
+            const tick = configured ? chalk.green('✓ configured') : chalk.gray('○ not configured');
+            console.log(`  ${chalk.bold(provider)}  ${tick}`);
+            const models = PROVIDER_MODELS[provider];
+            if (models) {
+                for (const [cap, model] of Object.entries(models)) {
+                    console.log(`    ${chalk.gray(cap.padEnd(12))} ${model}`);
+                }
+            }
+            console.log('');
         }
+
+        console.log(chalk.gray('Add a key: dobbie config add-provider <name>'));
         console.log('');
     });
 

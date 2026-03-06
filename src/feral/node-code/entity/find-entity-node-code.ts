@@ -17,7 +17,7 @@ const NOT_FOUND = 'not_found';
 
 export class FindEntityNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
-        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to search (task, note, event, research, goal).', type: 'string' },
+        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to search (any configured entity type, e.g. task, note, event, goal).', type: 'string' },
         { key: 'entity_title', name: 'Entity Title', description: 'Title/filename to search for. Supports {context_key} interpolation. Sets the title in context.', type: 'string', isOptional: true },
         { key: 'title_context_key', name: 'Title Context Key', description: 'Context key holding the title/filename to search for.', type: 'string', default: 'title' },
         { key: 'context_path', name: 'Context Path', description: 'Context key to store the found entity.', type: 'string', default: 'entity' },

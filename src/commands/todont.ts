@@ -10,7 +10,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { requireProject } from '../state/manager.js';
 import {
-    slugify,
+    generateEntityId,
     ensureEntityDir,
     findEntityByTitle,
     trashEntity,
@@ -35,13 +35,14 @@ interface TodontState {
 
 async function saveTodont(state: TodontState): Promise<string> {
     const dir = await ensureEntityDir('todont');
-    const slug = slugify(state.title);
-    const filepath = path.join(dir, `${slug}.md`);
+    const id = generateEntityId('todont');
+    const filepath = path.join(dir, `${id}.md`);
 
     const today = new Date().toISOString().split('T')[0];
 
     const lines = [
         '---',
+        `id: ${id}`,
         `title: "${state.title}"`,
         `entityType: todont`,
         `created: ${today}`,
@@ -60,7 +61,7 @@ async function saveTodont(state: TodontState): Promise<string> {
     // Update entity index
     const index = getEntityIndex();
     if (index.isBuilt) {
-        await index.addOrUpdate('todont', slug, state.title, filepath);
+        await index.addOrUpdate('todont', id, state.title, filepath);
     }
 
     return filepath;

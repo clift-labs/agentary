@@ -43,6 +43,7 @@ import { RandomValueNodeCode } from './node-code/data/random-value-node-code.js'
 import { ReadFileNodeCode } from './node-code/data/read-file-node-code.js';
 import { LlmChatNodeCode } from './node-code/data/llm-chat-node-code.js';
 import { CleanLlmJsonNodeCode } from './node-code/data/clean-llm-json-node-code.js';
+import { WeatherNodeCode } from './node-code/data/weather-node-code.js';
 
 // Slack node codes
 import { SlackBlockBuilderNodeCode } from './node-code/slack/slack-block-builder-node-code.js';
@@ -65,11 +66,18 @@ import { HydrateModelNodeCode } from './node-code/genai/hydrate-model-node-code.
 import { ListEntitiesNodeCode } from './node-code/entity/list-entities-node-code.js';
 import { FindEntityNodeCode } from './node-code/entity/find-entity-node-code.js';
 import { CreateEntityNodeCode } from './node-code/entity/create-entity-node-code.js';
+import { CreateEntityTypeNodeCode } from './node-code/entity/create-entity-type-node-code.js';
+import { ListEntityTypesNodeCode } from './node-code/entity/list-entity-types-node-code.js';
+import { UpdateEntityTypeNodeCode } from './node-code/entity/update-entity-type-node-code.js';
+import { DeleteEntityTypeNodeCode } from './node-code/entity/delete-entity-type-node-code.js';
+import { SetEntityFieldNodeCode } from './node-code/entity/set-entity-field-node-code.js';
 import { UpdateEntityNodeCode } from './node-code/entity/update-entity-node-code.js';
 import { DeleteEntityNodeCode } from './node-code/entity/delete-entity-node-code.js';
 import { CompleteEntityNodeCode } from './node-code/entity/complete-entity-node-code.js';
 import { SortEntitiesNodeCode } from './node-code/entity/sort-entities-node-code.js';
 import { LoadVaultContextNodeCode } from './node-code/entity/load-vault-context-node-code.js';
+import { CreateRecurringTaskNodeCode } from './node-code/entity/create-recurring-task-node-code.js';
+import { SearchEntitiesNodeCode } from './node-code/entity/search-entities-node-code.js';
 
 // Catalog sources
 import { SlackCatalogSource } from './catalog/slack-catalog-source.js';
@@ -88,6 +96,9 @@ import { PromptSelectNodeCode } from './node-code/input/prompt-select-node-code.
 
 // Process sources
 import { JsonProcessSource } from './process/json-process-source.js';
+
+// Entity type schema
+import { loadEntityTypes } from '../entities/entity-type-config.js';
 
 /**
  * All built-in NodeCode instances.
@@ -116,6 +127,7 @@ function getBuiltInNodeCodes(): NodeCode[] {
         new ReadFileNodeCode(),
         new LlmChatNodeCode(),
         new CleanLlmJsonNodeCode(),
+        new WeatherNodeCode(),
         // Slack
         new SlackBlockBuilderNodeCode(),
         new SlackPostWebhookNodeCode(),
@@ -135,11 +147,18 @@ function getBuiltInNodeCodes(): NodeCode[] {
         new ListEntitiesNodeCode(),
         new FindEntityNodeCode(),
         new CreateEntityNodeCode(),
+        new CreateEntityTypeNodeCode(),
+        new ListEntityTypesNodeCode(),
+        new UpdateEntityTypeNodeCode(),
+        new DeleteEntityTypeNodeCode(),
         new UpdateEntityNodeCode(),
+        new SetEntityFieldNodeCode(),
         new DeleteEntityNodeCode(),
         new CompleteEntityNodeCode(),
         new SortEntitiesNodeCode(),
         new LoadVaultContextNodeCode(),
+        new CreateRecurringTaskNodeCode(),
+        new SearchEntitiesNodeCode(),
         // System & output
         new CliCommandNodeCode(),
         new DobbieSpeakNodeCode(),
@@ -177,16 +196,19 @@ export async function bootstrapFeral(
         { getNodeCodes: () => getBuiltInNodeCodes() },
     ]);
 
-    // 2. Load catalog config
-    const catalogConfig = await loadFeralCatalogConfig();
+    // 2. Load catalog config + entity types (parallel — independent)
+    const [catalogConfig, entityTypes] = await Promise.all([
+        loadFeralCatalogConfig(),
+        loadEntityTypes(),
+    ]);
 
-    // 3. Build catalog from both sources
+    // 3. Build catalog from all sources
     const catalog = new Catalog([
         new BuiltInCatalogSource(nodeCodeFactory),
         new JsonCatalogSource(catalogConfig),
         new SlackCatalogSource(),
         new AgentCatalogSource(),
-        new EntityCatalogSource(),
+        new EntityCatalogSource(entityTypes),
         new SystemCatalogSource(),
         new OutputCatalogSource(),
     ]);

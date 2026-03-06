@@ -12,7 +12,7 @@ import { listEntities, type EntityTypeName } from '../../../entities/entity.js';
 
 export class ListEntitiesNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
-        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to list (task, note, event, research, goal).', type: 'string' },
+        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to list (any configured entity type, e.g. task, note, event, goal).', type: 'string' },
         { key: 'context_path', name: 'Context Path', description: 'Context key to store the entity list.', type: 'string', default: 'entities' },
     ];
     static readonly resultDescriptions: ResultDescription[] = [

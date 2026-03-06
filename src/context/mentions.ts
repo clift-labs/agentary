@@ -11,9 +11,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { findEntityByTitle, type EntityTypeName } from '../entities/entity.js';
+import { listEntityTypeNames } from '../entities/entity-type-config.js';
 import { debug } from '../utils/debug.js';
 
-const VALID_ENTITY_TYPES: readonly string[] = [
+const DEFAULT_ENTITY_TYPES: readonly string[] = [
     'note', 'task', 'todo', 'event', 'research', 'goal', 'recurrence', 'person',
 ];
 
@@ -38,11 +39,16 @@ export function extractPeopleMentions(text: string): string[] {
 
 /**
  * Extract type:slug entity references from text.
+ * Accepts an optional list of valid type names; falls back to a hardcoded
+ * default so callers that don't have type info still work.
  */
-export function extractEntityRefs(text: string): { type: EntityTypeName; slug: string }[] {
+export function extractEntityRefs(text: string, validTypes?: readonly string[]): { type: EntityTypeName; slug: string }[] {
+    const types = validTypes ?? DEFAULT_ENTITY_TYPES;
     const refs: { type: EntityTypeName; slug: string }[] = [];
     const seen = new Set<string>();
-    const re = /\b(note|task|todo|event|research|goal|recurrence|person):([a-z0-9][-a-z0-9]*)/g;
+    // Build regex dynamically from the type list (plus 'todo' alias)
+    const typePattern = [...new Set([...types, 'todo'])].join('|');
+    const re = new RegExp(`\\b(${typePattern}):([a-z0-9][-a-z0-9]*)`, 'g');
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
         const key = `${m[1]}:${m[2]}`;
@@ -50,9 +56,7 @@ export function extractEntityRefs(text: string): { type: EntityTypeName; slug: s
         seen.add(key);
         // Normalize 'todo' → 'task' for consistency
         const type = m[1] === 'todo' ? 'task' : m[1];
-        if (VALID_ENTITY_TYPES.includes(type)) {
-            refs.push({ type: type as EntityTypeName, slug: m[2] });
-        }
+        refs.push({ type: type as EntityTypeName, slug: m[2] });
     }
     return refs;
 }
@@ -95,6 +99,14 @@ function formatEntityContext(type: string, meta: Record<string, unknown>, conten
 export async function resolveReferences(text: string): Promise<string> {
     const sections: string[] = [];
 
+    // Load dynamic type names for reference scanning
+    let typeNames: string[] | undefined;
+    try {
+        typeNames = await listEntityTypeNames();
+    } catch {
+        // Fall back to hardcoded defaults
+    }
+
     // ── People (@slug) ──────────────────────────────────────────────────
     const peopleSlugs = extractPeopleMentions(text);
     if (peopleSlugs.length > 0) {
@@ -115,7 +127,7 @@ export async function resolveReferences(text: string): Promise<string> {
     }
 
     // ── Entity references (type:slug) ───────────────────────────────────
-    const entityRefs = extractEntityRefs(text);
+    const entityRefs = extractEntityRefs(text, typeNames);
     if (entityRefs.length > 0) {
         const lines: string[] = [];
         for (const ref of entityRefs) {

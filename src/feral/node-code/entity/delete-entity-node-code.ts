@@ -16,7 +16,7 @@ const NOT_FOUND = 'not_found';
 
 export class DeleteEntityNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
-        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to delete (task, note, event, research, goal).', type: 'string' },
+        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to delete (any configured entity type, e.g. task, note, event, goal).', type: 'string' },
     ];
     static readonly resultDescriptions: ResultDescription[] = [
         { status: ResultStatus.OK, description: 'Entity deleted successfully.' },

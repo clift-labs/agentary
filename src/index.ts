@@ -27,6 +27,10 @@ import { feralCommand } from './commands/feral.js';
 import { interviewCommand } from './commands/interview.js';
 import { todontCommand } from './commands/todont.js';
 import { setupCommand } from './commands/setup.js';
+import { calCommand } from './commands/cal.js';
+import { cronCommand } from './commands/cron.js';
+import { entityTypeCommand } from './commands/entity-type.js';
+import { entityCommand } from './commands/entity.js';
 import { timeCommand } from './commands/time.js';
 import { listServiceTools, getServiceTool } from './tools/index.js';
 import { bootstrapFeral } from './feral/bootstrap.js';
@@ -39,7 +43,7 @@ export const program = new Command();
 
 program
   .name('dobbie')
-  .description(chalk.cyan('🧝 Dobbie - Your helpful AI notes assistant'))
+  .description(chalk.cyan('🤖 Dobbie - Your helpful AI notes assistant'))
   .version(pkg.version);
 
 // Register commands
@@ -66,6 +70,10 @@ program.addCommand(feralCommand);
 program.addCommand(interviewCommand);
 program.addCommand(timeCommand);
 program.addCommand(setupCommand);
+program.addCommand(entityTypeCommand);
+program.addCommand(entityCommand);
+program.addCommand(calCommand);
+program.addCommand(cronCommand);
 program.addCommand(createShellCommand(program));
 
 // Tool command - run any registered tool

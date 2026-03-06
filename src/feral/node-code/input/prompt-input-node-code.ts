@@ -61,14 +61,19 @@ export class PromptInputNodeCode extends AbstractNodeCode {
         // Interpolate {context_key} tokens
         const prompt = this.interpolate(promptTemplate, context);
 
-        const { answer } = await inquirer.prompt([{
-            type: 'input',
-            name: 'answer',
-            message: prompt,
-            ...(defaultValue ? { default: this.interpolate(defaultValue, context) } : {}),
-        }]);
-
-        const trimmed = (answer as string).trim();
+        const askQuestion = context.get('_askQuestion') as ((q: string, opts?: string[]) => Promise<string>) | null;
+        let trimmed: string;
+        if (askQuestion) {
+            trimmed = ((await askQuestion(prompt)) ?? '').trim();
+        } else {
+            const { answer } = await inquirer.prompt([{
+                type: 'input',
+                name: 'answer',
+                message: prompt,
+                ...(defaultValue ? { default: this.interpolate(defaultValue, context) } : {}),
+            }]);
+            trimmed = (answer as string).trim();
+        }
 
         if (!trimmed) {
             return this.result('skipped', 'User provided no answer.');

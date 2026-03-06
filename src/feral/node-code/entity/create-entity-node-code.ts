@@ -10,7 +10,7 @@ import type { ConfigurationDescription, ResultDescription } from '../../configur
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
 import {
-    slugify,
+    generateEntityId,
     createEntityMeta,
     ensureEntityDir,
     findEntityByTitle,
@@ -27,7 +27,7 @@ const ALREADY_EXISTS = 'already_exists';
 
 export class CreateEntityNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
-        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to create (task, note, event, research, goal, todont).', type: 'string' },
+        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to create (any configured entity type, e.g. task, note, event, goal).', type: 'string' },
         { key: 'entity_title', name: 'Entity Title', description: 'Title for the entity. Supports {context_key} interpolation. Sets "title" in context.', type: 'string', isOptional: true },
         { key: 'entity_body', name: 'Entity Body', description: 'Body/content for the entity. Supports {context_key} interpolation. Sets "content" in context.', type: 'string', isOptional: true },
         { key: 'extra_fields', name: 'Extra Fields', description: 'Comma-separated list of extra context keys to include in metadata (e.g. status,priority,dueDate).', type: 'string', default: '', isOptional: true },
@@ -80,12 +80,11 @@ export class CreateEntityNodeCode extends AbstractNodeCode {
         const tags = (context.get('tags') as string[]) ?? [];
 
         const dir = await ensureEntityDir(entityType);
-        const slug = slugify(title);
-        const filepath = path.join(dir, `${slug}.md`);
+        const entityMeta = createEntityMeta(entityType, title, { tags, project });
+        const id = entityMeta.id;
+        const filepath = path.join(dir, `${id}.md`);
 
-        const meta: Record<string, unknown> = {
-            ...createEntityMeta(entityType, title, { tags, project }),
-        };
+        const meta: Record<string, unknown> = { ...entityMeta };
 
         // Merge extra fields from context into metadata
         if (extraFieldsStr) {
@@ -105,7 +104,7 @@ export class CreateEntityNodeCode extends AbstractNodeCode {
         // Update entity index incrementally
         const index = getEntityIndex();
         if (index.isBuilt) {
-            await index.addOrUpdate(entityType, slug, title, filepath);
+            await index.addOrUpdate(entityType, id, title, filepath);
         }
 
         return this.result(ResultStatus.OK, `Created ${entityType} "${title}" at ${filepath}.`);

@@ -9,8 +9,9 @@ export const setupCommand = new Command('setup')
     .action(async () => {
         const currentName = await getUserName();
         const currentGender = await getUserGender() || 'other';
+        const state = await loadState();
 
-        console.log(chalk.cyan('\n🧝 Dobbie would like to update your preferences...\n'));
+        console.log(chalk.cyan('\n🤖 Dobbie would like to update your preferences...\n'));
         console.log(chalk.gray(`  Current name:   ${currentName}`));
         console.log(chalk.gray(`  Current gender: ${currentGender}\n`));
 
@@ -24,19 +25,18 @@ export const setupCommand = new Command('setup')
             {
                 type: 'list',
                 name: 'gender',
-                message: 'How should Dobbie address you?',
+                message: 'How does Dobbie see you?',
                 default: currentGender,
                 choices: [
-                    { name: 'Male   — sir, boss, master, chief, captain, guv, my lord, good sir', value: 'male' },
-                    { name: 'Female — ma\'am, miss, madam, my lady, boss, chief, mistress', value: 'female' },
-                    { name: 'Other  — boss, chief, captain, friend, guv, my liege, comrade', value: 'other' },
+                    { name: 'Male', value: 'male' },
+                    { name: 'Female', value: 'female' },
+                    { name: 'Other', value: 'other' },
                 ],
             },
         ]);
 
-        const state = await loadState();
         state.userName = userName;
-        state.gender = gender;
+        state.gender = gender as 'male' | 'female' | 'other';
         await saveState(state);
 
         await refreshResponseCache();

@@ -59,14 +59,21 @@ export class PromptSelectNodeCode extends AbstractNodeCode {
         const prompt = this.interpolate(promptTemplate, context);
         const choices = optionsRaw.split(',').map(s => s.trim()).filter(Boolean);
 
-        const { selection } = await inquirer.prompt([{
-            type: 'list',
-            name: 'selection',
-            message: prompt,
-            choices,
-        }]);
+        const askQuestion = context.get('_askQuestion') as ((q: string, opts?: string[]) => Promise<string>) | null;
+        let selection: string;
+        if (askQuestion) {
+            selection = await askQuestion(prompt, choices);
+        } else {
+            const result = await inquirer.prompt([{
+                type: 'list',
+                name: 'selection',
+                message: prompt,
+                choices,
+            }]);
+            selection = result.selection as string;
+        }
 
-        context.set(contextPath, selection as string);
+        context.set(contextPath, selection);
         return this.result(ResultStatus.OK, `User selected "${selection}", stored in ${contextPath}`);
     }
 

@@ -4,6 +4,7 @@ import os from 'os';
 import { StateSchema, type State } from '../schemas/index.js';
 import { getResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
+import { DEFAULT_ENTITY_TYPES } from '../entities/entity-types-defaults.js';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 
@@ -53,7 +54,7 @@ export async function getVaultRoot(): Promise<string> {
     const root = await findVaultRoot();
 
     if (!root) {
-        console.error(chalk.red('\n🧝 Dobbie cannot find a vault here, sir.'));
+        console.error(chalk.red('\n🤖 Dobbie cannot find a vault here, sir.'));
         console.error(chalk.gray('This directory does not contain a .socks.md file.'));
         console.error(chalk.gray('\nTo create a new vault, run: dobbie init'));
         throw new Error('No vault found in current directory tree');
@@ -125,7 +126,7 @@ export async function setUserName(name: string): Promise<void> {
 /**
  * Honorific pools by gender — Dobbie picks randomly from these each time.
  */
-const HONORIFIC_POOLS: Record<string, string[]> = {
+export const HONORIFIC_POOLS: Record<string, string[]> = {
     male: ['sir', 'boss', 'master', 'chief', 'captain', 'guv', 'my lord', 'good sir'],
     female: ['ma\'am', 'miss', 'madam', 'my lady', 'boss', 'chief', 'mistress'],
     other: ['boss', 'chief', 'captain', 'friend', 'guv', 'my liege', 'comrade'],
@@ -179,6 +180,9 @@ export async function saveProfile(profile: {
     hasCar?: boolean;
     cityLive?: string;
     cityWork?: string;
+    personalCalUrl?: string;
+    workCalUrl?: string;
+    firstProject?: string;
 }): Promise<void> {
     const state = await loadState();
     state.userName = profile.userName;
@@ -189,6 +193,9 @@ export async function saveProfile(profile: {
     state.hasCar = profile.hasCar;
     state.cityLive = profile.cityLive;
     state.cityWork = profile.cityWork;
+    state.personalCalUrl = profile.personalCalUrl;
+    state.workCalUrl = profile.workCalUrl;
+    state.firstProject = profile.firstProject;
     state.interviewComplete = true;
     await saveState(state);
 }
@@ -257,17 +264,20 @@ export async function listProjects(): Promise<string[]> {
 export async function createProject(name: string): Promise<void> {
     const vaultRoot = await getVaultRoot();
     const projectDir = path.join(vaultRoot, 'projects', name);
+    const today = new Date().toISOString().split('T')[0];
 
-    // Create project directories
-    await fs.mkdir(path.join(projectDir, 'notes'), { recursive: true });
-    await fs.mkdir(path.join(projectDir, 'todos'), { recursive: true });
-    await fs.mkdir(path.join(projectDir, 'research'), { recursive: true });
-    await fs.mkdir(path.join(projectDir, 'events'), { recursive: true });
-    await fs.mkdir(path.join(projectDir, 'inbox'), { recursive: true });
-    await fs.mkdir(path.join(projectDir, 'goals'), { recursive: true });
+    // New projects start with only the two built-in entity types (task + note).
+    // Users can add more types later via `dobbie type add`.
+    const folders = DEFAULT_ENTITY_TYPES.map(t => t.directory);
+    // Always include inbox (not an entity type but used for quick capture)
+    if (!folders.includes('inbox')) folders.push('inbox');
+
+    // Create all entity directories
+    for (const folder of folders) {
+        await fs.mkdir(path.join(projectDir, folder), { recursive: true });
+    }
 
     // Create project .socks.md
-    const today = new Date().toISOString().split('T')[0];
     const socksContent = `---
 title: "${name} Context"
 created: ${today}
@@ -290,15 +300,15 @@ Project-specific context and notes.
     await fs.writeFile(path.join(projectDir, '.socks.md'), socksContent);
 
     // Create sub-folder .socks.md files
-    const subFolders = ['notes', 'todos', 'research', 'events', 'inbox', 'goals'];
-    for (const folder of subFolders) {
+    for (const folder of folders) {
+        const label = folder.charAt(0).toUpperCase() + folder.slice(1);
         const folderSocks = `---
-title: "${name} ${folder.charAt(0).toUpperCase() + folder.slice(1)} Context"
+title: "${name} ${label} Context"
 created: ${today}
 tags: [context, ${folder}]
 ---
 
-# ${name} - ${folder.charAt(0).toUpperCase() + folder.slice(1)}
+# ${name} - ${label}
 
 `;
         await fs.writeFile(path.join(projectDir, folder, '.socks.md'), folderSocks);

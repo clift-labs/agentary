@@ -4,9 +4,9 @@
  * Maintains a dot-separated path (e.g. `dobbie.note`) so the user always
  * knows where they are in the interface hierarchy.
  *
- *   🧝 dobbie>              ← shell root
- *   🧝 dobbie.note>         ← inside the note editor
- *   🧝 dobbie.todo>         ← inside the todo editor
+ *   🤖 dobbie>              ← shell root
+ *   🤖 dobbie.note>         ← inside the note editor
+ *   🤖 dobbie.todo>         ← inside the todo editor
  */
 import chalk from 'chalk';
 

@@ -7,18 +7,61 @@ import matter from 'gray-matter';
 import { requireProject, getVaultRoot } from '../state/manager.js';
 import {
     slugify,
+    generateEntityId,
     ensureEntityDir,
-    getEntityDir,
     trashEntity,
-    type RecurrenceCadence,
-    type RecurrenceTargetType,
-    type BlackoutWindow,
-    type CadenceDetails,
 } from '../entities/entity.js';
+import { getEntityType, addEntityType } from '../entities/entity-type-config.js';
+import { spawn, type BlackoutWindow, type CadenceDetails } from '../entities/spawner.js';
 import { listEntities as listEntitiesDisplay } from './list.js';
 import { getResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
 import { getEntityIndex } from '../entities/entity-index.js';
+
+// Kept for backwards compat in this file
+type RecurrenceCadence = 'daily' | 'weekly' | 'monthly';
+type RecurrenceTargetType = 'task' | 'event';
+
+const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/**
+ * Auto-register the "recurrence" entity type if it doesn't exist yet.
+ */
+export async function ensureRecurrenceType(): Promise<void> {
+    const existing = await getEntityType('recurrence');
+    if (existing) return;
+
+    await addEntityType({
+        name: 'recurrence',
+        plural: 'recurrences',
+        directory: 'recurrences',
+        description: 'Recurring task/event templates that spawn concrete instances',
+        fields: [
+            { key: 'cadence', type: 'enum', label: 'Cadence', values: ['daily', 'weekly', 'monthly'], default: 'weekly', required: true },
+            { key: 'cadenceDetails', type: 'string', label: 'Cadence Details' },
+            { key: 'targetType', type: 'enum', label: 'Target Type', values: ['task', 'event'], default: 'task' },
+            { key: 'priority', type: 'enum', label: 'Priority', values: ['low', 'medium', 'high', 'critical'], default: 'medium' },
+            { key: 'status', type: 'enum', label: 'Status', values: ['active', 'paused'], default: 'active' },
+            { key: 'blackoutWindows', type: 'string', label: 'Blackout Windows' },
+        ],
+        spawner: {
+            mode: 'date-series' as const,
+            targetTypeField: 'targetType',
+            titlePattern: '{title} — {YYYY-MM-DD}',
+            dedupeFields: ['title', 'dueDate'],
+            scheduling: {
+                cadenceField: 'cadence',
+                cadenceDetailsField: 'cadenceDetails',
+                blackoutField: 'blackoutWindows',
+            },
+            fieldMapping: [
+                { from: 'priority', to: 'priority' },
+                { value: 'open', to: 'status' },
+                { value: '{date}', to: 'dueDate' },
+            ],
+        },
+    });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -41,14 +84,19 @@ interface RecurrenceState {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function saveRecurrence(state: RecurrenceState): Promise<string> {
+    await ensureRecurrenceType();
     const dir = await ensureEntityDir('recurrence');
 
     let filepath = state.filepath;
+    const entityId = state.filepath
+        ? path.basename(state.filepath, '.md')
+        : generateEntityId('recurrence');
     if (!filepath) {
-        filepath = path.join(dir, slugify(state.title) + '.md');
+        filepath = path.join(dir, entityId + '.md');
     }
 
     const meta: Record<string, unknown> = {
+        id: entityId,
         title: state.title,
         entityType: 'recurrence',
         recurrenceType: state.recurrenceType,
@@ -115,193 +163,68 @@ async function findRecurrence(project: string, name: string): Promise<Recurrence
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DATE UTILITIES
+// GENERATE CONCRETE ENTITIES (delegates to generic spawner)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+// ─────────────────────────────────────────────────────────────────────────────
+// HEADLESS GENERATE (reusable from cron scheduler and CLI)
+// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Compute all occurrence dates for a recurrence within [start, end].
- */
-function computeOccurrences(
-    cadence: RecurrenceCadence,
-    details: CadenceDetails,
-    start: Date,
-    end: Date,
-): Date[] {
-    const dates: Date[] = [];
-    const cursor = new Date(start);
-    cursor.setHours(0, 0, 0, 0);
-
-    switch (cadence) {
-        case 'daily': {
-            while (cursor <= end) {
-                dates.push(new Date(cursor));
-                cursor.setDate(cursor.getDate() + 1);
-            }
-            break;
-        }
-        case 'weekly': {
-            const targetDay = DAYS_OF_WEEK.indexOf((details.dayOfWeek ?? 'monday').toLowerCase());
-            // Advance cursor to the first occurrence of targetDay
-            while (cursor.getDay() !== targetDay && cursor <= end) {
-                cursor.setDate(cursor.getDate() + 1);
-            }
-            while (cursor <= end) {
-                dates.push(new Date(cursor));
-                cursor.setDate(cursor.getDate() + 7);
-            }
-            break;
-        }
-        case 'monthly': {
-            const targetDom = details.dayOfMonth ?? 1;
-            // Start with the month of `start`
-            cursor.setDate(targetDom);
-            if (cursor < start) {
-                cursor.setMonth(cursor.getMonth() + 1);
-                cursor.setDate(targetDom);
-            }
-            while (cursor <= end) {
-                dates.push(new Date(cursor));
-                cursor.setMonth(cursor.getMonth() + 1);
-                cursor.setDate(targetDom);
-            }
-            break;
-        }
-    }
-    return dates;
+export interface GenerateRecurrencesResult {
+    created: number;
+    skipped: number;
 }
 
 /**
- * Check if a date falls inside any blackout window.
+ * Generate concrete entities from recurrence templates.
+ * Headless — no console output. Throws on fatal errors.
  */
-function isBlackedOut(date: Date, windows: BlackoutWindow[]): boolean {
-    const d = formatDate(date);
-    return windows.some(w => d >= w.start && d <= w.end);
-}
-
-function formatDate(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GENERATE CONCRETE ENTITIES
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function generateConcreteEntities(project: string, days: number): Promise<void> {
+export async function generateRecurrences(project: string, days?: number): Promise<GenerateRecurrencesResult> {
+    await ensureRecurrenceType();
+    const daysAhead = days ?? 60;
     const recurrences = await loadAllRecurrences(project);
     if (recurrences.length === 0) {
-        console.log(chalk.gray('\nNo recurrences found. Create one with "recurrence create".'));
-        return;
+        return { created: 0, skipped: 0 };
     }
 
-    const vaultRoot = await getVaultRoot();
+    const recurrenceTypeConfig = await getEntityType('recurrence');
+    if (!recurrenceTypeConfig?.spawner) {
+        throw new Error('Recurrence spawner config not found in entity-types.json.');
+    }
+    const spawnerConfig = recurrenceTypeConfig.spawner;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + days);
+    endDate.setDate(endDate.getDate() + daysAhead);
 
     let totalCreated = 0;
     let totalSkipped = 0;
 
     for (const rec of recurrences) {
-        const occurrences = computeOccurrences(rec.cadence, rec.cadenceDetails, today, endDate);
-        const targetDir = rec.recurrenceType === 'todo'
-            ? path.join(vaultRoot, 'projects', project, 'todos')
-            : path.join(vaultRoot, 'projects', project, 'events');
+        if (!rec.filepath) continue;
 
-        await fs.mkdir(targetDir, { recursive: true });
+        const template = {
+            filepath: rec.filepath,
+            content: rec.body,
+            meta: {
+                title: rec.title,
+                entityType: 'recurrence',
+                targetType: rec.recurrenceType,
+                cadence: rec.cadence,
+                cadenceDetails: rec.cadenceDetails,
+                priority: rec.priority,
+                blackoutWindows: rec.blackoutWindows,
+                project,
+            } as Record<string, unknown>,
+        };
 
-        // Load existing entities to check for duplicates
-        const existingFiles = await safeReaddir(targetDir);
-        const existingMetas = await Promise.all(
-            existingFiles.filter(f => f.endsWith('.md')).map(async f => {
-                const raw = await fs.readFile(path.join(targetDir, f), 'utf-8');
-                return matter(raw).data;
-            }),
-        );
-
-        for (const date of occurrences) {
-            if (isBlackedOut(date, rec.blackoutWindows)) {
-                totalSkipped++;
-                continue;
-            }
-
-            const dateStr = formatDate(date);
-            const concreteTitle = `${rec.title} — ${dateStr}`;
-
-            // Idempotency: check if already exists
-            const alreadyExists = existingMetas.some(m =>
-                m.recurrenceTitle === rec.title && m.recurrenceDate === dateStr,
-            );
-            if (alreadyExists) {
-                totalSkipped++;
-                continue;
-            }
-
-            // Create the concrete entity
-            const filename = slugify(concreteTitle) + '.md';
-            const filepath = path.join(targetDir, filename);
-
-            let meta: Record<string, unknown>;
-            if (rec.recurrenceType === 'todo') {
-                meta = {
-                    title: concreteTitle,
-                    entityType: 'task',
-                    created: new Date().toISOString(),
-                    project,
-                    priority: rec.priority ?? 'medium',
-                    completed: false,
-                    dueDate: dateStr,
-                    tags: ['todo', 'recurring'],
-                    recurrenceTitle: rec.title,
-                    recurrenceDate: dateStr,
-                };
-            } else {
-                // Event — attach start/end times using the date + time from cadenceDetails
-                const startTime = rec.cadenceDetails.startTime ?? '09:00';
-                const endTime = rec.cadenceDetails.endTime ?? '10:00';
-                meta = {
-                    title: concreteTitle,
-                    entityType: 'event',
-                    created: new Date().toISOString(),
-                    project,
-                    startTime: `${dateStr}T${startTime}:00`,
-                    endTime: `${dateStr}T${endTime}:00`,
-                    location: rec.cadenceDetails.location ?? '',
-                    tags: ['event', 'recurring'],
-                    recurrenceTitle: rec.title,
-                    recurrenceDate: dateStr,
-                };
-            }
-
-            const fileContent = matter.stringify(rec.body, meta);
-            await fs.writeFile(filepath, fileContent);
-
-            // Update entity index for generated entity
-            const index = getEntityIndex();
-            if (index.isBuilt) {
-                const entityType = rec.recurrenceType === 'todo' ? 'task' : 'event';
-                const slug = path.basename(filepath, '.md');
-                await index.addOrUpdate(entityType as any, slug, concreteTitle, filepath);
-            }
-
-            totalCreated++;
-        }
+        const result = await spawn(template, spawnerConfig, { startDate: today, endDate });
+        totalCreated += result.created;
+        totalSkipped += result.skipped;
     }
 
-    console.log(chalk.green(`\n✓ Generated ${totalCreated} concrete entities (${totalSkipped} skipped/blacked-out)`));
-}
-
-async function safeReaddir(dir: string): Promise<string[]> {
-    try {
-        return await fs.readdir(dir);
-    } catch {
-        return [];
-    }
+    return { created: totalCreated, skipped: totalSkipped };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -635,7 +558,8 @@ export const recurrenceCommand = new Command('recurrence')
                         return;
                     }
                     console.log(chalk.gray(`\nGenerating concrete entities for the next ${days} days...`));
-                    await generateConcreteEntities(project, days);
+                    const result = await generateRecurrences(project, days);
+                    console.log(chalk.green(`\n✓ Generated ${result.created} concrete entities (${result.skipped} skipped/blacked-out)`));
                     break;
                 }
 

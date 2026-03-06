@@ -22,7 +22,7 @@ async function loadAsciiArt(): Promise<string> {
         return await fs.readFile(artPath, 'utf-8');
     } catch {
         // Fallback if the file cannot be found (e.g. in a binary bundle)
-        return '🧝 Dobbie';
+        return '🤖 Dobbie';
     }
 }
 

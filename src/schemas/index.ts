@@ -45,10 +45,10 @@ export const CapabilityModelMappingSchema = z.object({
 
 export type CapabilityModelMapping = z.infer<typeof CapabilityModelMappingSchema>;
 
-// Config
+// Config — capabilityMapping holds only manual overrides; auto-resolution fills the rest.
 export const ConfigSchema = z.object({
-    capabilityMapping: z.record(LLMCapabilitySchema, CapabilityModelMappingSchema),
-    defaultProvider: z.string(),
+    capabilityMapping: z.record(LLMCapabilitySchema, CapabilityModelMappingSchema).default({}),
+    defaultProvider: z.string().default('openai'),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -65,6 +65,9 @@ export const StateSchema = z.object({
     hasCar: z.boolean().optional(),
     cityLive: z.string().optional(),
     cityWork: z.string().optional(),
+    personalCalUrl: z.string().optional(),
+    workCalUrl: z.string().optional(),
+    firstProject: z.string().optional(),
     interviewComplete: z.boolean().optional(),
 });
 

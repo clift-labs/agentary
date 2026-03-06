@@ -1,14 +1,14 @@
 {
   "name": "dobbie",
   "version": "3.0.1",
-  "description": "AI-powered notes system with hierarchical context",
+  "description": "An AI-powered Personal Assistant",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "dobbie": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc && cp src/dobbie.txt dist/dobbie.txt",
+    "build": "tsc && cp src/dobbie.txt dist/dobbie.txt && cp src/service/web-client.html dist/service/web-client.html",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run --exclude='tests/integration/**'",
@@ -23,13 +23,16 @@
     "gray-matter": "^4.0.3",
     "inquirer": "^9.2.12",
     "marked": "^17.0.2",
+    "node-ical": "^0.25.4",
     "openai": "^6.17.0",
     "ora": "^8.0.1",
+    "ws": "^8.19.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",
     "@types/node": "^20.11.0",
+    "@types/ws": "^8.18.1",
     "esbuild": "^0.27.3",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",

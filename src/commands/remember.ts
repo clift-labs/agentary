@@ -84,7 +84,7 @@ Format the response as markdown that can be appended to an existing document.`;
                 }
 
                 console.log(chalk.green('✓ Dobbie has noted that, sir!'));
-                console.log(chalk.gray('(Configure AI with `dobbie config add-provider claude` for smart formatting)'));
+                console.log(chalk.gray('(Configure AI with `dobbie config add-provider anthropic` for smart formatting)'));
             }
 
         } catch (error) {

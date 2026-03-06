@@ -10,7 +10,8 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { getVaultRoot, getActiveProject } from '../state/manager.js';
-import { parseEntity, type EntityTypeName } from './entity.js';
+import { parseEntity, type EntityTypeName, type EntityLink } from './entity.js';
+import { loadEntityTypes } from './entity-type-config.js';
 import { extractPeopleMentions, extractEntityRefs } from '../context/mentions.js';
 import { debug } from '../utils/debug.js';
 
@@ -19,7 +20,7 @@ import { debug } from '../utils/debug.js';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface IndexNode {
-    id: string;              // slug (filename without .md)
+    id: string;              // entity id (filename without .md), e.g. "task-abc123"
     type: EntityTypeName;
     title: string;
     filepath: string;
@@ -28,7 +29,8 @@ export interface IndexNode {
 export interface IndexEdge {
     source: string;          // composite key "type:id"
     target: string;          // composite key "type:id"
-    edgeType: 'mention' | 'reference';  // @slug → mention, type:slug → reference
+    edgeType: 'mention' | 'reference' | 'link';
+    label?: string;          // relationship name (for 'link' edges)
 }
 
 export interface IndexStats {
@@ -38,24 +40,23 @@ export interface IndexStats {
     builtAt: string;         // ISO timestamp
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DIR MAPPING
-// ─────────────────────────────────────────────────────────────────────────────
+// Entity type list and directory mapping are now loaded dynamically from
+// entity-type-config so that user-defined types are automatically indexed.
 
-const ALL_ENTITY_TYPES: EntityTypeName[] = [
-    'note', 'task', 'event', 'research', 'goal', 'recurrence', 'person', 'todont',
-];
-
-const DIR_MAP: Record<EntityTypeName, string> = {
-    note: 'notes',
-    task: 'todos',
-    event: 'events',
-    research: 'research',
-    goal: 'goals',
-    recurrence: 'recurrences',
-    person: 'people',
-    todont: 'todonts',
-};
+/**
+ * Extract validated links from entity frontmatter `links` field.
+ */
+function extractFrontmatterLinks(meta: Record<string, unknown>): EntityLink[] {
+    const raw = meta.links;
+    if (!Array.isArray(raw)) return [];
+    const links: EntityLink[] = [];
+    for (const item of raw) {
+        if (item && typeof item === 'object' && typeof item.target === 'string' && typeof item.label === 'string') {
+            links.push({ target: item.target, label: item.label });
+        }
+    }
+    return links;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENTITY INDEX
@@ -86,10 +87,12 @@ export class EntityIndex {
         }
 
         const projectDir = path.join(vaultRoot, 'projects', project);
+        const entityTypes = await loadEntityTypes();
 
         // Pass 1: collect all nodes
-        for (const entityType of ALL_ENTITY_TYPES) {
-            const dir = path.join(projectDir, DIR_MAP[entityType]);
+        for (const typeConfig of entityTypes) {
+            const entityType = typeConfig.name;
+            const dir = path.join(projectDir, typeConfig.directory);
 
             try {
                 const files = await fs.readdir(dir);
@@ -119,9 +122,11 @@ export class EntityIndex {
             }
         }
 
-        // Pass 2: extract edges from content
-        for (const entityType of ALL_ENTITY_TYPES) {
-            const dir = path.join(projectDir, DIR_MAP[entityType]);
+        // Pass 2: extract edges from content and frontmatter links
+        const typeNames = entityTypes.map(t => t.name);
+        for (const typeConfig of entityTypes) {
+            const entityType = typeConfig.name;
+            const dir = path.join(projectDir, typeConfig.directory);
 
             try {
                 const files = await fs.readdir(dir);
@@ -134,7 +139,7 @@ export class EntityIndex {
 
                     try {
                         const raw = await fs.readFile(filepath, 'utf-8');
-                        const { content } = parseEntity(filepath, raw);
+                        const { meta, content } = parseEntity(filepath, raw);
 
                         // @slug → person mention edges
                         const peopleSlugs = extractPeopleMentions(content);
@@ -150,7 +155,7 @@ export class EntityIndex {
                         }
 
                         // type:slug → entity reference edges
-                        const entityRefs = extractEntityRefs(content);
+                        const entityRefs = extractEntityRefs(content, typeNames);
                         for (const ref of entityRefs) {
                             const targetKey = EntityIndex.key(ref.type, ref.slug);
                             if (this.nodes.has(targetKey)) {
@@ -158,6 +163,19 @@ export class EntityIndex {
                                     source: sourceKey,
                                     target: targetKey,
                                     edgeType: 'reference',
+                                });
+                            }
+                        }
+
+                        // frontmatter links → labeled link edges
+                        const fmLinks = extractFrontmatterLinks(meta);
+                        for (const link of fmLinks) {
+                            if (this.nodes.has(link.target)) {
+                                this.edges.push({
+                                    source: sourceKey,
+                                    target: link.target,
+                                    edgeType: 'link',
+                                    label: link.label,
                                 });
                             }
                         }
@@ -205,10 +223,10 @@ export class EntityIndex {
         // Remove old outbound edges from this node
         this.edges = this.edges.filter(e => e.source !== key);
 
-        // Re-scan content for new edges
+        // Re-scan content and frontmatter for new edges
         try {
             const raw = await fs.readFile(filepath, 'utf-8');
-            const { content } = parseEntity(filepath, raw);
+            const { meta, content } = parseEntity(filepath, raw);
 
             const peopleSlugs = extractPeopleMentions(content);
             for (const slug of peopleSlugs) {
@@ -218,11 +236,20 @@ export class EntityIndex {
                 }
             }
 
-            const entityRefs = extractEntityRefs(content);
+            const entityTypes = await loadEntityTypes();
+            const typeNames = entityTypes.map(t => t.name);
+            const entityRefs = extractEntityRefs(content, typeNames);
             for (const ref of entityRefs) {
                 const targetKey = EntityIndex.key(ref.type, ref.slug);
                 if (this.nodes.has(targetKey)) {
                     this.edges.push({ source: key, target: targetKey, edgeType: 'reference' });
+                }
+            }
+
+            const fmLinks = extractFrontmatterLinks(meta);
+            for (const link of fmLinks) {
+                if (this.nodes.has(link.target)) {
+                    this.edges.push({ source: key, target: link.target, edgeType: 'link', label: link.label });
                 }
             }
         } catch (err) {
@@ -261,22 +288,22 @@ export class EntityIndex {
         return this.edges.filter(e => e.target === key);
     }
 
-    getNeighbors(key: string): { node: IndexNode; direction: 'out' | 'in'; edgeType: string }[] {
-        const results: { node: IndexNode; direction: 'out' | 'in'; edgeType: string }[] = [];
+    getNeighbors(key: string): { node: IndexNode; direction: 'out' | 'in'; edgeType: string; label?: string }[] {
+        const results: { node: IndexNode; direction: 'out' | 'in'; edgeType: string; label?: string }[] = [];
         const seen = new Set<string>();
 
         for (const edge of this.edges) {
             if (edge.source === key && !seen.has(`out:${edge.target}`)) {
                 const node = this.nodes.get(edge.target);
                 if (node) {
-                    results.push({ node, direction: 'out', edgeType: edge.edgeType });
+                    results.push({ node, direction: 'out', edgeType: edge.edgeType, label: edge.label });
                     seen.add(`out:${edge.target}`);
                 }
             }
             if (edge.target === key && !seen.has(`in:${edge.source}`)) {
                 const node = this.nodes.get(edge.source);
                 if (node) {
-                    results.push({ node, direction: 'in', edgeType: edge.edgeType });
+                    results.push({ node, direction: 'in', edgeType: edge.edgeType, label: edge.label });
                     seen.add(`in:${edge.source}`);
                 }
             }

@@ -118,17 +118,17 @@ export class ServiceClient {
     /**
      * Get all edges in the entity graph.
      */
-    async getIndexGraph(): Promise<{ source: string; target: string; edgeType: string }[]> {
+    async getIndexGraph(): Promise<{ source: string; target: string; edgeType: string; label?: string }[]> {
         const response = await this.query('index.graph');
-        return response.result as { source: string; target: string; edgeType: string }[];
+        return response.result as { source: string; target: string; edgeType: string; label?: string }[];
     }
 
     /**
      * Get neighbors of a given entity key.
      */
-    async getIndexNeighbors(key: string): Promise<{ node: { id: string; type: string; title: string }; direction: string; edgeType: string }[]> {
+    async getIndexNeighbors(key: string): Promise<{ node: { id: string; type: string; title: string }; direction: string; edgeType: string; label?: string }[]> {
         const response = await this.query('index.neighbors', { key });
-        return response.result as { node: { id: string; type: string; title: string }; direction: string; edgeType: string }[];
+        return response.result as { node: { id: string; type: string; title: string }; direction: string; edgeType: string; label?: string }[];
     }
 
     /**
@@ -137,6 +137,25 @@ export class ServiceClient {
     async rebuildIndex(): Promise<{ nodeCount: number; edgeCount: number; byType: Record<string, number>; builtAt: string }> {
         const response = await this.query('index.rebuild');
         return response.result as { nodeCount: number; edgeCount: number; byType: Record<string, number>; builtAt: string };
+    }
+
+    /**
+     * Get cron scheduler status.
+     */
+    async getCronStatus(): Promise<import('../service/cron/scheduler.js').CronStatus> {
+        const response = await this.query('cron.status');
+        return response.result as import('../service/cron/scheduler.js').CronStatus;
+    }
+
+    /**
+     * Trigger a cron job immediately.
+     */
+    async runCronJob(job: string): Promise<{ job: string; summary: string }> {
+        const response = await this.query('cron.run', { job });
+        if (response.status === 'error') {
+            throw new Error(response.error || 'Unknown error');
+        }
+        return response.result as { job: string; summary: string };
     }
 
     /**

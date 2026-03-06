@@ -13,7 +13,7 @@ import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
 import { getEntityIndex } from '../entities/entity-index.js';
-import { findEntityByTitle, trashEntity } from '../entities/entity.js';
+import { findEntityByTitle, trashEntity, generateEntityId } from '../entities/entity.js';
 
 interface NoteState {
     title: string;
@@ -24,40 +24,14 @@ interface NoteState {
 }
 
 async function findExistingNote(project: string, titleOrFilename: string): Promise<{ filepath: string; title: string; content: string } | null> {
-    const vaultRoot = await getVaultRoot();
-    const notesDir = path.join(vaultRoot, 'projects', project, 'notes');
-
-    try {
-        const files = await fs.readdir(notesDir);
-
-        // Convert title to expected filename
-        const expectedFilename = titleOrFilename
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '') + '.md';
-
-        // Also check without .md extension
-        const filenameWithMd = titleOrFilename.endsWith('.md') ? titleOrFilename : titleOrFilename + '.md';
-
-        for (const file of files) {
-            if (file === expectedFilename || file === filenameWithMd || file === titleOrFilename) {
-                const filepath = path.join(notesDir, file);
-                const rawContent = await fs.readFile(filepath, 'utf-8');
-                const parsed = matter(rawContent);
-
-                return {
-                    filepath,
-                    title: parsed.data.title || file.replace('.md', ''),
-                    content: parsed.content.trim(),
-                };
-            }
-        }
-    } catch (err) {
-        debug('note', err);
-        // Notes directory doesn't exist yet
-    }
-
-    return null;
+    const found = await findEntityByTitle('note', titleOrFilename);
+    if (!found) return null;
+    if (found.meta.project && found.meta.project !== project) return null;
+    return {
+        filepath: found.filepath,
+        title: found.meta.title as string,
+        content: found.content,
+    };
 }
 
 async function reviewNote(state: NoteState): Promise<string> {
@@ -180,12 +154,9 @@ async function saveNote(state: NoteState, formatContent: boolean = true): Promis
 
     // Use existing filepath or create new one
     let filepath = state.filepath;
+    const entityId = filepath ? path.basename(filepath, '.md') : generateEntityId('note');
     if (!filepath) {
-        const filename = state.title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '') + '.md';
-        filepath = path.join(notesDir, filename);
+        filepath = path.join(notesDir, `${entityId}.md`);
     }
 
     // Format content as markdown if requested
@@ -197,6 +168,7 @@ async function saveNote(state: NoteState, formatContent: boolean = true): Promis
     // Create markdown with frontmatter
     const today = new Date().toISOString().split('T')[0];
     const markdown = `---
+id: ${entityId}
 title: "${state.title}"
 created: ${today}
 project: ${state.project}

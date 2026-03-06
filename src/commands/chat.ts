@@ -10,14 +10,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import chalk from 'chalk';
-import * as readline from 'readline';
 import ora from 'ora';
+import inquirer from 'inquirer';
 import { bootstrapFeral } from '../feral/bootstrap.js';
 import { hydrateProcessFromString } from '../feral/process/process-json-hydrator.js';
 import type { ProcessSource } from '../feral/process/process-factory.js';
 import type { Process } from '../feral/process/process.js';
 import { getModelForCapability, createDobbieSystemPrompt } from '../llm/router.js';
 import { debug } from '../utils/debug.js';
+import { loadEntityTypes } from '../entities/entity-type-config.js';
+import { getActiveProject, getUserName } from '../state/manager.js';
+import { getProjectContext } from '../context/reader.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IN-MEMORY PROCESS SOURCE
@@ -56,36 +59,6 @@ const EXAMPLE_PROCESSES = [
         },
     },
     {
-        description: 'System info: gather multiple system values in sequence',
-        json: {
-            schema_version: 1,
-            key: 'system.info',
-            description: 'Gather local system information',
-            context: {},
-            nodes: [
-                { key: 'start', catalog_node_key: 'start', configuration: {}, edges: { ok: 'hostname' } },
-                { key: 'hostname', catalog_node_key: 'get_hostname', configuration: {}, edges: { ok: 'uptime', error: 'uptime' } },
-                { key: 'uptime', catalog_node_key: 'get_uptime', configuration: {}, edges: { ok: 'done', error: 'done' } },
-                { key: 'done', catalog_node_key: 'stop', configuration: {}, edges: {} },
-            ],
-        },
-    },
-    {
-        description: 'LLM-powered: read a file, send it to an LLM for classification, store the result',
-        json: {
-            schema_version: 1,
-            key: 'classify.file',
-            description: 'Read a file and classify its contents with AI',
-            context: {},
-            nodes: [
-                { key: 'start', catalog_node_key: 'start', configuration: {}, edges: { ok: 'read' } },
-                { key: 'read', catalog_node_key: 'read_file', configuration: { file_path: '{file_path}', context_path: 'file_content' }, edges: { ok: 'classify', error: 'done' } },
-                { key: 'classify', catalog_node_key: 'llm_chat', configuration: { capability: 'categorize', prompt: 'Classify this content: {file_content}', response_context_path: 'classification' }, edges: { ok: 'done', error: 'done' } },
-                { key: 'done', catalog_node_key: 'stop', configuration: {}, edges: {} },
-            ],
-        },
-    },
-    {
         description: 'Create multiple entities: a goal and a todont from user input',
         json: {
             schema_version: 1,
@@ -100,56 +73,113 @@ const EXAMPLE_PROCESSES = [
             ],
         },
     },
+    {
+        description: 'If/else branch: find a task, check its priority, and take different actions based on whether it is high priority',
+        json: {
+            schema_version: 1,
+            key: 'task.priority.check',
+            description: 'Find a task by title, then branch on its priority — set high-priority tasks to in-progress, leave others as-is',
+            context: {},
+            nodes: [
+                { key: 'start', catalog_node_key: 'start', configuration: {}, edges: { ok: 'find' } },
+                { key: 'find', catalog_node_key: 'find_task', configuration: {}, edges: { ok: 'check_priority', error: 'done' } },
+                { key: 'check_priority', catalog_node_key: 'context_value_comparator', configuration: { left_context_path: 'priority', right_value: 'high' }, edges: { true: 'set_in_progress', false: 'done' } },
+                { key: 'set_in_progress', catalog_node_key: 'set_task_status', configuration: { value: 'in-progress' }, edges: { ok: 'done', error: 'done' } },
+                { key: 'done', catalog_node_key: 'stop', configuration: {}, edges: {} },
+            ],
+        },
+    },
+    {
+        description: 'While loop: list tasks, iterate over each one, and use LLM to add a summary to each task body',
+        json: {
+            schema_version: 1,
+            key: 'tasks.summarize',
+            description: 'Loop through all tasks and ask the LLM to generate a one-line summary for each',
+            context: {},
+            nodes: [
+                { key: 'start', catalog_node_key: 'start', configuration: {}, edges: { ok: 'list' } },
+                { key: 'list', catalog_node_key: 'list_tasks', configuration: {}, edges: { ok: 'iterate' } },
+                { key: 'iterate', catalog_node_key: 'array_iterator', configuration: { source_context_path: 'entities', cursor_context_path: '_cursor', spread_fields: 'true' }, edges: { ok: 'summarize', done: 'done' } },
+                { key: 'summarize', catalog_node_key: 'llm_chat', configuration: { capability: 'summarize', prompt: 'Write a one-line summary for a task titled "{title}".', response_context_path: 'summary' }, edges: { ok: 'iterate', error: 'iterate' } },
+                { key: 'done', catalog_node_key: 'stop', configuration: {}, edges: {} },
+            ],
+        },
+    },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CORE: feralChat
+// CORE: feralChatHeadless — headless pipeline, returns the response string
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function feralChat(userInput: string): Promise<void> {
-    const spinner = ora({ text: chalk.dim('Dobbie is thinking…'), color: 'cyan' }).start();
+export async function feralChatHeadless(
+    userInput: string,
+    onStatus?: (status: string) => void,
+    onProcess?: (processJson: Record<string, unknown>) => void,
+    onQuestion?: (question: string, options?: string[]) => Promise<string>,
+): Promise<string> {
+    const status = (s: string) => onStatus?.(s);
 
-    try {
-        // ── Bootstrap Feral ──────────────────────────────────────────────
-        const inMemorySource = new InMemoryProcessSource();
-        const runtime = await bootstrapFeral([inMemorySource]);
-        const allNodes = runtime.catalog.getAllCatalogNodes();
+    status('Dobbie is thinking…');
 
-        // Build catalog summary for LLM
-        const catalogSummary = allNodes
-            .filter(n => !n.key.startsWith('speak_'))  // skip output variants
-            .map(n => `- ${n.key}: ${n.description || n.name} [group: ${n.group}]`)
-            .join('\n');
+    // ── Bootstrap Feral + load entity types + vault context ────────
+    const inMemorySource = new InMemoryProcessSource();
+    const [runtime, entityTypes, activeProject, userName] = await Promise.all([
+        bootstrapFeral([inMemorySource]),
+        loadEntityTypes().catch(() => []),
+        getActiveProject().catch(() => null),
+        getUserName().catch(() => 'friend'),
+    ]);
 
-        debug('chat', `Catalog has ${allNodes.length} nodes, sending ${catalogSummary.split('\n').length} to LLM`);
+    // Load project vault context (.socks.md chain) if a project is active
+    // Scrub any secrets that may have been accidentally pasted into .socks.md files
+    const vaultContext = activeProject
+        ? scrubSecrets(await getProjectContext(activeProject).catch(() => '')) as string
+        : '';
 
-        // ── STEP 1: Select catalog nodes ─────────────────────────────────
-        spinner.text = chalk.dim('Selecting capabilities…');
+    // Build global variables block for the LLM
+    const today = new Date().toISOString().split('T')[0];
+    const globalsBlock = [
+        `- user_name: ${userName}`,
+        `- current_date: ${today}`,
+        activeProject ? `- active_project: ${activeProject}` : null,
+    ].filter(Boolean).join('\n');
 
-        const llm = await getModelForCapability('reason');
+    const allNodes = runtime.catalog.getAllCatalogNodes();
 
-        const step1Response = await llm.chat(
-            [{
-                role: 'user' as const,
-                content: `The user said: "${userInput}"
+    // Build catalog summary for LLM
+    const catalogSummary = allNodes
+        .filter(n => !n.key.startsWith('speak_'))  // skip output variants
+        .map(n => `- ${n.key}: ${n.description || n.name} [group: ${n.group}]`)
+        .join('\n');
 
-DOBBIE'S ENTITY TYPES:
+    debug('chat', `Catalog has ${allNodes.length} nodes, sending ${catalogSummary.split('\n').length} to LLM`);
+
+    // ── STEP 1: Select catalog nodes ─────────────────────────────────
+    status('Selecting capabilities…');
+
+    const llm = await getModelForCapability('reason');
+
+    const step1Response = await llm.chat(
+        [{
+            role: 'user' as const,
+            content: `The user said: "${userInput}"
+
+GLOBAL VARIABLES:
+${globalsBlock}
+
+${vaultContext ? `VAULT CONTEXT (from .socks.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}DOBBIE'S ENTITY TYPES:
 Dobbie manages these entity types. When the user mentions something that maps to an entity, prefer creating it:
-- task (plural: tasks) — A to-do item with status, priority, and optional due date
-- note (plural: notes) — A freeform note or piece of information
-- event (plural: events) — A calendar event with date/time
-- goal (plural: goals) — A SMART goal with measurable criteria and target date
-- research (plural: research) — A research topic to investigate
-- person (plural: people) — A contact with name, company, email, phone
-- todont (plural: todonts) — Something to AVOID doing (always active, or within a date window)
-- recurrence (plural: recurrences) — A recurring template that generates todos/events
+${entityTypes.map(t => {
+    const fieldDesc = t.fields.length > 0
+        ? ` Fields: ${t.fields.map(f => `${f.key}${f.type === 'enum' && f.values ? ` (${f.values.join('|')})` : ''}`).join(', ')}.`
+        : '';
+    return `- ${t.name} (plural: ${t.plural})${t.description ? ` — ${t.description}` : ''}.${fieldDesc}`;
+}).join('\n')}
 
-Each entity type has create_*, list_*, find_*, update_*, delete_* catalog nodes.
-For example: create_goal, create_todont, list_tasks, find_note, etc.
+Each entity type has create_*, list_*, find_*, update_*, delete_* catalog nodes, plus set_${'{type}'}_{field} nodes for each field.
+For example: create_task, list_tasks, find_note, set_task_status, etc.
 
 When the user's request implies creating entities, ALWAYS select the appropriate create_* nodes.
-When the user mentions avoiding something → create a todont.
-When the user mentions a goal or objective → create a goal.
 When the user mentions multiple entities, select multiple create_* nodes.
 
 Here are all available catalog nodes in the Feral process engine. Each node performs a specific action:
@@ -172,162 +202,102 @@ Return a JSON object with this exact structure:
 }
 
 Return ONLY the JSON object, no markdown fences.`,
-            }],
-            {
-                systemPrompt: 'You are a process designer for the Feral CCF system. Select the minimal set of catalog nodes needed to fulfill the user\'s request. Always include "start" and "stop". Be precise and concise.',
-                temperature: 0.3,
-            },
-        );
+        }],
+        {
+            systemPrompt: 'You are a process designer for the Feral CCF system. Select the minimal set of catalog nodes needed to fulfill the user\'s request. Always include "start" and "stop". Be precise and concise.',
+            temperature: 0.3,
+        },
+    );
 
-        debug('chat', `Step 1 response: ${step1Response}`);
+    debug('chat', `Step 1 response: ${step1Response}`);
 
-        let nodeSelection: { reasoning: string; nodes: string[] };
-        try {
-            nodeSelection = JSON.parse(cleanJson(step1Response));
-        } catch {
-            throw new Error('Failed to parse node selection from LLM');
-        }
+    let nodeSelection: { reasoning: string; nodes: string[] };
+    try {
+        nodeSelection = JSON.parse(cleanJson(step1Response));
+    } catch {
+        throw new Error('Failed to parse node selection from LLM');
+    }
 
-        // Ensure start/stop are included
-        if (!nodeSelection.nodes.includes('start')) nodeSelection.nodes.unshift('start');
-        if (!nodeSelection.nodes.includes('stop')) nodeSelection.nodes.push('stop');
+    // Ensure start/stop are included
+    if (!nodeSelection.nodes.includes('start')) nodeSelection.nodes.unshift('start');
+    if (!nodeSelection.nodes.includes('stop')) nodeSelection.nodes.push('stop');
 
-        // Gather selected node details + their config descriptions
-        const selectedNodes = nodeSelection.nodes
-            .map(key => {
-                try {
-                    return runtime.catalog.getCatalogNode(key);
-                } catch {
-                    return null;
-                }
-            })
-            .filter(Boolean);
-
-        const selectedNodeDetails = selectedNodes
-            .map(n => {
-                const config = Object.keys(n!.configuration).length > 0
-                    ? `  config: ${JSON.stringify(n!.configuration)}`
-                    : '';
-                return `- ${n!.key} (${n!.group}): ${n!.description || n!.name}${config}`;
-            })
-            .join('\n');
-
-        // Get config descriptions for the selected node codes
-        const nodeCodeDetails: string[] = [];
-        for (const n of selectedNodes) {
-            if (!n) continue;
+    // Gather selected node details + their config descriptions
+    const selectedNodes = nodeSelection.nodes
+        .map(key => {
             try {
-                const nodeCode = runtime.nodeCodeFactory.getNodeCode(n.nodeCodeKey);
-                const Ctor = nodeCode.constructor as { configDescriptions?: Array<{ key: string; name: string; description: string; type: string; default?: unknown; isOptional?: boolean }> };
-                const Ctor2 = nodeCode.constructor as { resultDescriptions?: Array<{ status: string; description: string }> };
-                const configs = Ctor.configDescriptions ?? [];
-                const results = Ctor2.resultDescriptions ?? [];
-                if (configs.length > 0 || results.length > 0) {
-                    const configStr = configs.map(c =>
-                        `    - ${c.key} (${c.type}${c.isOptional ? ', optional' : ''}${c.default != null ? `, default: ${JSON.stringify(c.default)}` : ''}): ${c.description}`
-                    ).join('\n');
-                    const resultStr = results.map(r => `    → "${r.status}": ${r.description}`).join('\n');
-                    nodeCodeDetails.push(`${n.key} (nodeCode: ${n.nodeCodeKey}):\n  Configuration:\n${configStr}\n  Results (edge keys):\n${resultStr}`);
-                }
+                return runtime.catalog.getCatalogNode(key);
             } catch {
-                // Skip if node code not found
+                return null;
             }
-        }
+        })
+        .filter(Boolean);
 
-        // ── STEP 1.5: Information gathering loop ───────────────────────
-        spinner.text = chalk.dim('Checking if more info is needed…');
-
-        const gatheredInfo: Record<string, string> = {};
-        const MAX_QUESTIONS = 5;
-
-        for (let i = 0; i < MAX_QUESTIONS; i++) {
-            const selectedNodeNames = nodeSelection.nodes.join(', ');
-            const previousAnswers = Object.entries(gatheredInfo).length > 0
-                ? `\n\nPreviously gathered information:\n${Object.entries(gatheredInfo).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`
+    const selectedNodeDetails = selectedNodes
+        .map(n => {
+            const config = Object.keys(n!.configuration).length > 0
+                ? `  config: ${JSON.stringify(n!.configuration)}`
                 : '';
+            return `- ${n!.key} (${n!.group}): ${n!.description || n!.name}${config}`;
+        })
+        .join('\n');
 
-            const sufficiencyResponse = await llm.chat(
-                [{
-                    role: 'user' as const,
-                    content: `The user said: "${userInput}"
-
-Selected catalog nodes: ${selectedNodeNames}
-${previousAnswers}
-
-Do you have ALL the specific information needed to create a Feral process that fulfills this request?
-For entity creation, you need at minimum: a title and optionally a body/description.
-Consider what the user explicitly provided in their message — don't ask for info they already gave.
-
-Return a JSON object with EXACTLY this structure:
-If MORE info needed: { "status": "need_more", "question": "The question to ask the user", "field_name": "a_short_key_for_this_field" }
-If SUFFICIENT: { "status": "sufficient" }
-
-Return ONLY the JSON object, no markdown fences.`,
-                }],
-                {
-                    systemPrompt: 'You are an information-gathering assistant. Determine if the user\'s request provides enough detail to proceed. Be practical — if the user gave enough info (e.g., "run 10 miles by March"), that IS a title. Only ask for genuinely missing critical info. Prefer to proceed rather than over-asking.',
-                    temperature: 0.2,
-                },
-            );
-
-            debug('chat', `Sufficiency check ${i + 1}: ${sufficiencyResponse}`);
-
-            let sufficiency: { status: string; question?: string; field_name?: string };
-            try {
-                sufficiency = JSON.parse(cleanJson(sufficiencyResponse));
-            } catch {
-                // If we can't parse, assume sufficient and proceed
-                debug('chat', 'Could not parse sufficiency response, assuming sufficient');
-                break;
+    // Get config descriptions for the selected node codes
+    const nodeCodeDetails: string[] = [];
+    for (const n of selectedNodes) {
+        if (!n) continue;
+        try {
+            const nodeCode = runtime.nodeCodeFactory.getNodeCode(n.nodeCodeKey);
+            const Ctor = nodeCode.constructor as { configDescriptions?: Array<{ key: string; name: string; description: string; type: string; default?: unknown; isOptional?: boolean; isSecret?: boolean }> };
+            const Ctor2 = nodeCode.constructor as { resultDescriptions?: Array<{ status: string; description: string }> };
+            // Filter out secret config keys — they should never appear in LLM prompts
+            const configs = (Ctor.configDescriptions ?? []).filter(c => !c.isSecret);
+            const results = Ctor2.resultDescriptions ?? [];
+            if (configs.length > 0 || results.length > 0) {
+                const configStr = configs.map(c =>
+                    `    - ${c.key} (${c.type}${c.isOptional ? ', optional' : ''}${c.default != null ? `, default: ${JSON.stringify(c.default)}` : ''}): ${c.description}`
+                ).join('\n');
+                const resultStr = results.map(r => `    → "${r.status}": ${r.description}`).join('\n');
+                nodeCodeDetails.push(`${n.key} (nodeCode: ${n.nodeCodeKey}):\n  Configuration:\n${configStr}\n  Results (edge keys):\n${resultStr}`);
             }
-
-            if (sufficiency.status === 'sufficient') {
-                debug('chat', 'LLM says we have enough info, proceeding');
-                break;
-            }
-
-            // Ask the user the follow-up question
-            spinner.stop();
-            const answer = await askFollowUp(chalk.cyan(`  🧝 ${sufficiency.question} `));
-            spinner.start(chalk.dim('Checking if more info is needed…'));
-
-            const trimmed = (answer as string).trim();
-            if (trimmed) {
-                const fieldName = sufficiency.field_name || `field_${i + 1}`;
-                gatheredInfo[fieldName] = trimmed;
-            }
+        } catch {
+            // Skip if node code not found
         }
+    }
 
-        const gatheredInfoStr = Object.entries(gatheredInfo).length > 0
-            ? `\n\nADDITIONAL INFO GATHERED FROM USER:\n${Object.entries(gatheredInfo).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`
+    // ── STEP 1.5: Information gathering (skipped in headless mode) ──
+    // In headless mode we don't prompt for follow-ups — proceed with what we have
+    const gatheredInfoStr = '';
+
+    // ── ORCHESTRATION LOOP ────────────────────────────────────────────
+    // Iteratively: generate process → run → check completion → repeat
+    const MAX_ITERATIONS = 3;
+    const allResults: Record<string, unknown>[] = [];
+    const allReasonings: string[] = [];
+    let remainingWork = userInput;
+
+    const examplesStr = EXAMPLE_PROCESSES.map((ex, i) =>
+        `Example ${i + 1}: ${ex.description}\n${JSON.stringify(ex.json, null, 2)}`
+    ).join('\n\n');
+
+    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+        // ── STEP 2: Generate process ─────────────────────────────────
+        status(`Designing process${iteration > 0 ? ` (step ${iteration + 1})` : ''}…`);
+
+        const previousResultsStr = allResults.length > 0
+            ? `\n\nRESULTS FROM PREVIOUS STEPS:\n${JSON.stringify(allResults, null, 2)}`
             : '';
 
-        // ── ORCHESTRATION LOOP ────────────────────────────────────────────
-        // Iteratively: generate process → run → check completion → repeat
-        const MAX_ITERATIONS = 3;
-        const allResults: Record<string, unknown>[] = [];
-        const allReasonings: string[] = [];
-        let remainingWork = userInput;
-
-        const examplesStr = EXAMPLE_PROCESSES.map((ex, i) =>
-            `Example ${i + 1}: ${ex.description}\n${JSON.stringify(ex.json, null, 2)}`
-        ).join('\n\n');
-
-        for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-            // ── STEP 2: Generate process ─────────────────────────────────
-            spinner.text = chalk.dim(`Designing process${iteration > 0 ? ` (step ${iteration + 1})` : ''}…`);
-
-            const previousResultsStr = allResults.length > 0
-                ? `\n\nRESULTS FROM PREVIOUS STEPS:\n${JSON.stringify(allResults, null, 2)}`
-                : '';
-
-            const step2Response = await llm.chat(
-                [{
-                    role: 'user' as const,
-                    content: `Build a Feral process to handle: "${remainingWork}"
+        const step2Response = await llm.chat(
+            [{
+                role: 'user' as const,
+                content: `Build a Feral process to handle: "${remainingWork}"
 ${gatheredInfoStr}${previousResultsStr}
 
-SELECTED CATALOG NODES (you must only use nodes from this list):
+GLOBAL VARIABLES:
+${globalsBlock}
+
+${vaultContext ? `VAULT CONTEXT (from .socks.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}SELECTED CATALOG NODES (you must only use nodes from this list):
 ${selectedNodeDetails}
 
 NODE CONFIGURATION DETAILS:
@@ -344,6 +314,7 @@ PROCESS FORMAT RULES:
 8. The context starts with: user_input = "${userInput}"
 9. Keep the process as simple as possible — prefer fewer nodes
 10. For entity creation, ALWAYS set entity_title and entity_body in the configuration with concrete values
+11. Use the vault context to inform entity content — respect project goals and conventions
 
 EXAMPLE PROCESSES:
 ${examplesStr}
@@ -355,64 +326,70 @@ Return a JSON object with this exact structure:
 }
 
 Return ONLY the JSON object, no markdown fences.`,
-                }],
-                {
-                    systemPrompt: 'You are a process designer for the Feral CCF engine. Generate a valid process JSON that solves the user\'s request using the provided catalog nodes. The process will be executed immediately by the Feral engine. Be precise with catalog_node_key values — they must match exactly.',
-                    temperature: 0.3,
-                },
-            );
+            }],
+            {
+                systemPrompt: 'You are a process designer for the Feral CCF engine. Generate a valid process JSON that solves the user\'s request using the provided catalog nodes. The process will be executed immediately by the Feral engine. Be precise with catalog_node_key values — they must match exactly.',
+                temperature: 0.3,
+            },
+        );
 
-            debug('chat', `Step 2 response (iteration ${iteration + 1}): ${step2Response}`);
+        debug('chat', `Step 2 response (iteration ${iteration + 1}): ${step2Response}`);
 
-            let processDesign: { reasoning: string; process: Record<string, unknown> };
-            try {
-                processDesign = JSON.parse(cleanJson(step2Response));
-            } catch {
-                throw new Error('Failed to parse process design from LLM');
-            }
+        let processDesign: { reasoning: string; process: Record<string, unknown> };
+        try {
+            processDesign = JSON.parse(cleanJson(step2Response));
+        } catch {
+            throw new Error('Failed to parse process design from LLM');
+        }
 
-            allReasonings.push(processDesign.reasoning);
+        allReasonings.push(processDesign.reasoning);
 
-            // ── STEP 3: Execute the generated process ────────────────────
-            spinner.text = chalk.dim(`Running process${iteration > 0 ? ` (step ${iteration + 1})` : ''}…`);
+        // Emit process JSON for visualization
+        onProcess?.(processDesign.process);
 
-            let processJsonStr: string;
-            try {
-                processJsonStr = JSON.stringify(processDesign.process);
-            } catch {
-                throw new Error('Generated process is not valid JSON');
-            }
+        // ── STEP 3: Execute the generated process ────────────────────
+        status(`Running process${iteration > 0 ? ` (step ${iteration + 1})` : ''}…`);
 
-            const process = hydrateProcessFromString(processJsonStr);
-            inMemorySource.add(process);
+        let processJsonStr: string;
+        try {
+            processJsonStr = JSON.stringify(processDesign.process);
+        } catch {
+            throw new Error('Generated process is not valid JSON');
+        }
 
-            let contextResult: Record<string, unknown>;
-            try {
-                const ctx = await runtime.runner.run(process.key, { user_input: userInput });
-                contextResult = ctx.getAll();
-            } catch (error) {
-                debug('chat', `Process execution failed: ${error}`);
-                contextResult = { _error: error instanceof Error ? error.message : String(error) };
-            }
+        const process = hydrateProcessFromString(processJsonStr);
+        inMemorySource.add(process);
 
-            // Filter internal keys
-            const iterationResult = Object.entries(contextResult)
-                .filter(([k]) => !k.startsWith('_') && k !== 'user_input')
-                .reduce((acc, [k, v]) => {
-                    acc[k] = typeof v === 'string' && v.length > 2000 ? v.slice(0, 2000) + '…' : v;
-                    return acc;
-                }, {} as Record<string, unknown>);
+        let contextResult: Record<string, unknown>;
+        try {
+            const ctx = await runtime.runner.run(process.key, {
+                user_input: userInput,
+                ...(onQuestion ? { _askQuestion: onQuestion } : {}),
+            });
+            contextResult = ctx.getAll();
+        } catch (error) {
+            debug('chat', `Process execution failed: ${error}`);
+            contextResult = { _error: error instanceof Error ? error.message : String(error) };
+        }
 
-            allResults.push(iterationResult);
+        // Filter internal keys and scrub any secrets from context results
+        const iterationResult = Object.entries(contextResult)
+            .filter(([k]) => !k.startsWith('_') && k !== 'user_input')
+            .reduce((acc, [k, v]) => {
+                acc[k] = typeof v === 'string' && v.length > 2000 ? v.slice(0, 2000) + '…' : v;
+                return acc;
+            }, {} as Record<string, unknown>);
 
-            // ── STEP 4: Check completion ──────────────────────────────────
-            if (iteration < MAX_ITERATIONS - 1) {
-                spinner.text = chalk.dim('Checking if task is complete…');
+        allResults.push(scrubSecrets(iterationResult) as Record<string, unknown>);
 
-                const completionResponse = await llm.chat(
-                    [{
-                        role: 'user' as const,
-                        content: `The user originally said: "${userInput}"
+        // ── STEP 4: Check completion ──────────────────────────────────
+        if (iteration < MAX_ITERATIONS - 1) {
+            status('Checking if task is complete…');
+
+            const completionResponse = await llm.chat(
+                [{
+                    role: 'user' as const,
+                    content: `The user originally said: "${userInput}"
 
 We have completed ${iteration + 1} step(s) so far.
 
@@ -431,38 +408,38 @@ If COMPLETE: { "status": "complete" }
 If MORE WORK NEEDED: { "status": "more_work", "remaining": "Description of what still needs to be done" }
 
 Return ONLY the JSON object, no markdown fences.`,
-                    }],
-                    {
-                        systemPrompt: 'You are a task completion checker. Be thorough — if the user asked for multiple things (e.g., create a goal AND avoid pizza), make sure ALL parts have been addressed.',
-                        temperature: 0.2,
-                    },
-                );
+                }],
+                {
+                    systemPrompt: 'You are a task completion checker. Be thorough — if the user asked for multiple things (e.g., create a goal AND avoid pizza), make sure ALL parts have been addressed.',
+                    temperature: 0.2,
+                },
+            );
 
-                debug('chat', `Completion check (iteration ${iteration + 1}): ${completionResponse}`);
+            debug('chat', `Completion check (iteration ${iteration + 1}): ${completionResponse}`);
 
-                let completion: { status: string; remaining?: string };
-                try {
-                    completion = JSON.parse(cleanJson(completionResponse));
-                } catch {
-                    debug('chat', 'Could not parse completion response, assuming complete');
-                    break;
-                }
-
-                if (completion.status === 'complete') {
-                    debug('chat', 'Task complete, exiting orchestration loop');
-                    break;
-                }
-
-                // Update the remaining work for the next iteration
-                remainingWork = completion.remaining || userInput;
-                debug('chat', `More work needed: ${remainingWork}`);
+            let completion: { status: string; remaining?: string };
+            try {
+                completion = JSON.parse(cleanJson(completionResponse));
+            } catch {
+                debug('chat', 'Could not parse completion response, assuming complete');
+                break;
             }
+
+            if (completion.status === 'complete') {
+                debug('chat', 'Task complete, exiting orchestration loop');
+                break;
+            }
+
+            // Update the remaining work for the next iteration
+            remainingWork = completion.remaining || userInput;
+            debug('chat', `More work needed: ${remainingWork}`);
         }
+    }
 
-        // ── STEP 5: Synthesize response ──────────────────────────────────
-        spinner.text = chalk.dim('Composing response…');
+    // ── STEP 5: Synthesize response ──────────────────────────────────
+    status('Composing response…');
 
-        const synthesisPrompt = `You are Dobbie, a helpful personal assistant. The user said: "${userInput}"
+    const synthesisPrompt = `You are Dobbie, a helpful personal assistant. The user said: "${userInput}"
 
 To answer, I selected these capabilities:
 ${nodeSelection.reasoning}
@@ -480,30 +457,91 @@ ${allResults.some(r => r._error) ? `Note: Some steps encountered errors.` : ''}
 
 Now compose a helpful, natural response to the user. Be concise and friendly. If processes produced data, present it clearly. If there were errors, acknowledge them gracefully and suggest what the user could try instead.`;
 
-        const step5Response = await llm.chat(
-            [{ role: 'user' as const, content: synthesisPrompt }],
-            {
-                systemPrompt: createDobbieSystemPrompt('You are responding to a natural language request from your user. Be helpful, concise, and warm.'),
-                temperature: 0.7,
-            },
-        );
+    const step5Response = await llm.chat(
+        [{ role: 'user' as const, content: synthesisPrompt }],
+        {
+            systemPrompt: createDobbieSystemPrompt('You are responding to a natural language request from your user. Be helpful, concise, and warm.'),
+            temperature: 0.7,
+        },
+    );
+
+    return step5Response.trim();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CORE: feralChat — CLI wrapper with ora spinner
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function feralChat(userInput: string): Promise<void> {
+    const spinner = ora({ text: chalk.dim('Dobbie is thinking…'), color: 'cyan' }).start();
+
+    try {
+        const response = await feralChatHeadless(userInput, (s) => {
+            spinner.text = chalk.dim(s);
+        });
 
         spinner.stop();
-
-        console.log(chalk.cyan(`\n  ${step5Response.trim().split('\n').join('\n  ')}\n`));
-
+        console.log(chalk.cyan(`\n  ${response.split('\n').join('\n  ')}\n`));
     } catch (error) {
         spinner.stop();
         const msg = error instanceof Error ? error.message : String(error);
         debug('chat', `Autonomous chat failed: ${msg}`);
-        console.log(chalk.yellow(`\n  Hmm, Dobbie tried to think about that but got confused: ${msg}`));
-        console.log(chalk.dim('  Try rephrasing, or use a specific command like "todo", "note", "today".\n'));
+        if (msg.includes('credit balance') || msg.includes('too low') || msg.includes('billing')) {
+            console.log(chalk.red('\n  Dobbie\'s AI provider is out of credits.'));
+            console.log(chalk.dim('  Top up at: https://console.anthropic.com/settings/billing\n'));
+        } else {
+            console.log(chalk.yellow(`\n  Hmm, Dobbie tried to think about that but got confused: ${msg}`));
+            console.log(chalk.dim('  Try rephrasing, or use a specific command like "todo", "note", "today".\n'));
+        }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Patterns that look like API keys / tokens — redact before sending to LLM
+const SECRET_PATTERNS = [
+    /sk-[a-zA-Z0-9_-]{20,}/g,          // OpenAI keys
+    /sk-ant-[a-zA-Z0-9_-]{20,}/g,      // Anthropic keys
+    /ghp_[a-zA-Z0-9]{36,}/g,           // GitHub PATs
+    /ghu_[a-zA-Z0-9]{36,}/g,           // GitHub user tokens
+    /xox[bsarp]-[a-zA-Z0-9\-]{10,}/g,  // Slack tokens
+];
+
+const SECRET_KEYS = new Set([
+    'apiKey', 'api_key', 'apikey',
+    'secret', 'token', 'password',
+    'authorization', 'credential',
+]);
+
+/**
+ * Deep-scrub secret-shaped values from an object before it's sent to an LLM.
+ */
+function scrubSecrets(obj: unknown): unknown {
+    if (typeof obj === 'string') {
+        let s = obj;
+        for (const pat of SECRET_PATTERNS) {
+            s = s.replace(pat, '[REDACTED]');
+        }
+        return s;
+    }
+    if (Array.isArray(obj)) {
+        return obj.map(scrubSecrets);
+    }
+    if (obj && typeof obj === 'object') {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(obj)) {
+            if (SECRET_KEYS.has(k.toLowerCase())) {
+                out[k] = '[REDACTED]';
+            } else {
+                out[k] = scrubSecrets(v);
+            }
+        }
+        return out;
+    }
+    return obj;
+}
 
 /**
  * Strip markdown fences, fix common LLM JSON mistakes, and trim whitespace.
@@ -520,32 +558,15 @@ function cleanJson(raw: string): string {
 }
 
 /**
- * Ask a follow-up question using a temporary readline.
- * Disables raw mode and removes existing stdin listeners to prevent
- * the shell's paused readline from double-echoing characters.
+ * Ask a follow-up question using inquirer.
+ * Inquirer manages its own stdin/stdout lifecycle, avoiding conflicts
+ * with the shell's paused readline interface.
  */
-function askFollowUp(question: string): Promise<string> {
-    // Save and remove existing stdin listeners to prevent the shell's
-    // paused readline from processing the same keystrokes.
-    const savedListeners = process.stdin.rawListeners('data').slice();
-    process.stdin.removeAllListeners('data');
-
-    // Disable raw mode so the temporary readline gets clean cooked input.
-    const wasRaw = process.stdin.isRaw ?? false;
-    if (process.stdin.isTTY && wasRaw) process.stdin.setRawMode(false);
-
-    const tempRl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    return new Promise(resolve => {
-        tempRl.question(question, (answer: string) => {
-            tempRl.close();
-
-            // Restore raw mode and stdin listeners for the shell readline
-            if (process.stdin.isTTY && wasRaw) process.stdin.setRawMode(true);
-            for (const listener of savedListeners) {
-                process.stdin.on('data', listener as (...args: unknown[]) => void);
-            }
-
-            resolve(answer);
-        });
-    });
+async function askFollowUp(question: string): Promise<string> {
+    const { answer } = await inquirer.prompt([{
+        type: 'input',
+        name: 'answer',
+        message: question,
+    }]);
+    return answer as string;
 }

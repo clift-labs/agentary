@@ -115,6 +115,40 @@ async function listInboxItems(project: string): Promise<string[]> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HEADLESS PROCESS (reusable from cron scheduler)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ProcessInboxResult {
+    processed: number;
+    skipped: number;
+}
+
+/**
+ * Process all inbox items headlessly (no interactive prompts).
+ * Failed items are silently skipped and left in the inbox.
+ */
+export async function processInbox(project: string): Promise<ProcessInboxResult> {
+    const items = await listInboxItems(project);
+    let processed = 0;
+    let skipped = 0;
+
+    for (const itemPath of items) {
+        try {
+            const result = await processInboxItem(itemPath, project);
+            if (result.success) {
+                processed += result.entities.length;
+            } else {
+                skipped++;
+            }
+        } catch {
+            skipped++;
+        }
+    }
+
+    return { processed, skipped };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMMAND
 // ─────────────────────────────────────────────────────────────────────────────
 

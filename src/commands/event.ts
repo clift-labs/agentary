@@ -13,7 +13,7 @@ import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
 import { getEntityIndex } from '../entities/entity-index.js';
-import { findEntityByTitle, trashEntity } from '../entities/entity.js';
+import { findEntityByTitle, trashEntity, generateEntityId } from '../entities/entity.js';
 
 interface EventState {
     title: string;
@@ -47,43 +47,19 @@ function parseDateTime(input: string): string | null {
 }
 
 async function findExistingEvent(project: string, titleOrFilename: string): Promise<EventState | null> {
-    const vaultRoot = await getVaultRoot();
-    const eventsDir = path.join(vaultRoot, 'projects', project, 'events');
-
-    try {
-        const files = await fs.readdir(eventsDir);
-
-        const expectedFilename = titleOrFilename
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '') + '.md';
-
-        const filenameWithMd = titleOrFilename.endsWith('.md') ? titleOrFilename : titleOrFilename + '.md';
-
-        for (const file of files) {
-            if (file === expectedFilename || file === filenameWithMd || file === titleOrFilename) {
-                const filepath = path.join(eventsDir, file);
-                const rawContent = await fs.readFile(filepath, 'utf-8');
-                const parsed = matter(rawContent);
-
-                return {
-                    title: parsed.data.title || file.replace('.md', ''),
-                    description: parsed.content.trim(),
-                    project,
-                    startTime: parsed.data.startTime || '',
-                    endTime: parsed.data.endTime || '',
-                    location: parsed.data.location,
-                    filepath,
-                    isExisting: true,
-                };
-            }
-        }
-    } catch (err) {
-        debug('event', err);
-        // Events directory doesn't exist yet
-    }
-
-    return null;
+    const found = await findEntityByTitle('event', titleOrFilename);
+    if (!found) return null;
+    if (found.meta.project && found.meta.project !== project) return null;
+    return {
+        title: found.meta.title as string,
+        description: found.content,
+        project,
+        startTime: (found.meta.startTime || found.meta.startDate || '') as string,
+        endTime: (found.meta.endTime || found.meta.endDate || '') as string,
+        location: found.meta.location as string | undefined,
+        filepath: found.filepath,
+        isExisting: true,
+    };
 }
 
 async function clarifyEvent(state: EventState): Promise<string> {
@@ -179,15 +155,13 @@ async function saveEvent(state: EventState): Promise<string> {
     await fs.mkdir(eventsDir, { recursive: true });
 
     let filepath = state.filepath;
+    const entityId = filepath ? path.basename(filepath, '.md') : generateEntityId('event');
     if (!filepath) {
-        const filename = state.title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '') + '.md';
-        filepath = path.join(eventsDir, filename);
+        filepath = path.join(eventsDir, `${entityId}.md`);
     }
 
     const markdown = `---
+id: ${entityId}
 title: "${state.title}"
 startTime: ${state.startTime}
 endTime: ${state.endTime}

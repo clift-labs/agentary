@@ -3,11 +3,11 @@ import { getApiKey } from '../../config.js';
 import type { LLMProvider, Message, ChatOptions } from '../types.js';
 
 export class ClaudeProvider implements LLMProvider {
-    name = 'claude';
+    name = 'anthropic';
     private client: Anthropic | null = null;
     private modelId: string;
 
-    constructor(modelId: string = 'claude-sonnet-4-20250514') {
+    constructor(modelId: string = 'claude-sonnet-4-6') {
         this.modelId = modelId;
     }
 
@@ -16,10 +16,10 @@ export class ClaudeProvider implements LLMProvider {
             return this.client;
         }
 
-        const apiKey = await getApiKey('claude');
+        const apiKey = await getApiKey('anthropic');
         if (!apiKey) {
             throw new Error(
-                "Dobbie needs an API key for Claude, sir. Please run 'dobbie config add-provider claude'"
+                "Dobbie needs an Anthropic API key, sir. Please run 'dobbie config add-provider anthropic'"
             );
         }
 

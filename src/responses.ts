@@ -51,13 +51,13 @@ export type ResponseKey =
 
 const responses: Record<ResponseKey, string[]> = {
     greeting: [
-        '🧝 Dobbie is at your service, {name}!',
-        '🧝 Dobbie awaits your command, {honorific}!',
-        '🧝 How may Dobbie assist you today, {name}?',
-        '🧝 Dobbie is ready and eager to help, {honorific}!',
-        '🧝 Dobbie is here! What does {name} require?',
-        '🧝 Dobbie has been waiting, {honorific}! How can Dobbie help?',
-        '🧝 Good to see you, {name}! Dobbie is at the ready!',
+        '🤖 Dobbie is at your service, {name}!',
+        '🤖 Dobbie awaits your command, {honorific}!',
+        '🤖 How may Dobbie assist you today, {name}?',
+        '🤖 Dobbie is ready and eager to help, {honorific}!',
+        '🤖 Dobbie is here! What does {name} require?',
+        '🤖 Dobbie has been waiting, {honorific}! How can Dobbie help?',
+        '🤖 Good to see you, {name}! Dobbie is at the ready!',
     ],
     farewell: [
         'Dobbie is always here if you need anything else, {name}!',
@@ -384,16 +384,16 @@ const responses: Record<ResponseKey, string[]> = {
         'Dobbie is here if you need more help, {name}!',
     ],
     startup_greeting: [
-        '🧝 *yawns* Dobbie is awake and ready to serve, {name}!',
-        '🧝 Dobbie has polished his socks and is reporting for duty, {honorific}!',
-        '🧝 Systems online, {name}! Dobbie ran all the diagnostics twice... just to be safe.',
-        '🧝 Dobbie is here, {name}! The socks are sorted and the quills are sharp!',
-        '🧝 *cracks knuckles* Dobbie is warmed up and eager, {honorific}!',
-        '🧝 Good day, {name}! Dobbie has been counting the seconds until your return.',
-        '🧝 Dobbie\'s ears perked up the moment you arrived, {name}!',
-        '🧝 All candles lit, all scrolls ready — Dobbie awaits your command, {honorific}!',
-        '🧝 Dobbie checked the vault, polished the projects, and is standing by, {name}!',
-        '🧝 *bounces excitedly* Dobbie is fully operational and at your service, {honorific}!',
+        '🤖 *yawns* Dobbie is awake and ready to serve, {name}!',
+        '🤖 Dobbie has polished his socks and is reporting for duty, {honorific}!',
+        '🤖 Systems online, {name}! Dobbie ran all the diagnostics twice... just to be safe.',
+        '🤖 Dobbie is here, {name}! The socks are sorted and the quills are sharp!',
+        '🤖 *cracks knuckles* Dobbie is warmed up and eager, {honorific}!',
+        '🤖 Good day, {name}! Dobbie has been counting the seconds until your return.',
+        '🤖 Dobbie\'s ears perked up the moment you arrived, {name}!',
+        '🤖 All candles lit, all scrolls ready — Dobbie awaits your command, {honorific}!',
+        '🤖 Dobbie checked the vault, polished the projects, and is standing by, {name}!',
+        '🤖 *bounces excitedly* Dobbie is fully operational and at your service, {honorific}!',
     ],
     unknown_command: [
         'Dobbie does not know that spell, {honorific}. Perhaps try one of these?',
@@ -407,14 +407,7 @@ const responses: Record<ResponseKey, string[]> = {
 };
 
 import os from 'os';
-import { getUserName, getUserGender } from './state/manager.js';
-
-// ── Honorific pools by gender ──────────────────────────────────────────────
-const HONORIFIC_POOLS: Record<string, string[]> = {
-    male: ['sir', 'boss', 'master', 'chief', 'captain', 'guv', 'my lord', 'good sir'],
-    female: ['ma\'am', 'miss', 'madam', 'my lady', 'boss', 'chief', 'mistress'],
-    other: ['boss', 'chief', 'captain', 'friend', 'guv', 'my liege', 'comrade'],
-};
+import { getUserName, getUserGender, HONORIFIC_POOLS } from './state/manager.js';
 
 // ── Cached values for sync substitution ────────────────────────────────────
 let cachedName: string = os.userInfo().username || 'friend';

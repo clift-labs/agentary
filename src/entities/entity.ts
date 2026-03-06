@@ -8,12 +8,23 @@ import path from 'path';
 import matter from 'gray-matter';
 import { debug } from '../utils/debug.js';
 import { getVaultRoot, getActiveProject } from '../state/manager.js';
+import { getEntityType, loadEntityTypes } from './entity-type-config.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SHARED TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EntityTypeName = 'note' | 'task' | 'event' | 'research' | 'goal' | 'recurrence' | 'person' | 'todont';
+/** Any registered entity type name. Validated at runtime via entity-type-config. */
+export type EntityTypeName = string;
+
+/** A named link stored in YAML frontmatter to express a labeled relationship. */
+export interface EntityLink {
+    target: string;   // "type:id" composite key
+    label: string;    // relationship name
+}
+
+/** @deprecated Use EntityTypeName (string) — kept for callers that rely on the union */
+export type BuiltInEntityTypeName = 'note' | 'task' | 'event' | 'research' | 'goal' | 'recurrence' | 'person' | 'todont';
 
 export type TaskStatus = 'open' | 'in-progress' | 'done' | 'blocked';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -47,6 +58,7 @@ export interface CadenceDetails {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface EntityMeta {
+    id: string;                // e.g. "task-abc123" — type prefix + 6 base-36 chars
     title: string;
     entityType: EntityTypeName;
     created: string;           // ISO 8601
@@ -133,6 +145,17 @@ export type Entity = NoteEntity | TaskEntity | EventEntity | ResearchEntity | Go
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Generate a unique entity id: "{typeName}-{6 random base-36 chars}"
+ * e.g. "task-abc123", "event-a1b2c3"
+ */
+export function generateEntityId(typeName: string): string {
+    const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+    let suffix = '';
+    for (let i = 0; i < 6; i++) suffix += chars[Math.floor(Math.random() * 36)];
+    return `${typeName}-${suffix}`;
+}
+
+/**
  * Slugify a title into a URL/filename-safe string.
  */
 export function slugify(title: string): string {
@@ -151,6 +174,7 @@ export function createEntityMeta(
     opts: { tags?: string[]; project?: string } = {},
 ): EntityMeta {
     return {
+        id: generateEntityId(entityType),
         title,
         entityType,
         created: new Date().toISOString(),
@@ -165,6 +189,7 @@ export function createEntityMeta(
 
 /**
  * Resolve the directory for an entity type in the active project.
+ * Reads the entity type config to get the directory name.
  */
 export async function getEntityDir(entityType: EntityTypeName): Promise<string> {
     const vaultRoot = await getVaultRoot();
@@ -172,18 +197,11 @@ export async function getEntityDir(entityType: EntityTypeName): Promise<string> 
     if (!project) {
         throw new Error('No active project. Use project.use first.');
     }
-    // Map entity type to directory name
-    const dirMap: Record<EntityTypeName, string> = {
-        note: 'notes',
-        task: 'todos',
-        event: 'events',
-        research: 'research',
-        goal: 'goals',
-        recurrence: 'recurrences',
-        person: 'people',
-        todont: 'todonts',
-    };
-    return path.join(vaultRoot, 'projects', project, dirMap[entityType]);
+    const typeConfig = await getEntityType(entityType);
+    if (!typeConfig) {
+        throw new Error(`Unknown entity type: "${entityType}". Check ~/.dobbie/entity-types.json.`);
+    }
+    return path.join(vaultRoot, 'projects', project, typeConfig.directory);
 }
 
 /**
@@ -277,10 +295,10 @@ export async function findEntityByTitle(
         debug('entities', err);
         return null;
     }
-    const slug = slugify(titleOrFilename);
-
     try {
         const files = await fs.readdir(dir);
+        const needle = titleOrFilename.toLowerCase();
+        let partialMatch: { filepath: string; meta: Record<string, unknown>; content: string } | null = null;
 
         for (const file of files) {
             if (!file.endsWith('.md') || file.startsWith('.')) continue;
@@ -289,14 +307,27 @@ export async function findEntityByTitle(
             const rawContent = await fs.readFile(filepath, 'utf-8');
             const { meta, content } = parseEntity(filepath, rawContent);
 
-            const fileBasename = path.basename(file, '.md');
+            // Exact match on id or title — return immediately
             if (
-                fileBasename === slug ||
-                fileBasename.toLowerCase() === titleOrFilename.toLowerCase() ||
-                (meta.title && (meta.title as string).toLowerCase() === titleOrFilename.toLowerCase())
+                meta.id === titleOrFilename ||
+                (meta.title && (meta.title as string).toLowerCase() === needle)
             ) {
                 return { filepath, meta, content };
             }
+
+            // Partial match — title contains search term or vice versa
+            if (!partialMatch && meta.title) {
+                const titleLower = (meta.title as string).toLowerCase();
+                if (titleLower.includes(needle) || needle.includes(titleLower)) {
+                    partialMatch = { filepath, meta, content };
+                }
+            }
+        }
+
+        // Fall back to partial match if no exact match found
+        if (partialMatch) {
+            debug('entities', `No exact match for "${titleOrFilename}", using partial match: "${partialMatch.meta.title}"`);
+            return partialMatch;
         }
     } catch (err) {
         debug('entities', err);
@@ -304,6 +335,56 @@ export async function findEntityByTitle(
     }
 
     return null;
+}
+
+/**
+ * Full-text search across entities by title, tags, and body content.
+ * Tokenizes query into words and scores matches: title=3pts, tag=2pts, body=1pt per token.
+ * Only returns entities where ALL tokens match at least one field.
+ */
+export async function searchEntities(
+    query: string,
+    entityType?: EntityTypeName,
+): Promise<{ filepath: string; meta: Record<string, unknown>; content: string; score: number }[]> {
+    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return [];
+
+    // Gather all entities to search
+    let allEntities: { filepath: string; meta: Record<string, unknown>; content: string }[];
+
+    if (entityType) {
+        allEntities = await listEntities(entityType);
+    } else {
+        const types = await loadEntityTypes();
+        const lists = await Promise.all(types.map(t => listEntities(t.name)));
+        allEntities = lists.flat();
+    }
+
+    const results: { filepath: string; meta: Record<string, unknown>; content: string; score: number }[] = [];
+
+    for (const entity of allEntities) {
+        const title = ((entity.meta.title as string) ?? '').toLowerCase();
+        const tags = ((entity.meta.tags as string[]) ?? []).map(t => t.toLowerCase());
+        const body = entity.content.toLowerCase();
+
+        let score = 0;
+        let allMatched = true;
+
+        for (const token of tokens) {
+            let matched = false;
+            if (title.includes(token)) { score += 3; matched = true; }
+            if (tags.some(tag => tag.includes(token))) { score += 2; matched = true; }
+            if (body.includes(token)) { score += 1; matched = true; }
+            if (!matched) { allMatched = false; break; }
+        }
+
+        if (allMatched && score > 0) {
+            results.push({ filepath: entity.filepath, meta: entity.meta, content: entity.content, score });
+        }
+    }
+
+    results.sort((a, b) => b.score - a.score);
+    return results;
 }
 
 /**

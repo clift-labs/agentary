@@ -15,7 +15,7 @@ const NOT_FOUND = 'not_found';
 
 export class UpdateEntityNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
-        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to update (task, note, event, research, goal, todont).', type: 'string' },
+        { key: 'entity_type', name: 'Entity Type', description: 'The entity type to update (any configured entity type, e.g. task, note, event, goal).', type: 'string' },
         { key: 'entity_title', name: 'Entity Title', description: 'Title of the entity to update. Supports {context_key} interpolation. Sets "title" in context.', type: 'string', isOptional: true },
         { key: 'entity_body', name: 'Entity Body', description: 'New body/content for the entity. Supports {context_key} interpolation. Sets "content" in context.', type: 'string', isOptional: true },
         { key: 'patch_fields', name: 'Patch Fields', description: 'Comma-separated context keys to merge into entity metadata (e.g. status,priority,dueDate).', type: 'string', default: '', isOptional: true },

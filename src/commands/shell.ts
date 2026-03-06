@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import readline from 'readline';
 import { spawn } from 'child_process';
 import { listServiceTools } from '../tools/index.js';
-import { getResponse, getResponseWith } from '../responses.js';
+import { getResponse } from '../responses.js';
 import { StatusBar } from '../shell/tui.js';
 import { StatusPoller } from '../shell/status-poller.js';
 import { breadcrumbPrompt } from '../ui/breadcrumb.js';
@@ -11,7 +11,21 @@ import { isInterviewComplete } from '../state/manager.js';
 import { runInterview } from './interview.js';
 import { getEntityIndex } from '../entities/entity-index.js';
 import type { EntityTypeName } from '../entities/entity.js';
+import { loadEntityTypes } from '../entities/entity-type-config.js';
 import { feralChat } from './chat.js';
+
+// ── Dynamic entity type names (loaded once at shell startup) ─────────────────
+let _dynamicEntityTypes: Set<string> = new Set();
+async function loadDynamicEntityTypes(): Promise<void> {
+    const types = await loadEntityTypes();
+    _dynamicEntityTypes = new Set(types.map(t => t.name));
+    // Also add to COMMAND_TREE for tab-completion
+    for (const t of types) {
+        if (!COMMAND_TREE[t.name]) {
+            COMMAND_TREE[t.name] = ['list', 'add', 'remove', 'show'];
+        }
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMMAND TREE (for tab-completion)
@@ -22,7 +36,7 @@ const COMMAND_TREE: Record<string, string[]> = {
     today: [],
     remember: ['-g'],
     project: ['list', 'switch', 'new'],
-    config: ['add-provider', 'set-capability', 'list-capabilities', 'list-providers', 'set-name'],
+    config: ['add-provider', 'set-capability', 'reset-capability', 'list-capabilities', 'list-providers', 'set-name'],
     sync: [],
     week: ['--next'],
     note: ['list', 'remove'],
@@ -31,6 +45,8 @@ const COMMAND_TREE: Record<string, string[]> = {
     research: ['list'],
     goal: ['list'],
     todont: ['list', 'remove'],
+    cal: ['add', 'remove', 'list', 'sync', 'set-url'],
+    cron: ['list', 'enable', 'disable', 'set-interval', 'status', 'run'],
     time: [],
     recurrence: ['create', 'list', 'edit', 'delete', 'remove', 'generate'],
     person: ['list', 'edit', 'delete', 'remove'],
@@ -43,6 +59,7 @@ const COMMAND_TREE: Record<string, string[]> = {
     feral: ['nodes', 'catalog', 'process'],
     interview: [],
     setup: [],
+    type: ['list', 'add', 'edit', 'remove'],
     shell: [],
     help: [],
     clear: [],
@@ -201,6 +218,9 @@ export function createShellCommand(_program: Command): Command {
             const entityIndex = getEntityIndex();
             entityIndex.build().catch(() => { /* silent — index is optional for completions */ });
 
+            // Load custom entity types for dynamic command routing + tab-completion
+            loadDynamicEntityTypes().catch(() => { /* silent */ });
+
             await bar.printWelcome();
 
             // First-run interview
@@ -246,8 +266,8 @@ export function createShellCommand(_program: Command): Command {
                         return;
                     }
 
-                    if (input === 'help') {
-                        printShellHelp();
+                    if (input === 'help all' || input === 'help') {
+                        await printHelp();
                         showPrompt(rl, bar);
                         return;
                     }
@@ -255,27 +275,30 @@ export function createShellCommand(_program: Command): Command {
                     // Dispatch via subprocess — keeps readline completely isolated
                     const args = input.split(/\s+/);
 
-                    // Unknown command? Show a witty message + available commands
+                    // Unknown command? Check dynamic entity types first, then fall through
                     const command = args[0];
                     if (command && !TOP_LEVEL_COMMANDS.includes(command)) {
-                        if (args.length >= 3) {
-                            // 3+ words that don't match a command → autonomous chat
+                        // Dynamic entity type: `car add` → `entity car add`
+                        if (_dynamicEntityTypes.has(command)) {
                             rl.pause();
-                            try {
-                                await feralChat(input);
-                            } finally {
-                                // Restore raw mode and resume readline
-                                if (process.stdin.isTTY) process.stdin.setRawMode(true);
-                                rl.resume();
-                            }
+                            const result = await runCommand(['entity', ...args]);
+                            rl.resume();
+                            if (result === 'quit') { poller.stop(); rl.close(); return; }
                             await poller.pollNow();
                             console.log('');
                             showPrompt(rl, bar);
                             return;
                         }
-                        const msg = getResponseWith('unknown_command', { command });
-                        console.log(chalk.yellow(`\n  ${msg}`));
-                        printShellHelp();
+                        // Any unrecognised input → autonomous chat
+                        rl.pause();
+                        try {
+                            await feralChat(input);
+                        } finally {
+                            if (process.stdin.isTTY) process.stdin.setRawMode(true);
+                            rl.resume();
+                        }
+                        await poller.pollNow();
+                        console.log('');
                         showPrompt(rl, bar);
                         return;
                     }
@@ -323,20 +346,50 @@ export function createShellCommand(_program: Command): Command {
         });
 }
 
-function printShellHelp(): void {
-    console.log(chalk.cyan(`
-${chalk.bold('Available Commands:')}
+async function printHelp(): Promise<void> {
+    const b = chalk.bold;
+    const g = chalk.gray;
 
-  ${chalk.bold('Vault:')}      init, sync, today, week [--next], time
-  ${chalk.bold('Projects:')}   project [list|switch|new]
-  ${chalk.bold('Memory:')}     note, todo, task, event, goal, research, recurrence, person, inbox [add], remember
-  ${chalk.bold('Index:')}      index [stats|graph|neighbors|rebuild]
-  ${chalk.bold('Config:')}     config [add-provider|set-capability|list-capabilities|list-providers|set-name]
-  ${chalk.bold('Service:')}    service [start|stop|status]
-  ${chalk.bold('Queue:')}      queue [size|status|clear|pause|resume]
-  ${chalk.bold('Tools:')}      tools, tool <name>
-  ${chalk.bold('Feral:')}      feral [nodes|catalog|process]
-  ${chalk.bold('Other:')}      interview, setup
-  ${chalk.bold('Shell:')}      help, clear, exit
+    // Load entity types dynamically
+    const types = await loadEntityTypes().catch(() => []);
+
+    const COL = 14; // width of name column
+    const PAD = ' '.repeat(4 + COL + 2); // indent for continuation lines
+    const entityLines = types.map(t => {
+        const label = b(t.plural.padEnd(COL));
+        const desc = t.description ?? '';
+        const fields = t.fields.length > 0
+            ? t.fields.map(f => f.key).join(g(' · '))
+            : '';
+        const parts = [desc, fields].filter(Boolean);
+        return `    ${label}  ${parts.join(g('\n' + PAD))}`;
+    }).join('\n');
+
+    const typesSuggestion = types.length < 5
+        ? g(`\n  Tip: "${b('type add')}" to track something new (cars, books, recipes…)`)
+        : '';
+
+    console.log(chalk.cyan(`
+${b('Just tell me what you need.')}
+
+  Examples:
+    "remind me to call the dentist on Friday"
+    "note that the API key expires in 30 days"
+    "what's on my plate this week?"
+    "add a goal to run a 5k by June"
+    "mark the dentist task as done"
+
+${b('Things I\'m tracking:')}
+
+${entityLines || g('  (no entity types yet — try "type add")')}
+${typesSuggestion}
+
+${b('Vault & system:')}
+  ${g('today · week · sync · cal · time · project')}
+  ${g('service · queue · index · cron · config · setup')}
+  ${g('type [list|add|edit|remove]  — manage what I track')}
+  ${g('feral [nodes|catalog|process]  — flow engine')}
+
+  ${g('clear · exit')}
 `));
 }

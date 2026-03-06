@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dobbie</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a1a2e;
+    --panel: #16213e;
+    --border: #0f3460;
+    --text: #e0e0e0;
+    --dim: #8888aa;
+    --cyan: #00d4ff;
+    --cyan-dim: #0099bb;
+    --green: #00e676;
+    --yellow: #ffd740;
+    --red: #ff5252;
+    --orange: #ff9100;
+  }
+
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .header {
+    grid-column: 1 / -1;
+    background: var(--panel);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    font-size: 10px;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+
+  .stat-label {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
+  }
+
+  .stat-value {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+
+  .project-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    max-width: 160px;
+  }
+
+  .project-select:focus { border-color: var(--cyan); }
+
+  .ws-status {
+    font-size: 11px;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+
+  .ws-status .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 6px;
+  }
+
+  .panel {
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--cyan);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .panel-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--cyan);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Today panel ─────────────────────────────────── */
+
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .task-item:last-child { border-bottom: none; }
+
+  .task-check {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--dim);
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .task-check:hover { border-color: var(--cyan); }
+
+  .task-info { flex: 1; min-width: 0; }
+
+  .task-title {
+    font-size: 13px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .task-meta {
+    font-size: 10px;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-critical { background: var(--red); color: #fff; }
+  .badge-high { background: var(--orange); color: #1a1a2e; }
+  .badge-medium { background: var(--yellow); color: #1a1a2e; }
+  .badge-low { background: var(--dim); color: #1a1a2e; }
+
+  .empty-state {
+    color: var(--dim);
+    font-size: 12px;
+    text-align: center;
+    padding: 32px 16px;
+    line-height: 1.6;
+  }
+
+  /* ── Calendar panel ──────────────────────────────── */
+
+  .day-group { margin-bottom: 16px; }
+
+  .day-header {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--cyan-dim);
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 6px;
+  }
+
+  .day-header.today { color: var(--cyan); }
+
+  .event-item {
+    padding: 6px 0;
+    font-size: 13px;
+  }
+
+  .event-time {
+    font-size: 10px;
+    color: var(--dim);
+  }
+
+  .event-location {
+    font-size: 10px;
+    color: var(--dim);
+    font-style: italic;
+  }
+
+  .day-empty {
+    font-size: 11px;
+    color: var(--dim);
+    padding: 4px 0;
+    font-style: italic;
+  }
+
+  /* ── Chat panel ──────────────────────────────────── */
+
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .chat-msg {
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .chat-msg.user {
+    text-align: right;
+  }
+
+  .chat-msg.user .chat-bubble {
+    background: var(--border);
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 12px 12px 2px 12px;
+    max-width: 85%;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .chat-msg.bot .chat-bubble {
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 12px 12px 12px 2px;
+    max-width: 85%;
+    font-size: 13px;
+  }
+
+  /* ── Markdown inside bot bubbles ──────────────────── */
+
+  .chat-bubble p { margin: 0 0 8px 0; }
+  .chat-bubble p:last-child { margin-bottom: 0; }
+
+  .chat-bubble ul, .chat-bubble ol {
+    margin: 4px 0 8px 0;
+    padding-left: 20px;
+  }
+  .chat-bubble li { margin-bottom: 2px; }
+
+  .chat-bubble h1, .chat-bubble h2, .chat-bubble h3,
+  .chat-bubble h4, .chat-bubble h5, .chat-bubble h6 {
+    margin: 8px 0 4px 0;
+    color: var(--cyan);
+    font-size: 13px;
+  }
+  .chat-bubble h1 { font-size: 15px; }
+  .chat-bubble h2 { font-size: 14px; }
+
+  .chat-bubble code {
+    background: rgba(255,255,255,0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  .chat-bubble pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin: 6px 0;
+    overflow-x: auto;
+    font-size: 12px;
+  }
+  .chat-bubble pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  .chat-bubble blockquote {
+    border-left: 3px solid var(--cyan-dim);
+    padding-left: 10px;
+    margin: 6px 0;
+    color: var(--dim);
+  }
+
+  .chat-bubble strong { color: #fff; }
+
+  .chat-bubble a {
+    color: var(--cyan);
+    text-decoration: none;
+  }
+  .chat-bubble a:hover { text-decoration: underline; }
+
+  .chat-bubble hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 8px 0;
+  }
+
+  .chat-bubble table {
+    border-collapse: collapse;
+    margin: 6px 0;
+    font-size: 12px;
+  }
+  .chat-bubble th, .chat-bubble td {
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+  }
+  .chat-bubble th { background: rgba(255,255,255,0.05); }
+
+  .chat-msg.thinking .chat-bubble {
+    color: var(--dim);
+    font-style: italic;
+    font-size: 11px;
+    border: none;
+    background: none;
+  }
+
+  .chat-msg.error .chat-bubble {
+    color: var(--red);
+    font-size: 12px;
+    border-color: rgba(255, 82, 82, 0.2);
+    background: rgba(255, 82, 82, 0.05);
+  }
+
+  .chat-msg.question .chat-bubble {
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px solid rgba(0, 212, 255, 0.25);
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 12px 12px 12px 2px;
+    max-width: 85%;
+    font-size: 13px;
+  }
+
+  .chat-msg.question .question-text {
+    margin-bottom: 10px;
+    color: var(--cyan);
+    font-weight: 600;
+  }
+
+  .chat-msg.question .question-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chat-msg.question .question-option-btn {
+    background: var(--border);
+    color: var(--text);
+    border: 1px solid var(--cyan-dim);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .chat-msg.question .question-option-btn:hover {
+    background: rgba(0, 212, 255, 0.15);
+    border-color: var(--cyan);
+  }
+
+  .chat-msg.question .question-option-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .chat-msg.question .question-input-wrap {
+    display: flex;
+    gap: 6px;
+  }
+
+  .chat-msg.question .question-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    outline: none;
+  }
+
+  .chat-msg.question .question-input:focus { border-color: var(--cyan); }
+
+  .chat-msg.question .question-submit-btn {
+    background: var(--cyan);
+    color: var(--bg);
+    border: none;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .chat-msg.question .question-submit-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .chat-process {
+    margin-bottom: 12px;
+  }
+
+  .process-toggle {
+    font-size: 11px;
+    color: var(--cyan-dim);
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+  }
+
+  .process-toggle:hover { color: var(--cyan); }
+
+  .process-diagram {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 6px;
+    overflow-x: auto;
+  }
+
+  .process-diagram svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .chat-input-wrap {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .chat-input-wrap form {
+    display: flex;
+    gap: 8px;
+  }
+
+  .chat-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .chat-input:focus { border-color: var(--cyan); }
+  .chat-input::placeholder { color: var(--dim); }
+
+  .chat-send {
+    background: var(--cyan);
+    color: var(--bg);
+    border: none;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .chat-send:hover { opacity: 0.85; }
+  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Responsive ──────────────────────────────────── */
+
+  @media (max-width: 700px) {
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1>Dobbie</h1>
+    <div class="header-stats" id="header-stats">
+      <div class="stat"><span class="stat-label">Queue</span><span class="stat-value" id="stat-queue">--</span></div>
+      <div class="stat"><span class="stat-label">Graph</span><span class="stat-value" id="stat-graph">--</span></div>
+      <div class="stat"><span class="stat-label">Mem</span><span class="stat-value" id="stat-mem">--</span></div>
+      <div class="stat"><span class="stat-label">Uptime</span><span class="stat-value" id="stat-uptime">--</span></div>
+    </div>
+    <div class="header-right">
+      <select class="project-select" id="project-select" title="Active project">
+        <option value="">No project</option>
+      </select>
+      <div class="ws-status" id="ws-status"><span class="dot"></span>Connected</div>
+    </div>
+  </div>
+
+  <!-- Left: Today + Calendar -->
+  <div class="panel">
+    <div class="panel-body" id="left-body">
+      <div class="panel-section-title">Today</div>
+      <div id="today-body">
+        <div class="empty-state">Loading tasks…</div>
+      </div>
+      <div class="panel-section-title" style="margin-top: 16px;">3-Day Calendar</div>
+      <div id="calendar-body">
+        <div class="empty-state">Loading events…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="panel chat-panel">
+    <div class="panel-title">Chat</div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg bot">
+        <div class="chat-bubble">Dobbie is ready to serve, sir.</div>
+      </div>
+    </div>
+    <div class="chat-input-wrap">
+      <form id="chat-form">
+        <input class="chat-input" id="chat-input" type="text"
+               placeholder="Ask Dobbie anything…" autocomplete="off">
+        <button class="chat-send" id="chat-send" type="submit">Send</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@17/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: { primaryColor: '#0f3460', primaryTextColor: '#e0e0e0', primaryBorderColor: '#00d4ff', lineColor: '#00d4ff', secondaryColor: '#16213e', tertiaryColor: '#1a1a2e', fontFamily: 'monospace' } });</script>
+<script>
+(function() {
+  const todayBody = document.getElementById('today-body');
+  const calendarBody = document.getElementById('calendar-body');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatSend = document.getElementById('chat-send');
+  const wsStatusEl = document.getElementById('ws-status');
+  const projectSelect = document.getElementById('project-select');
+  const statQueue = document.getElementById('stat-queue');
+  const statGraph = document.getElementById('stat-graph');
+  const statMem = document.getElementById('stat-mem');
+  const statUptime = document.getElementById('stat-uptime');
+
+  let ws = null;
+  let thinkingEl = null;
+
+  // ── Data fetching ──────────────────────────────────────────
+
+  async function fetchToday() {
+    try {
+      const res = await fetch('/api/today');
+      const data = await res.json();
+      renderToday(data);
+    } catch {
+      todayBody.innerHTML = '<div class="empty-state">Failed to load tasks.</div>';
+    }
+  }
+
+  async function fetchCalendar() {
+    try {
+      const res = await fetch('/api/events?days=3');
+      const data = await res.json();
+      renderCalendar(data);
+    } catch {
+      calendarBody.innerHTML = '<div class="empty-state">Failed to load events.</div>';
+    }
+  }
+
+  async function fetchStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      statQueue.textContent = String(data.queueSize ?? 0);
+      statGraph.textContent = (data.graph ? data.graph.nodes + 'n / ' + data.graph.edges + 'e' : '--');
+      statMem.textContent = (data.memory ? data.memory.rss + ' MB' : '--');
+      statUptime.textContent = formatUptime(data.uptime || 0);
+    } catch { /* ignore */ }
+  }
+
+  async function fetchProjects() {
+    try {
+      const res = await fetch('/api/projects');
+      const data = await res.json();
+      renderProjectSelect(data.projects || [], data.active);
+    } catch { /* ignore */ }
+  }
+
+  function formatUptime(seconds) {
+    if (seconds < 60) return seconds + 's';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return h + 'h ' + m + 'm';
+  }
+
+  function renderProjectSelect(projects, active) {
+    projectSelect.innerHTML = projects.length === 0
+      ? '<option value="">No projects</option>'
+      : projects.map(p =>
+          '<option value="' + esc(p) + '"' + (p === active ? ' selected' : '') + '>' + esc(p) + '</option>'
+        ).join('');
+  }
+
+  projectSelect.addEventListener('change', async () => {
+    const project = projectSelect.value;
+    if (!project) return;
+    try {
+      await fetch('/api/projects/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project }),
+      });
+      // Refresh all panels with new project data
+      fetchToday();
+      fetchCalendar();
+      fetchStatus();
+    } catch { /* ignore */ }
+  });
+
+  // ── Rendering ──────────────────────────────────────────────
+
+  function renderToday(data) {
+    if (!data.tasks || data.tasks.length === 0) {
+      todayBody.innerHTML = '<div class="empty-state">No open tasks. Dobbie is pleased, sir!</div>';
+      return;
+    }
+
+    // Sort: critical > high > medium > low, then by due date
+    const order = { critical: 0, high: 1, medium: 2, low: 3 };
+    data.tasks.sort((a, b) => {
+      const pa = order[a.priority] ?? 2;
+      const pb = order[b.priority] ?? 2;
+      if (pa !== pb) return pa - pb;
+      if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      return 0;
+    });
+
+    todayBody.innerHTML = data.tasks.map(t => `
+      <div class="task-item" data-task-id="${esc(t.id)}">
+        <div class="task-check" title="Mark done"></div>
+        <div class="task-info">
+          <div class="task-title">${esc(t.title)}</div>
+          <div class="task-meta">
+            <span class="badge badge-${t.priority}">${t.priority}</span>
+            ${t.dueDate ? ' · due ' + t.dueDate : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // Wire up checkbox clicks
+    todayBody.querySelectorAll('.task-check').forEach(el => {
+      el.addEventListener('click', async () => {
+        const item = el.closest('.task-item');
+        const id = item.dataset.taskId;
+        if (!id) return;
+        item.style.opacity = '0.4';
+        try {
+          const res = await fetch('/api/tasks/' + encodeURIComponent(id) + '/done', { method: 'PATCH' });
+          if (res.ok) {
+            item.remove();
+            if (!todayBody.querySelector('.task-item')) {
+              todayBody.innerHTML = '<div class="empty-state">No open tasks. Dobbie is pleased, sir!</div>';
+            }
+          } else {
+            item.style.opacity = '1';
+          }
+        } catch {
+          item.style.opacity = '1';
+        }
+      });
+    });
+  }
+
+  function renderCalendar(data) {
+    if (!data.dates || Object.keys(data.dates).length === 0) {
+      calendarBody.innerHTML = '<div class="empty-state">No upcoming events.</div>';
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+    calendarBody.innerHTML = Object.entries(data.dates).map(([date, events]) => {
+      const d = new Date(date + 'T12:00:00');
+      const label = date === todayStr ? 'Today' : dayNames[d.getDay()];
+      const isToday = date === todayStr;
+
+      const eventsHtml = events.length === 0
+        ? '<div class="day-empty">No events</div>'
+        : events.map(e => {
+            const time = e.startDate ? formatTime(e.startDate) : '';
+            return `<div class="event-item">
+              ${time ? '<span class="event-time">' + time + '</span> ' : ''}
+              ${esc(e.title)}
+              ${e.location ? '<div class="event-location">' + esc(e.location) + '</div>' : ''}
+            </div>`;
+          }).join('');
+
+      return `<div class="day-group">
+        <div class="day-header${isToday ? ' today' : ''}">${label} · ${date}</div>
+        ${eventsHtml}
+      </div>`;
+    }).join('');
+  }
+
+  // ── WebSocket ──────────────────────────────────────────────
+
+  function connectWs() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(proto + '//' + location.host);
+
+    ws.onopen = () => {
+      wsStatusEl.innerHTML = '<span class="dot"></span>Connected';
+    };
+
+    ws.onclose = () => {
+      wsStatusEl.innerHTML = '<span class="dot" style="background:var(--red)"></span>Disconnected';
+      // Reconnect after 3s
+      setTimeout(connectWs, 3000);
+    };
+
+    ws.onmessage = (evt) => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch { return; }
+
+      try {
+        switch (msg.type) {
+          case 'chat.thinking':
+            showThinking(msg.status);
+            break;
+          case 'chat.question':
+            clearThinking();
+            showQuestion(msg.question, msg.options);
+            break;
+          case 'chat.process':
+            clearThinking();
+            showProcessDiagram(msg.process);
+            break;
+          case 'chat.response':
+            clearThinking();
+            addMessage('bot', msg.message);
+            unlockChat();
+            break;
+          case 'chat.error':
+            clearThinking();
+            addMessage('error', msg.error);
+            unlockChat();
+            break;
+          case 'refresh':
+            if (msg.panel === 'today') fetchToday();
+            if (msg.panel === 'calendar') fetchCalendar();
+            break;
+        }
+      } catch (err) {
+        console.error('WS message handler error:', err);
+        clearThinking();
+        addMessage('error', 'Client error: ' + (err.message || err));
+        unlockChat();
+      }
+    };
+  }
+
+  // ── Chat UI ────────────────────────────────────────────────
+
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+    addMessage('user', text);
+    ws.send(JSON.stringify({ type: 'chat', message: text }));
+    chatInput.value = '';
+    chatSend.disabled = true;
+    chatInput.disabled = true;
+  });
+
+  function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + role;
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    if (role === 'bot') {
+      bubble.innerHTML = renderMarkdown(text || '');
+    } else {
+      bubble.textContent = text || '';
+    }
+    div.appendChild(bubble);
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function unlockChat() {
+    chatSend.disabled = false;
+    chatInput.disabled = false;
+    chatInput.focus();
+  }
+
+  function renderMarkdown(text) {
+    try {
+      if (typeof marked !== 'undefined' && marked.parse) {
+        return marked.parse(text);
+      }
+    } catch (err) {
+      console.warn('marked.parse failed:', err);
+    }
+    // Fallback: escape HTML and convert newlines to <br>
+    return esc(text).replace(/\n/g, '<br>');
+  }
+
+  function showThinking(status) {
+    if (!thinkingEl) {
+      thinkingEl = document.createElement('div');
+      thinkingEl.className = 'chat-msg thinking';
+      thinkingEl.innerHTML = '<div class="chat-bubble"></div>';
+      chatMessages.appendChild(thinkingEl);
+    }
+    thinkingEl.querySelector('.chat-bubble').textContent = status;
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function clearThinking() {
+    if (thinkingEl) {
+      thinkingEl.remove();
+      thinkingEl = null;
+    }
+  }
+
+  // ── Question UI ────────────────────────────────────────────
+
+  function showQuestion(question, options) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg question';
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+
+    const qText = document.createElement('div');
+    qText.className = 'question-text';
+    qText.textContent = question || 'Dobbie has a question:';
+    bubble.appendChild(qText);
+
+    function sendAnswer(answer) {
+      // Show user's answer as a message
+      addMessage('user', answer);
+      // Send to server
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'chat.answer', answer: answer }));
+      }
+      // Show thinking again while process resumes
+      showThinking('Resuming…');
+    }
+
+    if (options && options.length > 0) {
+      const optWrap = document.createElement('div');
+      optWrap.className = 'question-options';
+      options.forEach(function(opt) {
+        const btn = document.createElement('button');
+        btn.className = 'question-option-btn';
+        btn.textContent = opt;
+        btn.addEventListener('click', function() {
+          // Disable all buttons
+          optWrap.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+          sendAnswer(opt);
+        });
+        optWrap.appendChild(btn);
+      });
+      bubble.appendChild(optWrap);
+    } else {
+      const inputWrap = document.createElement('div');
+      inputWrap.className = 'question-input-wrap';
+      const input = document.createElement('input');
+      input.className = 'question-input';
+      input.type = 'text';
+      input.placeholder = 'Type your answer…';
+      const submitBtn = document.createElement('button');
+      submitBtn.className = 'question-submit-btn';
+      submitBtn.textContent = 'Send';
+
+      function submitAnswer() {
+        const val = input.value.trim();
+        if (!val) return;
+        input.disabled = true;
+        submitBtn.disabled = true;
+        sendAnswer(val);
+      }
+
+      submitBtn.addEventListener('click', submitAnswer);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitAnswer(); }
+      });
+
+      inputWrap.appendChild(input);
+      inputWrap.appendChild(submitBtn);
+      bubble.appendChild(inputWrap);
+
+      // Auto-focus the question input
+      setTimeout(function() { input.focus(); }, 50);
+    }
+
+    div.appendChild(bubble);
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // ── Process diagram ────────────────────────────────────────
+
+  let mermaidCounter = 0;
+
+  function processToMermaid(proc) {
+    const nodes = proc.nodes || [];
+    if (nodes.length === 0) return null;
+
+    const lines = ['graph LR'];
+
+    // Define node shapes
+    for (const n of nodes) {
+      const label = n.catalog_node_key || n.key;
+      if (label === 'start') {
+        lines.push('  ' + n.key + '([start])');
+      } else if (label === 'stop') {
+        lines.push('  ' + n.key + '([stop])');
+      } else {
+        lines.push('  ' + n.key + '[' + label + ']');
+      }
+    }
+
+    // Define edges
+    for (const n of nodes) {
+      if (!n.edges) continue;
+      for (const [status, target] of Object.entries(n.edges)) {
+        if (status === 'ok') {
+          lines.push('  ' + n.key + ' --> ' + target);
+        } else {
+          lines.push('  ' + n.key + ' -->|' + status + '| ' + target);
+        }
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  async function showProcessDiagram(proc) {
+    if (typeof mermaid === 'undefined') return;
+
+    const mermaidSrc = processToMermaid(proc);
+    if (!mermaidSrc) return;
+
+    const id = 'mermaid-' + (++mermaidCounter);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-process';
+
+    const toggle = document.createElement('div');
+    toggle.className = 'process-toggle';
+    toggle.textContent = '▶ Process diagram';
+
+    const diagram = document.createElement('div');
+    diagram.className = 'process-diagram';
+    diagram.style.display = 'none';
+    diagram.id = id;
+
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = mermaidSrc;
+    diagram.appendChild(pre);
+
+    toggle.addEventListener('click', async () => {
+      const showing = diagram.style.display !== 'none';
+      if (showing) {
+        diagram.style.display = 'none';
+        toggle.textContent = '▶ Process diagram';
+      } else {
+        diagram.style.display = 'block';
+        toggle.textContent = '▼ Process diagram';
+        // Render mermaid if not yet rendered
+        if (!diagram.dataset.rendered) {
+          try {
+            await mermaid.run({ nodes: [pre] });
+            diagram.dataset.rendered = '1';
+          } catch (err) {
+            console.warn('Mermaid render failed:', err);
+            pre.textContent = mermaidSrc;
+          }
+        }
+      }
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    wrapper.appendChild(toggle);
+    wrapper.appendChild(diagram);
+    chatMessages.appendChild(wrapper);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // ── Helpers ────────────────────────────────────────────────
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+  }
+
+  function formatTime(iso) {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch { return ''; }
+  }
+
+  // ── Init ───────────────────────────────────────────────────
+
+  fetchToday();
+  fetchCalendar();
+  fetchStatus();
+  fetchProjects();
+  connectWs();
+
+  // Poll status every 30s
+  setInterval(fetchStatus, 30000);
+})();
+</script>
+</body>
+</html>

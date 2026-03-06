@@ -24,6 +24,7 @@ serviceCommand
                 console.log(chalk.green('✓ Dobbie service is running'));
                 console.log(chalk.dim(`  PID: ${status.pid}`));
                 console.log(chalk.dim(`  Socket: ${status.socketPath}`));
+                console.log(chalk.dim(`  Web: http://localhost:3737`));
             } else {
                 console.log(chalk.red('✗ Failed to start service'));
             }
@@ -46,6 +47,36 @@ serviceCommand
                 console.log(chalk.green('✓ Dobbie service stopped'));
             } else {
                 console.log(chalk.red('✗ Failed to stop service'));
+            }
+        } catch (error) {
+            console.error(chalk.red(getResponse('error')), error);
+        }
+    });
+
+// dobbie service restart
+serviceCommand
+    .command('restart')
+    .description('Restart the Dobbie background service')
+    .action(async () => {
+        try {
+            const status = await getDaemonStatus();
+
+            if (status.running) {
+                console.log(chalk.cyan('Stopping Dobbie service...'));
+                await stopDaemon();
+                console.log(chalk.green('✓ Stopped'));
+            }
+
+            console.log(chalk.cyan('Starting Dobbie service...'));
+            const newStatus = await startDaemon();
+
+            if (newStatus.running) {
+                console.log(chalk.green('✓ Dobbie service is running'));
+                console.log(chalk.dim(`  PID: ${newStatus.pid}`));
+                console.log(chalk.dim(`  Socket: ${newStatus.socketPath}`));
+                console.log(chalk.dim(`  Web: http://localhost:3737`));
+            } else {
+                console.log(chalk.red('✗ Failed to start service'));
             }
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error);

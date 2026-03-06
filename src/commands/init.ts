@@ -6,6 +6,7 @@ import inquirer from 'inquirer';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { findVaultRoot, saveState, loadState } from '../state/manager.js';
+import { initEntityTypes } from '../entities/entity-type-config.js';
 
 export const initCommand = new Command('init')
     .description('Initialize a new dobbie vault in the current directory')
@@ -71,6 +72,9 @@ Dobbie is a helpful, polite English house-elf. He is:
 `;
         await fs.writeFile(socksPath, rootSocks);
 
+        // Seed entity-types.json in ~/.dobbie/
+        await initEntityTypes();
+
         // Create projects folder
         await fs.mkdir(path.join(cwd, 'projects'), { recursive: true });
         await fs.writeFile(path.join(cwd, 'projects', '.socks.md'), `---
@@ -135,7 +139,7 @@ Time-blocked events and appointments.
 
         // ── User setup ─────────────────────────────────────────────────
         console.log(chalk.green('\n✓ Vault structure created!'));
-        console.log(chalk.cyan('\n🧝 Dobbie would like to get to know you...\n'));
+        console.log(chalk.cyan('\n🤖 Dobbie would like to get to know you...\n'));
 
         const { userName, gender } = await inquirer.prompt([
             {
@@ -147,18 +151,18 @@ Time-blocked events and appointments.
             {
                 type: 'list',
                 name: 'gender',
-                message: 'How should Dobbie address you?',
+                message: 'How does Dobbie see you?',
                 choices: [
-                    { name: 'Male   — sir, boss, master, chief, captain, guv, my lord, good sir', value: 'male' },
-                    { name: 'Female — ma\'am, miss, madam, my lady, boss, chief, mistress', value: 'female' },
-                    { name: 'Other  — boss, chief, captain, friend, guv, my liege, comrade', value: 'other' },
+                    { name: 'Male', value: 'male' },
+                    { name: 'Female', value: 'female' },
+                    { name: 'Other', value: 'other' },
                 ],
             },
         ]);
 
         const state = await loadState();
         state.userName = userName;
-        state.gender = gender;
+        state.gender = gender as 'male' | 'female' | 'other';
         await saveState(state);
 
         // Refresh the response cache so the greeting uses the new name
