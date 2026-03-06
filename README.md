@@ -191,7 +191,7 @@ Dobbi includes a browser-based dashboard:
 dobbi service start
 ```
 
-This starts a background daemon with a web UI (default: `http://localhost:3001`) that shows:
+This starts a background daemon with a web UI (default: `http://localhost:3737`) that shows:
 
 - Today's tasks with priority badges
 - 3-day calendar view
