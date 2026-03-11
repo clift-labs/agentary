@@ -29,6 +29,7 @@ import { setupCommand } from './commands/setup.js';
 import { calCommand } from './commands/cal.js';
 import { cronCommand } from './commands/cron.js';
 import { pampCommand } from './commands/pamp.js';
+import { skillCommand } from './commands/skill.js';
 import { entityTypeCommand } from './commands/entity-type.js';
 import { entityCommand } from './commands/entity.js';
 import { timeCommand } from './commands/time.js';
@@ -74,6 +75,7 @@ program.addCommand(entityCommand);
 program.addCommand(calCommand);
 program.addCommand(cronCommand);
 program.addCommand(pampCommand);
+program.addCommand(skillCommand);
 program.addCommand(createShellCommand(program));
 
 // Tool command - run any registered tool

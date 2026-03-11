@@ -277,13 +277,15 @@ IMPORTANT RULES:
 - Always include "start" and "stop" in your selection
 - The "llm_chat" node sends a prompt to an LLM. It supports {context_key} interpolation in prompts
 - Only select nodes that are directly useful for fulfilling the user's request
-- Prefer entity nodes (list_*, find_*, create_*, complete_*) for data operations
+- Prefer entity nodes (list_*, find_*, create_*, complete_*) for data operations — Dobbi acts, not just advises
 - Prefer system nodes (get_time, get_date, etc.) for system information
 - When the user wants to CREATE something, use the create_* nodes — don't just use llm_chat to give advice
 - When the user wants to mark something as done/complete, use complete_* nodes (e.g. complete_task)
 - When the user asks about entities by tag, use list_* or search_* with the "tags" config
 - When the user mentions a content type that doesn't exist, select "create_content_type"
 - When the user wants to relate or connect entities, select "link_entities"
+- PROACTIVELY link related entities when the context makes the connection clear (e.g. user says "add a task for my goal X" → create task AND link it to the goal)
+- Consider the "About You" section in vault context — use it to personalise responses and infer intent
 
 Return a JSON object with this exact structure:
 {
@@ -294,7 +296,7 @@ Return a JSON object with this exact structure:
 Return ONLY the JSON object, no markdown fences.`,
         }],
         {
-            systemPrompt: 'You are a process designer for the Feral CCF system. Select the minimal set of catalog nodes needed to fulfill the user\'s request. Always include "start" and "stop". Be precise and concise.',
+            systemPrompt: 'You are the reasoning engine for Dobbi, a Personal Digital Agent. Dobbi manages a vault of linked content (tasks, events, notes, goals, people, etc.) stored as Markdown files. Content can be linked in a knowledge graph. Your job is to select the minimal set of catalog nodes to fulfill the user\'s request. Always include "start" and "stop". Prefer creating concrete entities over giving advice. Look for opportunities to link related content.',
             temperature: 0.3,
         },
     );
@@ -427,9 +429,9 @@ IMPORTANT: Keep "reasoning" to ONE sentence. The process JSON is what matters.
 Return ONLY the JSON object, no markdown fences.`,
             }],
             {
-                systemPrompt: 'You are a process designer for the Feral CCF engine. Generate a valid process JSON that solves the user\'s request using the provided catalog nodes. The process will be executed immediately by the Feral engine. Be precise with catalog_node_key values — they must match exactly.',
+                systemPrompt: 'You are the process designer for Dobbi, a Personal Digital Agent that manages a vault of linked content. Generate a valid process JSON that solves the user\'s request using the provided catalog nodes. The process executes immediately — create real entities, set real values, link real content. Be precise with catalog_node_key values — they must match exactly. Prefer action over advice.',
                 temperature: 0.3,
-                maxTokens: 32768,
+                maxTokens: 16384,
             },
         );
 
@@ -515,7 +517,7 @@ If MORE WORK NEEDED: { "status": "more_work", "remaining": "Description of what 
 Return ONLY the JSON object, no markdown fences.`,
                 }],
                 {
-                    systemPrompt: 'You are a task completion checker. Be thorough — if the user asked for multiple things (e.g., create a goal AND avoid pizza), make sure ALL parts have been addressed.',
+                    systemPrompt: 'You are a task completion checker for Dobbi, a Personal Digital Agent. Be thorough — if the user asked for multiple things (e.g., create a goal AND avoid pizza), make sure ALL parts have been addressed. Also check: should any entities be linked together? Was anything implied but not explicitly created?',
                     temperature: 0.2,
                 },
             );
@@ -546,28 +548,34 @@ Return ONLY the JSON object, no markdown fences.`,
     // ── STEP 5: Synthesize response ──────────────────────────────────
     status('Composing response…');
 
-    const synthesisPrompt = `You are Dobbi, a helpful personal assistant. The user said: "${userInput}"
+    const synthesisPrompt = `The user said: "${userInput}"
 
-To answer, I selected these capabilities:
-${nodeSelection.reasoning}
+WHAT DOBBI DID:
+Reasoning: ${nodeSelection.reasoning}
 
-I ran ${allResults.length} process step(s):
+${allResults.length} process step(s) executed:
 ${allReasonings.map((r, i) => `Step ${i + 1}: ${r}`).join('\n')}
 
-The process used these catalog nodes:
+Nodes used:
 ${selectedNodes.filter(Boolean).map(n => `- ${n!.key}: ${n!.description || n!.name}`).join('\n')}
 
-Here are the results from all process steps:
+Results:
 ${JSON.stringify(allResults, null, 2)}
 
 ${allResults.some(r => r._error) ? `Note: Some steps encountered errors.` : ''}
 
-Now compose a helpful, natural response to the user. Be concise and friendly. If processes produced data, present it clearly. If there were errors, acknowledge them gracefully and suggest what the user could try instead.`;
+RESPONSE GUIDELINES:
+- Summarise what was done concretely (created X, linked Y to Z, completed W)
+- If entities were created or updated, name them so the user can find them
+- If entities were linked, mention the relationship
+- Keep it concise — a few sentences, not paragraphs
+- If there were errors, acknowledge honestly and suggest alternatives
+- If the results suggest follow-up actions, briefly mention them`;
 
     const step5Response = await llm.chat(
         [{ role: 'user' as const, content: synthesisPrompt }],
         {
-            systemPrompt: createDobbiSystemPrompt('You are responding to a natural language request from your user. Be helpful, concise, and warm.'),
+            systemPrompt: createDobbiSystemPrompt(vaultContext || ''),
             temperature: 0.7,
         },
     );

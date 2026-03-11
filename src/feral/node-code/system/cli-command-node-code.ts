@@ -9,6 +9,7 @@ import { ResultStatus } from '../../result/result.js';
 import type { ConfigurationDescription, ResultDescription } from '../../configuration/configuration-description.js';
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
+import { findVaultRoot } from '../../../state/manager.js';
 
 export class CliCommandNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
@@ -35,11 +36,16 @@ export class CliCommandNodeCode extends AbstractNodeCode {
             return String(context.get(key) ?? '');
         });
 
+        // Sandbox: run commands with cwd set to the vault root (if available)
+        const vaultRoot = await findVaultRoot();
+        const cwd = vaultRoot ?? undefined;
+
         try {
             const stdout = execSync(command, {
                 encoding: 'utf-8',
                 timeout: timeoutMs,
                 stdio: ['pipe', 'pipe', 'pipe'],
+                cwd,
             }).trim();
 
             context.set(contextPath, stdout);

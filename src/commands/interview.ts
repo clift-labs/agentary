@@ -1,6 +1,10 @@
 /**
- * Dobbi's onboarding interview — a fun, interactive conversation
- * to learn about the user and personalise responses.
+ * Dobbi's "10 Questions" — a personal-assistant onboarding interview.
+ *
+ * Covers identity, work, relationships, health, growth, and how
+ * the user wants Dobbi to help. Answers are stored as a concise
+ * AI-context block in the vault root .socks.md so every LLM call
+ * has the full picture.
  *
  * Run automatically on first launch, or manually via `dobbi interview`.
  */
@@ -8,75 +12,49 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { saveProfile } from '../state/manager.js';
+import { promises as fs } from 'fs';
+import path from 'path';
+import matter from 'gray-matter';
+import { saveProfile, getVaultRoot } from '../state/manager.js';
 import { loadCalConfig, saveCalConfig } from './cal.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DIALOGUE LINES
+// DIALOGUE
 // ─────────────────────────────────────────────────────────────────────────────
 
 const INTRO_LINES = [
     `\n🤖 ${chalk.cyan('*peeks out from behind a stack of scrolls*')}`,
     `\n   Oh! A new face! Dobbi is ${chalk.bold('so')} excited!`,
-    `   Dobbi has never had a proper introduction, you see.`,
-    `   ${chalk.gray('*clears throat and stands up very straight*')}\n`,
-    `   Let Dobbi ask a few questions so Dobbi can serve you better!\n`,
+    `   Before Dobbi can truly help, Dobbi needs to understand ${chalk.bold('you')}.`,
+    `   ${chalk.gray('*pulls out a special parchment labelled "The 10 Questions"*')}\n`,
+    `   These questions help Dobbi become your ${chalk.bold('personal assistant')}.`,
+    `   Answer as much or as little as you like — press Enter to skip any.\n`,
 ];
 
-const REACTIONS = {
+const REACTIONS: Record<string, ((v: string) => string)[]> = {
     name: [
-        (n: string) => `   ${chalk.cyan(`*bounces with joy*`)} What a wonderful name! ${chalk.bold(n)}! Dobbi will remember it forever!`,
-        (n: string) => `   ${chalk.cyan(`*scribbles furiously on parchment*`)} ${chalk.bold(n)}... got it! Dobbi has excellent penmanship!`,
-        (n: string) => `   ${chalk.cyan(`*whispers reverently*`)} ${chalk.bold(n)}... a fine name indeed!`,
+        (n) => `   ${chalk.cyan('*bounces with joy*')} What a wonderful name! ${chalk.bold(n)}! Dobbi will remember it forever!`,
+        (n) => `   ${chalk.cyan('*scribbles furiously on parchment*')} ${chalk.bold(n)}... got it!`,
     ],
-    gender: [
-        `   ${chalk.cyan(`*nods solemnly*`)} Noted! Dobbi will address you properly from now on.`,
-        `   ${chalk.cyan(`*updates the scrolls*`)} Very good! Dobbi has made a note of it.`,
-        `   ${chalk.cyan(`*bows respectfully*`)} Understood! Dobbi shall address you accordingly.`,
+    generic: [
+        () => `   ${chalk.cyan('*nods thoughtfully*')} Dobbi has noted that carefully.`,
+        () => `   ${chalk.cyan('*scribbles on parchment*')} Very good, very good!`,
+        () => `   ${chalk.cyan('*taps chin*')} That helps Dobbi understand you better.`,
+        () => `   ${chalk.cyan('*files it under "important"*')} Noted!`,
     ],
-    work: [
-        (w: string) => `   ${chalk.cyan(`*eyes go wide*`)} ${chalk.bold(w)}?! That sounds fascinating! Dobbi wishes he could do that too!`,
-        (w: string) => `   ${chalk.cyan(`*adjusts spectacles*`)} Ah, ${chalk.bold(w)}! Dobbi has heard of such noble work!`,
-        (w: string) => `   ${chalk.cyan(`*takes careful notes*`)} ${chalk.bold(w)}... Dobbi will keep this in mind when helping you!`,
-    ],
-    family: [
-        () => `   ${chalk.cyan(`*wipes a tear*`)} How lovely! Dobbi is touched you shared that!`,
-        () => `   ${chalk.cyan(`*clutches heart*`)} Family is important! Dobbi knows this well.`,
-        () => `   ${chalk.cyan(`*smiles warmly*`)} Dobbi will remember this. Family context helps Dobbi help you!`,
-    ],
-    car: {
-        yes: [
-            `   ${chalk.cyan(`*pretends to drive*`)} Vroom vroom! Dobbi has always wanted to ride in one!`,
-            `   ${chalk.cyan(`*nods approvingly*`)} A chariot of steel! Very practical, very practical.`,
-        ],
-        no: [
-            `   ${chalk.cyan(`*nods wisely*`)} No car! Dobbi respects that. Dobbi gets everywhere by apparition anyway.`,
-            `   ${chalk.cyan(`*taps chin*`)} Public transport or teleportation? Either way, Dobbi approves!`,
-        ],
-    },
-    city_live: [
-        (c: string) => `   ${chalk.cyan(`*pulls out a tiny map*`)} ${chalk.bold(c)}! Dobbi has heard stories about that place!`,
-        (c: string) => `   ${chalk.cyan(`*marks it on his scroll*`)} ${chalk.bold(c)}... noted! Dobbi will factor this in.`,
-    ],
-    city_work: [
-        (c: string) => `   ${chalk.cyan(`*calculates on fingers*`)} And you work in ${chalk.bold(c)}! Dobbi sees, Dobbi sees.`,
-        (c: string) => `   ${chalk.cyan(`*draws a line on his map*`)} ${chalk.bold(c)} for work! Dobbi has the full picture now!`,
-    ],
-    cal_personal: [
-        `   ${chalk.cyan(`*carefully copies the link*`)} Personal calendar! Dobbi will keep an eye on it!`,
-        `   ${chalk.cyan(`*pins it to the notice board*`)} Splendid! Dobbi loves knowing what's coming up!`,
-    ],
-    cal_work: [
-        `   ${chalk.cyan(`*files it under "important"*`)} Work calendar too! Dobbi will track both, sir!`,
-        `   ${chalk.cyan(`*nods professionally*`)} Two calendars! Dobbi is very thorough.`,
+    deep: [
+        () => `   ${chalk.cyan('*wipes a tear*')} Dobbi is touched you shared that.`,
+        () => `   ${chalk.cyan('*clutches heart*')} Dobbi will keep this close.`,
+        () => `   ${chalk.cyan('*smiles warmly*')} Dobbi understands. Thank you for trusting Dobbi.`,
     ],
 };
 
 const OUTRO_LINES = [
-    `\n🤖 ${chalk.cyan(`*rolls up parchment and stores it carefully*`)}`,
-    `   Splendid! Dobbi knows everything Dobbi needs to know!`,
-    `   Dobbi is now ${chalk.bold('fully calibrated')} and ready to serve.`,
-    `   ${chalk.gray(`(You can update your profile anytime with: dobbi interview)`)}\n`,
+    `\n🤖 ${chalk.cyan('*rolls up the parchment and stores it carefully*')}`,
+    `   Splendid! The 10 Questions are complete!`,
+    `   Dobbi now knows you ${chalk.bold('properly')} — not just your name, but what matters to you.`,
+    `   Dobbi is ${chalk.bold('fully calibrated')} and ready to serve.`,
+    `   ${chalk.gray('(You can re-do this anytime with: dobbi interview)')}\n`,
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,142 +76,209 @@ async function printLines(lines: string[]): Promise<void> {
     }
 }
 
+function sectionHeader(n: number, label: string): string {
+    return chalk.cyan(`🤖 [${n}/10] ${label}`);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// INTERVIEW FLOW
+// THE 10 QUESTIONS
 // ─────────────────────────────────────────────────────────────────────────────
+
+interface TenQAnswers {
+    name: string;
+    gender: 'male' | 'female' | 'other';
+    location: string;
+    work: string;
+    workGoals: string;
+    relationships: string;
+    health: string;
+    growth: string;
+    struggles: string;
+    helpStyle: string;
+    // bonus: calendar URLs (not one of the 10, asked after)
+    personalCalUrl?: string;
+    workCalUrl?: string;
+}
 
 export async function runInterview(): Promise<void> {
     await printLines(INTRO_LINES);
 
-    // 1. Name
+    // ── Q1: Name ─────────────────────────────────────────────────────────
     const { name } = await inquirer.prompt([{
         type: 'input',
         name: 'name',
-        message: chalk.cyan('🤖 What is your name?'),
+        message: sectionHeader(1, 'What\'s your name?'),
         validate: (v: string) => v.trim().length > 0 || 'Dobbi needs at least one letter!',
     }]);
     console.log(pick(REACTIONS.name)(name.trim()));
     await pause();
 
-    // 2. Gender
+    // ── Q2: Gender ───────────────────────────────────────────────────────
     const { gender } = await inquirer.prompt([{
         type: 'list',
         name: 'gender',
-        message: chalk.cyan('🤖 How does Dobbi see you?'),
+        message: sectionHeader(2, 'How should Dobbi address you?'),
         choices: [
-            { name: 'Male', value: 'male' },
-            { name: 'Female', value: 'female' },
-            { name: 'Other', value: 'other' },
+            { name: 'Sir / Master / Boss  (male)', value: 'male' },
+            { name: 'Ma\'am / Miss / My Lady  (female)', value: 'female' },
+            { name: 'Boss / Chief / Captain  (neutral)', value: 'other' },
         ],
     }]);
-    console.log(pick(REACTIONS.gender));
+    console.log(pick(REACTIONS.generic)(''));
     await pause();
 
-    // 3. Work type
-    const { workType } = await inquirer.prompt([{
+    // ── Q3: Location ─────────────────────────────────────────────────────
+    const { location } = await inquirer.prompt([{
         type: 'input',
-        name: 'workType',
-        message: chalk.cyan('🤖 What kind of work do you do?'),
+        name: 'location',
+        message: sectionHeader(3, 'Where are you based? (city / region)'),
         default: '',
     }]);
-    if (workType.trim()) {
-        console.log(pick(REACTIONS.work)(workType.trim()));
+    if (location.trim()) {
+        console.log(pick(REACTIONS.generic)(''));
         await pause();
     }
 
-    // 4. Family situation
-    const { familySituation } = await inquirer.prompt([{
+    // ── Q4: Work ─────────────────────────────────────────────────────────
+    const { work } = await inquirer.prompt([{
         type: 'input',
-        name: 'familySituation',
-        message: chalk.cyan('🤖 Tell Dobbi about your family! (or press Enter to skip)'),
+        name: 'work',
+        message: sectionHeader(4, 'What do you do for work? (role, industry, or "student", "retired", etc.)'),
         default: '',
     }]);
-    if (familySituation.trim()) {
-        console.log(pick(REACTIONS.family)());
+    if (work.trim()) {
+        console.log(pick(REACTIONS.generic)(''));
         await pause();
     }
 
-    // 5. Car
-    const { hasCar } = await inquirer.prompt([{
-        type: 'confirm',
-        name: 'hasCar',
-        message: chalk.cyan('🤖 Do you have a car?'),
-        default: true,
-    }]);
-    console.log(pick(hasCar ? REACTIONS.car.yes : REACTIONS.car.no));
-    await pause();
-
-    // 6. City live
-    const { cityLive } = await inquirer.prompt([{
+    // ── Q5: Work / career goals ──────────────────────────────────────────
+    const { workGoals } = await inquirer.prompt([{
         type: 'input',
-        name: 'cityLive',
-        message: chalk.cyan('🤖 Where do you live? (city)'),
+        name: 'workGoals',
+        message: sectionHeader(5, 'What are you working towards right now? (career goals, projects, ambitions)'),
         default: '',
     }]);
-    if (cityLive.trim()) {
-        console.log(pick(REACTIONS.city_live)(cityLive.trim()));
+    if (workGoals.trim()) {
+        console.log(pick(REACTIONS.generic)(''));
         await pause();
     }
 
-    // 7. City work
-    const { cityWork } = await inquirer.prompt([{
+    // ── Q6: Relationships & family ───────────────────────────────────────
+    const { relationships } = await inquirer.prompt([{
         type: 'input',
-        name: 'cityWork',
-        message: chalk.cyan('🤖 Where do you work? (city, or Enter if same / remote)'),
+        name: 'relationships',
+        message: sectionHeader(6, 'Tell Dobbi about your people — partner, kids, family, close friends?'),
         default: '',
     }]);
-    if (cityWork.trim()) {
-        console.log(pick(REACTIONS.city_work)(cityWork.trim()));
+    if (relationships.trim()) {
+        console.log(pick(REACTIONS.deep)(''));
         await pause();
     }
 
-    // 8. Personal Google Calendar ICS link
+    // ── Q7: Health & fitness ─────────────────────────────────────────────
+    const { health } = await inquirer.prompt([{
+        type: 'input',
+        name: 'health',
+        message: sectionHeader(7, 'How about health & fitness? Any exercise routine, diet goals, or health things to track?'),
+        default: '',
+    }]);
+    if (health.trim()) {
+        console.log(pick(REACTIONS.generic)(''));
+        await pause();
+    }
+
+    // ── Q8: Personal growth ──────────────────────────────────────────────
+    const { growth } = await inquirer.prompt([{
+        type: 'input',
+        name: 'growth',
+        message: sectionHeader(8, 'What are you learning or want to grow in? (skills, hobbies, habits, reading)'),
+        default: '',
+    }]);
+    if (growth.trim()) {
+        console.log(pick(REACTIONS.generic)(''));
+        await pause();
+    }
+
+    // ── Q9: Struggles ────────────────────────────────────────────────────
+    const { struggles } = await inquirer.prompt([{
+        type: 'input',
+        name: 'struggles',
+        message: sectionHeader(9, 'What do you struggle with? (procrastination, focus, balance, stress — anything Dobbi should watch for)'),
+        default: '',
+    }]);
+    if (struggles.trim()) {
+        console.log(pick(REACTIONS.deep)(''));
+        await pause();
+    }
+
+    // ── Q10: How to help ─────────────────────────────────────────────────
+    const { helpStyle } = await inquirer.prompt([{
+        type: 'input',
+        name: 'helpStyle',
+        message: sectionHeader(10, 'How do you want Dobbi to help? (gentle nudges, strict accountability, just organise, be proactive, etc.)'),
+        default: '',
+    }]);
+    if (helpStyle.trim()) {
+        console.log(pick(REACTIONS.generic)(''));
+        await pause();
+    }
+
+    // ── Bonus: Calendar URLs (not counted in the 10) ─────────────────────
+    console.log(chalk.gray('\n   Almost done! Two optional bonus questions about calendars...\n'));
+
     const { personalCalUrl } = await inquirer.prompt([{
         type: 'input',
         name: 'personalCalUrl',
-        message: chalk.cyan('🤖 Got a personal Google Calendar ICS link? (or Enter to skip)'),
+        message: chalk.cyan('🤖 Got a personal Google Calendar ICS link? (Enter to skip)'),
         default: '',
     }]);
-    if (personalCalUrl.trim()) {
-        console.log(pick(REACTIONS.cal_personal));
-        await pause();
-    }
 
-    // 9. Work Google Calendar ICS link
     const { workCalUrl } = await inquirer.prompt([{
         type: 'input',
         name: 'workCalUrl',
-        message: chalk.cyan('🤖 And a work Google Calendar ICS link? (or Enter to skip)'),
+        message: chalk.cyan('🤖 Work Google Calendar ICS link? (Enter to skip)'),
         default: '',
     }]);
-    if (workCalUrl.trim()) {
-        console.log(pick(REACTIONS.cal_work));
-        await pause();
-    }
 
-    // Save everything
-    await saveProfile({
-        userName: name.trim(),
+    // ── Save ──────────────────────────────────────────────────────────────
+
+    const answers: TenQAnswers = {
+        name: name.trim(),
         gender,
-        workType: workType.trim() || undefined,
-        familySituation: familySituation.trim() || undefined,
-        hasCar,
-        cityLive: cityLive.trim() || undefined,
-        cityWork: cityWork.trim() || undefined,
+        location: location.trim(),
+        work: work.trim(),
+        workGoals: workGoals.trim(),
+        relationships: relationships.trim(),
+        health: health.trim(),
+        growth: growth.trim(),
+        struggles: struggles.trim(),
+        helpStyle: helpStyle.trim(),
         personalCalUrl: personalCalUrl.trim() || undefined,
         workCalUrl: workCalUrl.trim() || undefined,
+    };
+
+    // 1. Save basic profile to .state.json (for honorifics, name lookup)
+    await saveProfile({
+        userName: answers.name,
+        gender: answers.gender,
+        workType: answers.work || undefined,
+        familySituation: answers.relationships || undefined,
+        cityLive: answers.location || undefined,
+        personalCalUrl: answers.personalCalUrl,
+        workCalUrl: answers.workCalUrl,
     });
 
-    // Auto-configure calendars from provided URLs
-    const personalUrl = personalCalUrl.trim();
-    const workUrl = workCalUrl.trim();
-    if (personalUrl || workUrl) {
+    // 2. Write the full context to vault .socks.md
+    await writeAnswersToSocks(answers);
+
+    // 3. Auto-configure calendars
+    if (answers.personalCalUrl || answers.workCalUrl) {
         const cfg = await loadCalConfig();
-        if (personalUrl && !cfg.calendars.some(c => c.id === 'personal')) {
-            cfg.calendars.push({ id: 'personal', name: 'Personal', url: personalUrl });
+        if (answers.personalCalUrl && !cfg.calendars.some(c => c.id === 'personal')) {
+            cfg.calendars.push({ id: 'personal', name: 'Personal', url: answers.personalCalUrl });
         }
-        if (workUrl && !cfg.calendars.some(c => c.id === 'work')) {
-            cfg.calendars.push({ id: 'work', name: 'Work', url: workUrl });
+        if (answers.workCalUrl && !cfg.calendars.some(c => c.id === 'work')) {
+            cfg.calendars.push({ id: 'work', name: 'Work', url: answers.workCalUrl });
         }
         await saveCalConfig(cfg);
     }
@@ -242,11 +287,112 @@ export async function runInterview(): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SOCKS WRITER
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ABOUT_HEADING = '## About You';
+const ABOUT_MARKER_START = '<!-- 10Q:START -->';
+const ABOUT_MARKER_END = '<!-- 10Q:END -->';
+
+/**
+ * Build a concise, AI-context-friendly block from the 10 Questions answers.
+ * Uses terse key: value format — optimised for token efficiency.
+ */
+function buildAboutBlock(a: TenQAnswers): string {
+    const lines: string[] = [
+        ABOUT_MARKER_START,
+        ABOUT_HEADING,
+        '',
+    ];
+
+    lines.push(`- name: ${a.name}`);
+    lines.push(`- gender: ${a.gender}`);
+
+    if (a.location) lines.push(`- location: ${a.location}`);
+    if (a.work) lines.push(`- work: ${a.work}`);
+    if (a.workGoals) lines.push(`- goals: ${a.workGoals}`);
+    if (a.relationships) lines.push(`- relationships: ${a.relationships}`);
+    if (a.health) lines.push(`- health: ${a.health}`);
+    if (a.growth) lines.push(`- growth: ${a.growth}`);
+    if (a.struggles) lines.push(`- struggles: ${a.struggles}`);
+    if (a.helpStyle) lines.push(`- help_style: ${a.helpStyle}`);
+
+    lines.push(ABOUT_MARKER_END);
+    return lines.join('\n');
+}
+
+/**
+ * Insert or replace the "About You" block in the vault root .socks.md.
+ * If the file has existing 10Q markers, replaces that section.
+ * Otherwise appends after the frontmatter/personality section.
+ */
+async function writeAnswersToSocks(answers: TenQAnswers): Promise<void> {
+    let vaultRoot: string;
+    try {
+        vaultRoot = await getVaultRoot();
+    } catch {
+        // No vault yet — nothing to write to
+        return;
+    }
+
+    const socksPath = path.join(vaultRoot, '.socks.md');
+    const aboutBlock = buildAboutBlock(answers);
+
+    let fileContent: string;
+    try {
+        fileContent = await fs.readFile(socksPath, 'utf-8');
+    } catch {
+        // No .socks.md yet — create a minimal one
+        const today = new Date().toISOString().split('T')[0];
+        const vaultName = path.basename(vaultRoot);
+        fileContent = matter.stringify(
+            `\n# ${vaultName}\n\n${aboutBlock}\n`,
+            { title: `${vaultName} Vault`, created: today, tags: ['context', 'system', 'root'] },
+        );
+        await fs.writeFile(socksPath, fileContent);
+        return;
+    }
+
+    // Parse with gray-matter to preserve frontmatter
+    const parsed = matter(fileContent);
+
+    let body = parsed.content;
+
+    // Replace existing 10Q block if present
+    const markerRegex = new RegExp(
+        `${escapeRegex(ABOUT_MARKER_START)}[\\s\\S]*?${escapeRegex(ABOUT_MARKER_END)}`,
+    );
+
+    if (markerRegex.test(body)) {
+        body = body.replace(markerRegex, aboutBlock);
+    } else {
+        // Also replace a plain "## About You" section (up to next ## or end)
+        const headingRegex = /## About You\n[\s\S]*?(?=\n## |\n<!-- |$)/;
+        if (headingRegex.test(body)) {
+            body = body.replace(headingRegex, aboutBlock);
+        } else {
+            // Append after existing content
+            body = body.trimEnd() + '\n\n' + aboutBlock + '\n';
+        }
+    }
+
+    // Update modified date in frontmatter
+    parsed.data.modified = new Date().toISOString().split('T')[0];
+
+    const output = matter.stringify(body, parsed.data);
+    await fs.writeFile(socksPath, output);
+}
+
+function escapeRegex(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CLI COMMAND
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const interviewCommand = new Command('interview')
-    .description('Run (or re-run) the Dobbi onboarding interview')
+    .description('Run (or re-run) Dobbi\'s "10 Questions" personal assistant interview')
     .action(async () => {
         await runInterview();
     });

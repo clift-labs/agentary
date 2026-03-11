@@ -10,6 +10,8 @@ import type { ConfigurationDescription } from '../../configuration/configuration
 import type { Context } from '../../context/context.js';
 import type { Result } from '../../result/result.js';
 import { ResultStatus } from '../../result/result.js';
+import { findVaultRoot } from '../../../state/manager.js';
+import { assertPathAllowedSync, FileAccessDeniedError } from '../../security/file-access-guard.js';
 
 /**
  * Writes a context value to a file on disk.
@@ -41,6 +43,16 @@ export class WriteFileNodeCode extends AbstractNodeCode {
 
         const content = context.get(sourcePath);
         const text = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+
+        try {
+            const vaultRoot = await findVaultRoot();
+            assertPathAllowedSync(filePath, vaultRoot);
+        } catch (error) {
+            if (error instanceof FileAccessDeniedError) {
+                return this.result(ResultStatus.ERROR, error.message);
+            }
+            throw error;
+        }
 
         try {
             if (createDirs) {

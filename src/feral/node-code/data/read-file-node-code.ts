@@ -9,6 +9,7 @@ import { ResultStatus } from '../../result/result.js';
 import type { ConfigurationDescription, ResultDescription } from '../../configuration/configuration-description.js';
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
+import { assertPathAllowed, FileAccessDeniedError } from '../../security/file-access-guard.js';
 
 export class ReadFileNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
@@ -34,6 +35,15 @@ export class ReadFileNodeCode extends AbstractNodeCode {
         const filePath = filePathTemplate.replace(/\{(\w+)\}/g, (_, key: string) => {
             return String(context.get(key) ?? '');
         });
+
+        try {
+            await assertPathAllowed(filePath);
+        } catch (error) {
+            if (error instanceof FileAccessDeniedError) {
+                return this.result(ResultStatus.ERROR, error.message);
+            }
+            throw error;
+        }
 
         try {
             const content = await readFile(filePath, { encoding });
