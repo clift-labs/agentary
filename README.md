@@ -1,46 +1,50 @@
-# Dobbi
+# Agentary
 
-An AI-powered personal assistant that lives in your terminal. Dobbi manages your todos, events, notes, goals, people, and more — all stored as plain Markdown files in a local "vault" folder.
+An AI-powered personal assistant that lives in your terminal. Agentary manages your todos, events, notes, goals, people, and more — all stored as plain Markdown files in a local "vault" folder.
 
-Think of it as a loyal house-elf for your digital life: polite, eager, and surprisingly capable.
+Choose from 4 personalities and name your agent to make it truly yours.
 
 > **Requires an API key from [OpenAI](https://platform.openai.com) and/or [Anthropic](https://console.anthropic.com).**
 
 ```
-                               .......
-                            .:------::::...
-                          .-==------::::::..
-                       ..:==---------::::--:...
-               ....::::-=+++====-----====-------:.....
-              .-=+***++=++++***++=:=+***=+====****+=-..
-            .:=+===++***++++*#*++-::-+*+-===+##*+==++=:.
-           .:==++++++****+++++==+=::::----===*#*+*+++++:.
-          ..--===++++++*+++===++++==-==--===+**++++-::=-.
-                .:==++++++===++++++++========--=-:........
-                   ..::..:==+++++==+--=+==:......
-                      .. ..-=+++*****+++=:.
-                           ..-=========-....
-                            ..+*++++++==:.....
-                               D O B B I
+     ___                    __
+    /   |  ____ ____  ___  / /_____ ________  __
+   / /| | / __ `/ _ \/ _ \/ __/ __ `/ ___/ / / /
+  / ___ |/ /_/ /  __/  __/ /_/ /_/ / /  / /_/ /
+ /_/  |_|\__, /\___/\___/\__/\__,_/_/   \__, /
+        /____/                          /____/
 ```
 
 ## Quick Start
 
 ```bash
 # Install globally
-npm install -g dobbi
+npm install -g agentary
 
 # Initialize your vault
-dobbi init
+agentary init
 
 # Add an API key (OpenAI or Anthropic)
-dobbi config add-provider openai
+agentary config add-provider openai
 
 # Launch the interactive shell
-dobbi
+agentary
 ```
 
-That's it. Dobbi is ready to serve.
+That's it. Your agent is ready to serve.
+
+## Personalities
+
+During onboarding, choose a personality for your agent:
+
+| Personality | Style |
+|-------------|-------|
+| **British Butler** | Formal, composed, measured. Refers to itself in the third person. "Very good, sir." |
+| **Rock Star** | High-energy, irreverent, enthusiastic. Uses slang and music metaphors. "Let's shred this to-do list!" |
+| **Executive Assistant** | Professional, crisp, efficient. Corporate tone, uses your name directly. "Done. Next item on your agenda." |
+| **Friend** | Warm, casual, supportive peer. "Hey! I took care of that for you." |
+
+You also choose a name for your agent — it becomes part of every interaction, from the CLI shell to the web UI.
 
 ## Requirements
 
@@ -59,9 +63,9 @@ npm run build
 npm link
 ```
 
-## What Dobbi Does
+## What Agentary Does
 
-All of your information stays **local** — stored as plain Markdown files with YAML frontmatter, organized into structured content types within your vault (`~/.dobbi/` by default). Dobbi comes with built-in content types for common needs, and can create new ones on the fly when he needs a new way to store information for his human.
+All of your information stays **local** — stored as plain Markdown files with YAML frontmatter, organized into structured content types within your vault. Agentary comes with built-in content types for common needs, and can create new ones on the fly when it needs a new way to store information.
 
 ### Content Types
 
@@ -72,11 +76,11 @@ All of your information stays **local** — stored as plain Markdown files with 
 | **note** | Freeform notes |
 | **todont** | Things you're deliberately *not* doing |
 
-Dobbi creates new content types as needed — just ask him to track something new and he'll figure out the right structure.
+Your agent creates new content types as needed — just ask it to track something new and it'll figure out the right structure.
 
 ### Natural Language Chat
 
-Just type naturally and Dobbi figures out what to do:
+Just type naturally and your agent figures out what to do:
 
 ```
 > remind me to call the dentist tomorrow
@@ -87,7 +91,7 @@ Just type naturally and Dobbi figures out what to do:
 
 ### Dynamic Process Generation
 
-What sets Dobbi apart from other personal agents is that it **writes a unique software process for every request**. Instead of following rigid, pre-built workflows, Dobbi dynamically assembles a process graph tailored to exactly what you asked for.
+What sets Agentary apart from other personal agents is that it **writes a unique software process for every request**. Instead of following rigid, pre-built workflows, it dynamically assembles a process graph tailored to exactly what you asked for.
 
 This is powered by the **FeralCCF** (Feral Catalog-Code Framework) library, which has three layers:
 
@@ -95,47 +99,47 @@ This is powered by the **FeralCCF** (Feral Catalog-Code Framework) library, whic
 - **CatalogNodes** — configured instances of NodeCode with default settings
 - **ProcessNodes** — the actual nodes wired together into a directed graph for a specific request
 
-When you say "show me my high-priority tasks due this week", Dobbi doesn't run a canned query — it builds a process that selects the right nodes, connects them, and executes the graph. The **Web UI** visualizes the process that was created for each action, so you can see exactly what Dobbi did and how.
+When you say "show me my high-priority tasks due this week", your agent doesn't run a canned query — it builds a process that selects the right nodes, connects them, and executes the graph. The **Web UI** visualizes the process that was created for each action, so you can see exactly what happened and how.
 
 ## Commands
 
-Run `dobbi` with no arguments to enter the interactive shell, or use commands directly:
+Run `agentary` with no arguments to enter the interactive shell, or use commands directly:
 
 | Command | Description |
 |---------|-------------|
-| `dobbi` | Launch interactive shell |
-| `dobbi init` | Initialize a new vault |
-| `dobbi setup` | Change your name/gender preferences |
-| `dobbi today` | Show today's tasks and schedule |
-| `dobbi todo [title]` | Create or list tasks |
-| `dobbi todo done <title>` | Mark a task complete |
-| `dobbi event [title]` | Create or list events |
-| `dobbi note [title]` | Create or list notes |
-| `dobbi goal [title]` | Create or list goals |
-| `dobbi person [name]` | Create or list people |
-| `dobbi todont [title]` | Create or list todonts |
-| `dobbi remember <text>` | Quick-capture to inbox |
-| `dobbi cal` | Calendar view |
-| `dobbi project` | Manage projects |
-| `dobbi config` | View/manage LLM configuration |
-| `dobbi service start` | Start the background service + web UI |
-| `dobbi shell` | Enter interactive mode (same as no args) |
+| `agentary` | Launch interactive shell |
+| `agentary init` | Initialize a new vault |
+| `agentary interview` | Run (or re-run) the personality & onboarding interview |
+| `agentary setup` | Change your name/gender preferences |
+| `agentary today` | Show today's tasks and schedule |
+| `agentary todo [title]` | Create or list tasks |
+| `agentary todo done <title>` | Mark a task complete |
+| `agentary event [title]` | Create or list events |
+| `agentary note [title]` | Create or list notes |
+| `agentary goal [title]` | Create or list goals |
+| `agentary person [name]` | Create or list people |
+| `agentary todont [title]` | Create or list todonts |
+| `agentary remember <text>` | Quick-capture to inbox |
+| `agentary cal` | Calendar view |
+| `agentary config` | View/manage LLM configuration |
+| `agentary service start` | Start the background service + web UI |
+| `agentary shell` | Enter interactive mode (same as no args) |
 
 ## BYOK (Bring Your Own Key)
 
-Dobbi doesn't come with an API key — you bring your own from [OpenAI](https://platform.openai.com) and/or [Anthropic](https://console.anthropic.com). Your keys are stored locally in `~/.dobbi/secrets.json` and never leave your machine.
+Agentary doesn't come with an API key — you bring your own from [OpenAI](https://platform.openai.com) and/or [Anthropic](https://console.anthropic.com). Your keys are stored locally in `~/.agentary/secrets.json` and never leave your machine.
 
 ```bash
 # Add OpenAI
-dobbi config add-provider openai
+agentary config add-provider openai
 
 # Add Anthropic
-dobbi config add-provider anthropic
+agentary config add-provider anthropic
 
-# Or both — Dobbi will use each provider's strengths
+# Or both — Agentary will use each provider's strengths
 ```
 
-When both providers are configured, Dobbi automatically picks the best model for each task based on six **capabilities**:
+When both providers are configured, Agentary automatically picks the best model for each task based on six **capabilities**:
 
 | Capability | What it does | OpenAI default | Anthropic default |
 |------------|-------------|----------------|-------------------|
@@ -149,42 +153,41 @@ When both providers are configured, Dobbi automatically picks the best model for
 You can override any mapping:
 
 ```bash
-dobbi config set-capability reason anthropic claude-sonnet-4-6
-dobbi config reset-capability reason   # restore auto-selection
-dobbi config                           # view current configuration
+agentary config set-capability reason anthropic claude-sonnet-4-6
+agentary config reset-capability reason   # restore auto-selection
+agentary config                           # view current configuration
 ```
 
 ### Where Things Live
 
 ```
-~/.dobbi/
-  .state.json         # User profile (name, gender, active project)
+~/.agentary/
   secrets.json         # API keys (never committed)
-  config.json          # LLM capability overrides
-  entity-types.json    # Custom entity type definitions
-  projects/
-    my-project/
-      todos/           # Markdown files with YAML frontmatter
-      events/
-      notes/
-      goals/
-      people/
-      recurrences/
-      todonts/
-      research/
-      inbox/
-      .socks.md        # Project context (read by the LLM)
-  .trash/              # Soft-deleted entities
+
+your-vault/
+  .vault.md            # Vault root context (read by the LLM)
+  .state.json          # User profile (name, personality, agent name)
+  .agentary/           # Vault-scoped config
+    config.json        # LLM capability overrides
+    entity-types.json  # Custom entity type definitions
+  todos/               # Markdown files with YAML frontmatter
+  events/
+  notes/
+  goals/
+  people/
+  recurrences/
+  todonts/
+  inbox/
 ```
 
 Every entity is a plain `.md` file. You can edit them with any text editor, sync them with Git, or back them up however you like.
 
 ## Web UI
 
-Dobbi includes a browser-based dashboard:
+Agentary includes a browser-based dashboard:
 
 ```bash
-dobbi service start
+agentary service start
 ```
 
 This starts a background daemon with a web UI (default: `http://localhost:3737`) that shows:
@@ -192,16 +195,16 @@ This starts a background daemon with a web UI (default: `http://localhost:3737`)
 - Today's tasks with priority badges
 - 3-day calendar view
 - Chat interface with the same natural language capabilities as the CLI
-- Interactive Q&A when Dobbi needs clarification during a process
+- Interactive Q&A when your agent needs clarification during a process
 
 ## The Interactive Shell
 
-When you run `dobbi` with no arguments, you get a full interactive shell with:
+When you run `agentary` with no arguments, you get a full interactive shell with:
 
 - **Tab completion** for commands
 - **Up/Down arrow** history
 - **Natural language fallback** — anything that isn't a command gets routed to the AI chat
-- **Project context** — the LLM reads `.socks.md` files for project-specific context
+- **Vault context** — the LLM reads `.vault.md` for project-specific context
 
 ## Development
 
