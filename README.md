@@ -242,4 +242,4 @@ npm run build        # Compile TypeScript to dist/
 
 ## License
 
-MIT
+MIT © [Clift Labs](https://github.com/clift-labs)
