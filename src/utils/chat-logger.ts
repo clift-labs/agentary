@@ -2,7 +2,7 @@
 // Chat Session Logger — structured JSONL logs per chat session
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Each chat session gets its own file: {vault}/.dobbi/logs/<chatId>.log
+// Each chat session gets its own file: {vault}/.agentary/logs/<chatId>.log
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createWriteStream, type WriteStream } from 'fs';

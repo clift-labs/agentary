@@ -52,8 +52,8 @@ That's it. Dobbi is ready to serve.
 If you prefer to build from source:
 
 ```bash
-git clone https://github.com/clift-labs/dobbi.git
-cd dobbi
+git clone https://github.com/clift-labs/agentary.git
+cd agentary
 npm install
 npm run build
 npm link

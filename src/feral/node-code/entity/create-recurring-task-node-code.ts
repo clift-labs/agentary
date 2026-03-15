@@ -17,6 +17,7 @@ import {
     generateEntityId,
     ensureEntityDir,
     writeEntity,
+    entityFilename,
 } from '../../../entities/entity.js';
 import { getEntityType } from '../../../entities/entity-type-config.js';
 import { getEntityIndex } from '../../../entities/entity-index.js';
@@ -81,7 +82,7 @@ export class CreateRecurringTaskNodeCode extends AbstractNodeCode {
         // ── Create recurrence entity file ────────────────────────────────
         const dir = await ensureEntityDir('recurrence');
         const id = generateEntityId('recurrence');
-        const filepath = path.join(dir, `${id}.md`);
+        const filepath = path.join(dir, entityFilename(title, id));
 
         const meta: Record<string, unknown> = {
             id,
@@ -170,14 +171,5 @@ export class CreateRecurringTaskNodeCode extends AbstractNodeCode {
         const contextVal = context.get(key) as string | null;
         if (contextVal) return contextVal;
         return fallback;
-    }
-
-    /**
-     * Replace {key} tokens in a template with context values.
-     */
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
     }
 }

@@ -10,6 +10,7 @@ import {
     generateEntityId,
     ensureEntityDir,
     trashEntity,
+    entityFilename,
 } from '../entities/entity.js';
 import { getEntityType, addEntityType } from '../entities/entity-type-config.js';
 import { spawn, type BlackoutWindow, type CadenceDetails } from '../entities/spawner.js';
@@ -93,11 +94,14 @@ async function saveRecurrence(state: RecurrenceState): Promise<string> {
     const dir = await ensureEntityDir('recurrence');
 
     let filepath = state.filepath;
-    const entityId = state.filepath
-        ? path.basename(state.filepath, '.md')
-        : generateEntityId('recurrence');
-    if (!filepath) {
-        filepath = path.join(dir, entityId + '.md');
+    let entityId: string;
+    if (filepath) {
+        const raw = await fs.readFile(filepath, 'utf-8');
+        const parsed = matter(raw);
+        entityId = (parsed.data.id as string) ?? path.basename(filepath, '.md');
+    } else {
+        entityId = generateEntityId('recurrence');
+        filepath = path.join(dir, entityFilename(state.title, entityId));
     }
 
     const meta: Record<string, unknown> = {
@@ -119,8 +123,7 @@ async function saveRecurrence(state: RecurrenceState): Promise<string> {
     // Update entity index
     const index = getEntityIndex();
     if (index.isBuilt) {
-        const slug = path.basename(filepath, '.md');
-        await index.addOrUpdate('recurrence', slug, state.title, filepath);
+        await index.addOrUpdate('recurrence', entityId, state.title, filepath);
     }
 
     return filepath;
@@ -494,13 +497,15 @@ async function deleteRecurrence(name: string): Promise<void> {
     }]);
 
     if (confirm && rec.filepath) {
+        // Read id from frontmatter before trashing
+        const raw = await fs.readFile(rec.filepath, 'utf-8');
+        const recId = (matter(raw).data.id as string) ?? path.basename(rec.filepath, '.md');
         const trashPath = await trashEntity(rec.filepath);
 
         // Update entity index
         const index = getEntityIndex();
         if (index.isBuilt) {
-            const slug = path.basename(rec.filepath, '.md');
-            index.remove('recurrence', slug);
+            index.remove('recurrence', recId);
         }
 
         console.log(chalk.green(`🗑  Moved to trash: ${rec.title}`));

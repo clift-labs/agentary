@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { promises as fsPromises } from 'fs';
-import { getSkillsConfigPath, getVaultDobbiDir } from '../paths.js';
+import { getSkillsConfigPath, getVaultConfigDir } from '../paths.js';
 
 export interface SkillEntry {
     id: string;
@@ -29,7 +29,7 @@ export async function loadSkillsConfig(): Promise<SkillsConfig> {
 }
 
 export async function saveSkillsConfig(cfg: SkillsConfig): Promise<void> {
-    const dir = await getVaultDobbiDir();
+    const dir = await getVaultConfigDir();
     await fsPromises.mkdir(dir, { recursive: true });
     const configPath = await getSkillsConfigPath();
     await fsPromises.writeFile(configPath, JSON.stringify(cfg, null, 2));

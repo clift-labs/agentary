@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dobbi</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧦</text></svg>">
+<title>Agentary</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -237,6 +237,19 @@
     font-size: 10px;
     color: var(--dim);
     font-style: italic;
+  }
+
+  .event-cal {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(0, 212, 255, 0.12);
+    color: var(--cyan-dim);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    margin-left: 6px;
+    vertical-align: middle;
   }
 
   .day-empty {
@@ -603,6 +616,38 @@
   .chat-send:hover { opacity: 0.85; }
   .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  .chat-mic {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-size: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+
+  .chat-mic:hover { border-color: var(--cyan); color: var(--text); }
+
+  .chat-mic.listening {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(255, 82, 82, 0.1);
+    animation: mic-pulse 1.2s ease-in-out infinite;
+  }
+
+  .chat-mic.unsupported { display: none; }
+
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(255, 82, 82, 0); }
+  }
+
   /* ── Responsive ──────────────────────────────────── */
 
   @media (max-width: 700px) {
@@ -617,7 +662,7 @@
 
 <div class="app">
   <div class="header">
-    <h1>Dobbi</h1>
+    <h1 id="header-agent-name">Agentary</h1>
     <div class="header-stats" id="header-stats">
       <div class="stat"><span class="stat-label">Vault</span><span class="stat-value" id="stat-vault">--</span></div>
       <div class="stat"><span class="stat-label">Queue</span><span class="stat-value" id="stat-queue">--</span></div>
@@ -630,16 +675,11 @@
     </div>
   </div>
 
-  <!-- Left: Today + Calendar -->
+  <!-- Left: Timeline + Scheduler -->
   <div class="panel">
     <div class="panel-body" id="left-body">
-      <div class="panel-section-title">Today</div>
-      <div id="today-body">
-        <div class="empty-state">Loading tasks…</div>
-      </div>
-      <div class="panel-section-title" style="margin-top: 16px;">3-Day Calendar</div>
-      <div id="calendar-body">
-        <div class="empty-state">Loading events…</div>
+      <div id="timeline-body">
+        <div class="empty-state">Loading…</div>
       </div>
       <div class="panel-section-title" style="margin-top: 16px;">Scheduler</div>
       <div id="scheduler-body">
@@ -653,26 +693,26 @@
     <div class="panel-title">Chat</div>
     <div class="chat-messages" id="chat-messages">
       <div class="chat-msg bot">
-        <div class="chat-bubble">Dobbi is ready to serve, sir.</div>
+        <div class="chat-bubble">Ready to serve.</div>
       </div>
     </div>
     <div class="chat-input-wrap">
       <form id="chat-form">
+        <button class="chat-mic" id="chat-mic" type="button" title="Voice input">&#x1F3A4;</button>
         <input class="chat-input" id="chat-input" type="text"
-               placeholder="Ask Dobbi anything…" autocomplete="off">
+               placeholder="Ask me anything…" autocomplete="off">
         <button class="chat-send" id="chat-send" type="submit">Send</button>
       </form>
     </div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/marked@17/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: { primaryColor: '#0f3460', primaryTextColor: '#e0e0e0', primaryBorderColor: '#00d4ff', lineColor: '#00d4ff', secondaryColor: '#16213e', tertiaryColor: '#1a1a2e', fontFamily: 'monospace' } });</script>
 <script>
 (function() {
-  const todayBody = document.getElementById('today-body');
-  const calendarBody = document.getElementById('calendar-body');
+  const timelineBody = document.getElementById('timeline-body');
   const schedulerBody = document.getElementById('scheduler-body');
   const chatMessages = document.getElementById('chat-messages');
   const chatForm = document.getElementById('chat-form');
@@ -685,64 +725,165 @@
   const statMem = document.getElementById('stat-mem');
   const statUptime = document.getElementById('stat-uptime');
 
+  const chatMic = document.getElementById('chat-mic');
+
   let ws = null;
   let thinkingEl = null;
   let currentChatId = null;
+  let calendarNames = {}; // id → name
+
+  // ── Speech-to-Text ──────────────────────────────────────────
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let micListening = false;
+
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    let finalTranscript = '';
+
+    recognition.onstart = () => {
+      micListening = true;
+      chatMic.classList.add('listening');
+      chatMic.title = 'Listening… click to stop';
+    };
+
+    recognition.onend = () => {
+      micListening = false;
+      chatMic.classList.remove('listening');
+      chatMic.title = 'Voice input';
+      // If we got a final transcript and the input has text, auto-submit
+      if (finalTranscript && chatInput.value.trim()) {
+        chatForm.dispatchEvent(new Event('submit'));
+      }
+      finalTranscript = '';
+    };
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += t;
+        } else {
+          interim += t;
+        }
+      }
+      // Show interim results in the input as they come
+      if (finalTranscript) {
+        chatInput.value = finalTranscript;
+      } else {
+        chatInput.value = interim;
+      }
+    };
+
+    recognition.onerror = (event) => {
+      micListening = false;
+      chatMic.classList.remove('listening');
+      chatMic.title = 'Voice input';
+      if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        console.warn('Speech recognition error:', event.error);
+      }
+    };
+
+    chatMic.addEventListener('click', () => {
+      if (chatInput.disabled) return;
+      if (micListening) {
+        recognition.stop();
+      } else {
+        chatInput.value = '';
+        recognition.start();
+      }
+    });
+  } else {
+    chatMic.classList.add('unsupported');
+  }
 
   // ── Data fetching ──────────────────────────────────────────
 
-  async function fetchToday() {
+  async function fetchCalendarNames() {
     try {
-      const res = await fetch('/api/entities/task');
-      const entities = await res.json();
-      const today = new Date().toISOString().split('T')[0];
-      const tasks = entities
-        .filter(e => e.meta.status !== 'done')
-        .filter(e => {
-          const due = e.meta.dueDate;
-          return !due || due <= today;
-        })
-        .map(e => ({
+      const res = await fetch('/api/calendars');
+      const cals = await res.json();
+      calendarNames = {};
+      for (const c of cals) calendarNames[c.id] = c.name;
+    } catch { /* ignore */ }
+  }
+
+  function getValidDate(due) {
+    if (!due || typeof due !== 'string') return null;
+    if (due.startsWith('{')) return null;
+    if (!/^\d{4}-\d{2}-\d{2}/.test(due)) return null;
+    return due.slice(0, 10);
+  }
+
+  async function fetchTimeline() {
+    try {
+      const [taskRes, eventRes] = await Promise.all([
+        fetch('/api/entities/task'),
+        fetch('/api/entities/event'),
+      ]);
+      const tasks = await taskRes.json();
+      const events = await eventRes.json();
+
+      const now = new Date();
+      const dates = [];
+      for (let i = 0; i < 3; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + i);
+        dates.push(d.toISOString().split('T')[0]);
+      }
+      const todayStr = dates[0];
+
+      // Buckets: overdue, today, tomorrow, day-after
+      const overdue = [];
+      const buckets = { [dates[0]]: [], [dates[1]]: [], [dates[2]]: [] };
+
+      // Assign tasks to buckets
+      for (const e of tasks) {
+        if (e.meta.status === 'done') continue;
+        const due = getValidDate(e.meta.dueDate);
+        const item = {
+          kind: 'task',
           id: e.meta.id,
           title: e.meta.title,
           status: e.meta.status || 'open',
           priority: e.meta.priority || 'medium',
-          dueDate: e.meta.dueDate || null,
-        }));
-      renderToday({ date: today, tasks });
-    } catch {
-      todayBody.innerHTML = '<div class="empty-state">Failed to load tasks.</div>';
-    }
-  }
-
-  async function fetchCalendar() {
-    try {
-      const res = await fetch('/api/entities/event');
-      const entities = await res.json();
-      const now = new Date();
-      const dates = {};
-      for (let i = 0; i < 3; i++) {
-        const d = new Date(now);
-        d.setDate(d.getDate() + i);
-        dates[d.toISOString().split('T')[0]] = [];
-      }
-      const dateKeys = Object.keys(dates);
-      const startDate = dateKeys[0];
-      const endDate = dateKeys[dateKeys.length - 1];
-      for (const e of entities) {
-        const eventDate = ((e.meta.startDate || '') + '').split('T')[0];
-        if (eventDate >= startDate && eventDate <= endDate && dates[eventDate]) {
-          dates[eventDate].push({
-            title: e.meta.title,
-            startDate: e.meta.startDate,
-            endDate: e.meta.endDate,
-            location: e.meta.location || null,
-          });
+          dueDate: due,
+        };
+        if (!due) {
+          // No date → today bucket
+          buckets[dates[0]].push(item);
+        } else if (due < todayStr) {
+          overdue.push(item);
+        } else if (buckets[due]) {
+          buckets[due].push(item);
         }
+        // Future beyond 2 days → skip
       }
-      renderCalendar({ dates });
+
+      // Assign events to buckets
+      for (const e of events) {
+        const eventDate = ((e.meta.startDate || '') + '').split('T')[0];
+        if (!buckets[eventDate]) continue;
+        buckets[eventDate].push({
+          kind: 'event',
+          title: e.meta.title,
+          startDate: e.meta.startDate,
+          endDate: e.meta.endDate,
+          location: e.meta.location || null,
+          calendarId: e.meta.calendarId || null,
+        });
+      }
+
+      renderTimeline(overdue, buckets, dates);
     } catch {
-      calendarBody.innerHTML = '<div class="empty-state">Failed to load events.</div>';
+      timelineBody.innerHTML = '<div class="empty-state">Failed to load timeline.</div>';
     }
   }
 
@@ -783,6 +924,10 @@
       statGraph.textContent = (data.graph ? data.graph.nodes + 'n / ' + data.graph.edges + 'e' : '--');
       statMem.textContent = (data.memory ? data.memory.rss + ' MB' : '--');
       statUptime.textContent = formatUptime(data.uptime || 0);
+      // Update agent name in header if available
+      if (data.agentName) {
+        document.getElementById('header-agent-name').textContent = data.agentName;
+      }
     } catch { /* ignore */ }
   }
 
@@ -796,39 +941,48 @@
 
   // ── Rendering ──────────────────────────────────────────────
 
-  function renderToday(data) {
-    if (!data.tasks || data.tasks.length === 0) {
-      todayBody.innerHTML = '<div class="empty-state">No open tasks. Dobbi is pleased, sir!</div>';
-      return;
+  function renderTimeline(overdue, buckets, dates) {
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    const sections = [];
+
+    // A) Overdue
+    if (overdue.length > 0) {
+      overdue.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+      sections.push(renderSection('Overdue', null, overdue, true));
     }
 
-    // Sort: critical > high > medium > low, then by due date
-    const order = { critical: 0, high: 1, medium: 2, low: 3 };
-    data.tasks.sort((a, b) => {
-      const pa = order[a.priority] ?? 2;
-      const pb = order[b.priority] ?? 2;
-      if (pa !== pb) return pa - pb;
-      if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-      if (a.dueDate) return -1;
-      if (b.dueDate) return 1;
-      return 0;
-    });
+    // B) Today, Tomorrow, Day After
+    const labels = ['Today', null, null];
+    for (let i = 0; i < dates.length; i++) {
+      const date = dates[i];
+      const d = new Date(date + 'T12:00:00');
+      const label = labels[i] || dayNames[d.getDay()];
+      const items = buckets[date] || [];
 
-    todayBody.innerHTML = data.tasks.map(t => `
-      <div class="task-item" data-task-id="${esc(t.id)}">
-        <div class="task-check" title="Mark done"></div>
-        <div class="task-info">
-          <div class="task-title">${esc(t.title)}</div>
-          <div class="task-meta">
-            <span class="badge badge-${t.priority}">${t.priority}</span>
-            ${t.dueDate ? ' · due ' + t.dueDate : ''}
-          </div>
-        </div>
-      </div>
-    `).join('');
+      // Sort: events by time first, then tasks by priority
+      items.sort((a, b) => {
+        // Events before tasks
+        if (a.kind === 'event' && b.kind !== 'event') return -1;
+        if (a.kind !== 'event' && b.kind === 'event') return 1;
+        // Events: by start time
+        if (a.kind === 'event' && b.kind === 'event') {
+          return (a.startDate || '').localeCompare(b.startDate || '');
+        }
+        // Tasks: by priority
+        const pa = priorityOrder[a.priority] ?? 2;
+        const pb = priorityOrder[b.priority] ?? 2;
+        return pa - pb;
+      });
 
-    // Wire up checkbox clicks
-    todayBody.querySelectorAll('.task-check').forEach(el => {
+      sections.push(renderSection(label, date, items, i === 0));
+    }
+
+    const html = sections.join('');
+    timelineBody.innerHTML = html || '<div class="empty-state">Nothing on the horizon. All clear!</div>';
+
+    // Wire up task checkboxes
+    timelineBody.querySelectorAll('.task-check').forEach(el => {
       el.addEventListener('click', async () => {
         const item = el.closest('.task-item');
         const id = item.dataset.taskId;
@@ -842,9 +996,6 @@
           });
           if (res.ok) {
             item.remove();
-            if (!todayBody.querySelector('.task-item')) {
-              todayBody.innerHTML = '<div class="empty-state">No open tasks. Dobbi is pleased, sir!</div>';
-            }
           } else {
             item.style.opacity = '1';
           }
@@ -855,36 +1006,42 @@
     });
   }
 
-  function renderCalendar(data) {
-    if (!data.dates || Object.keys(data.dates).length === 0) {
-      calendarBody.innerHTML = '<div class="empty-state">No upcoming events.</div>';
-      return;
+  function renderSection(label, date, items, isHighlight) {
+    const headerClass = isHighlight ? ' today' : '';
+    const dateStr = date ? ' · ' + date : '';
+    let body;
+
+    if (items.length === 0) {
+      body = '<div class="day-empty">Nothing scheduled</div>';
+    } else {
+      body = items.map(item => {
+        if (item.kind === 'event') {
+          const time = item.startDate ? formatTime(item.startDate) : '';
+          const calName = item.calendarId && calendarNames[item.calendarId] ? calendarNames[item.calendarId] : '';
+          return `<div class="event-item">
+            ${time ? '<span class="event-time">' + time + '</span> ' : ''}
+            ${esc(item.title)}${calName ? '<span class="event-cal">' + esc(calName) + '</span>' : ''}
+            ${item.location ? '<div class="event-location">' + esc(item.location) + '</div>' : ''}
+          </div>`;
+        } else {
+          return `<div class="task-item" data-task-id="${esc(item.id)}">
+            <div class="task-check" title="Mark done"></div>
+            <div class="task-info">
+              <div class="task-title">${esc(item.title)}</div>
+              <div class="task-meta">
+                <span class="badge badge-${item.priority}">${item.priority}</span>
+                ${item.dueDate ? ' · due ' + item.dueDate : ''}
+              </div>
+            </div>
+          </div>`;
+        }
+      }).join('');
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-    calendarBody.innerHTML = Object.entries(data.dates).map(([date, events]) => {
-      const d = new Date(date + 'T12:00:00');
-      const label = date === todayStr ? 'Today' : dayNames[d.getDay()];
-      const isToday = date === todayStr;
-
-      const eventsHtml = events.length === 0
-        ? '<div class="day-empty">No events</div>'
-        : events.map(e => {
-            const time = e.startDate ? formatTime(e.startDate) : '';
-            return `<div class="event-item">
-              ${time ? '<span class="event-time">' + time + '</span> ' : ''}
-              ${esc(e.title)}
-              ${e.location ? '<div class="event-location">' + esc(e.location) + '</div>' : ''}
-            </div>`;
-          }).join('');
-
-      return `<div class="day-group">
-        <div class="day-header${isToday ? ' today' : ''}">${label} · ${date}</div>
-        ${eventsHtml}
-      </div>`;
-    }).join('');
+    return `<div class="day-group">
+      <div class="day-header${headerClass}">${label}${dateStr}</div>
+      ${body}
+    </div>`;
   }
 
   function renderScheduler(data) {
@@ -999,8 +1156,7 @@
             unlockChat();
             break;
           case 'refresh':
-            if (msg.panel === 'today') fetchToday();
-            if (msg.panel === 'calendar') fetchCalendar();
+            if (msg.panel === 'today' || msg.panel === 'calendar') fetchTimeline();
             break;
         }
       } catch (err) {
@@ -1056,7 +1212,7 @@
   function renderMarkdown(text) {
     try {
       if (typeof marked !== 'undefined' && marked.parse) {
-        return marked.parse(text);
+        return marked.parse(text, { breaks: true, gfm: true });
       }
     } catch (err) {
       console.warn('marked.parse failed:', err);
@@ -1093,7 +1249,7 @@
 
     const qText = document.createElement('div');
     qText.className = 'question-text';
-    qText.textContent = question || 'Dobbi has a question:';
+    qText.textContent = question || 'A question for you:';
     bubble.appendChild(qText);
 
     function sendAnswer(answer) {
@@ -1265,8 +1421,7 @@
 
   // ── Init ───────────────────────────────────────────────────
 
-  fetchToday();
-  fetchCalendar();
+  fetchCalendarNames().then(() => fetchTimeline());
   fetchStatus();
   fetchScheduler();
   connectWs();

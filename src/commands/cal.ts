@@ -9,7 +9,7 @@ import chalk from 'chalk';
 import path from 'path';
 import { promises as fsPromises } from 'fs';
 import { loadConfig, saveConfig } from '../config.js';
-import { getCalConfigPath, getVaultDobbiDir } from '../paths.js';
+import { getCalConfigPath, getVaultConfigDir } from '../paths.js';
 import { getVaultRoot } from '../state/manager.js';
 import { parseIcsFeed } from '../utils/ics-parser.js';
 import {
@@ -18,6 +18,7 @@ import {
     listEntities,
     generateEntityId,
     createEntityMeta,
+    entityFilename,
 } from '../entities/entity.js';
 import { getEntityType, addEntityType } from '../entities/entity-type-config.js';
 import { getEntityIndex } from '../entities/entity-index.js';
@@ -59,7 +60,7 @@ export async function loadCalConfig(): Promise<CalConfig> {
 }
 
 export async function saveCalConfig(cfg: CalConfig): Promise<void> {
-    const dir = await getVaultDobbiDir();
+    const dir = await getVaultConfigDir();
     await fsPromises.mkdir(dir, { recursive: true });
     const configPath = await getCalConfigPath();
     await fsPromises.writeFile(configPath, JSON.stringify(cfg, null, 2));
@@ -256,8 +257,8 @@ async function syncOneCalendar(
                 await writeEntity(existing.filepath, meta, body);
 
                 if (index.isBuilt) {
-                    const slug = path.basename(existing.filepath, '.md');
-                    await index.addOrUpdate('event', slug, ev.title, existing.filepath);
+                    const eventId = meta.id as string;
+                    await index.addOrUpdate('event', eventId, ev.title, existing.filepath);
                 }
                 updated++;
             } else {
@@ -278,7 +279,7 @@ async function syncOneCalendar(
                 status: 'confirmed',
             };
 
-            const filepath = path.join(eventsDir, `${baseMeta.id}.md`);
+            const filepath = path.join(eventsDir, entityFilename(ev.title, baseMeta.id));
             const body = ev.description || '';
             await writeEntity(filepath, meta, body);
 

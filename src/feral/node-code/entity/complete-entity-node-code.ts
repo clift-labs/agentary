@@ -13,7 +13,7 @@ import { ResultStatus } from '../../result/result.js';
 import type { ConfigurationDescription, ResultDescription } from '../../configuration/configuration-description.js';
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
-import { findEntityByTitle, writeEntity, slugify, type EntityTypeName } from '../../../entities/entity.js';
+import { findEntityByTitle, writeEntity, type EntityTypeName } from '../../../entities/entity.js';
 import { getEntityIndex } from '../../../entities/entity-index.js';
 import { getEmbeddingIndex } from '../../../entities/embedding-index.js';
 
@@ -67,10 +67,10 @@ export class CompleteEntityNodeCode extends AbstractNodeCode {
         // Update entity index
         const index = getEntityIndex();
         if (index.isBuilt) {
-            const slug = slugify(title);
+            const entityId = found.meta.id as string;
             const tags = Array.isArray(found.meta.tags) ? found.meta.tags as string[] : [];
             const summary = (found.meta.summary as string) ?? '';
-            await index.addOrUpdate(entityType, slug, title, found.filepath, tags, summary);
+            await index.addOrUpdate(entityType, entityId, title, found.filepath, tags, summary);
         }
 
         // Update embedding index
@@ -83,11 +83,5 @@ export class CompleteEntityNodeCode extends AbstractNodeCode {
         }
 
         return this.result(ResultStatus.OK, `Marked ${entityType} "${title}" as complete.`);
-    }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
     }
 }

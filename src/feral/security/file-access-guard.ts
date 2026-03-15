@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Restricts NodeCode file operations to allowed directories:
 //   1. The active vault root (and everything under it)
-//   2. ~/.dobbi/ (Dobbi's system configuration directory)
+//   2. ~/.agentary/ (system configuration directory)
 //
 // All NodeCodes that perform file I/O must call assertPathAllowed() before
 // any read/write operation.
@@ -13,13 +13,15 @@ import path from 'path';
 import os from 'os';
 import { findVaultRoot } from '../../state/manager.js';
 
-const DOBBI_SYSTEM_DIR = path.join(os.homedir(), '.dobbi');
+const AGENTARY_SYSTEM_DIR = path.join(os.homedir(), '.agentary');
+/** Legacy path — kept for backward compatibility */
+const LEGACY_SYSTEM_DIR = path.join(os.homedir(), '.dobbi');
 
 export class FileAccessDeniedError extends Error {
     constructor(filePath: string) {
         super(
-            `File access denied: "${filePath}" is outside the vault and ~/.dobbi/. ` +
-            `Feral NodeCodes may only access files within the active vault or the Dobbi system directory.`,
+            `File access denied: "${filePath}" is outside the vault and ~/.agentary/. ` +
+            `Feral NodeCodes may only access files within the active vault or the system directory.`,
         );
         this.name = 'FileAccessDeniedError';
     }
@@ -49,13 +51,15 @@ function isUnder(filePath: string, allowedDir: string): boolean {
  *
  * Allowed directories:
  *   - The active vault root (if one exists)
- *   - ~/.dobbi/ (always allowed for config/state access)
+ *   - ~/.agentary/ (always allowed for config/state access)
+ *   - ~/.dobbi/ (legacy, still allowed for backward compatibility)
  */
 export async function assertPathAllowed(filePath: string): Promise<void> {
     const resolved = resolveAbsolute(filePath);
 
-    // Always allow ~/.dobbi/
-    if (isUnder(resolved, DOBBI_SYSTEM_DIR)) return;
+    // Always allow ~/.agentary/ and legacy ~/.dobbi/
+    if (isUnder(resolved, AGENTARY_SYSTEM_DIR)) return;
+    if (isUnder(resolved, LEGACY_SYSTEM_DIR)) return;
 
     // Allow the vault root (if one is active)
     const vaultRoot = await findVaultRoot();
@@ -71,7 +75,8 @@ export async function assertPathAllowed(filePath: string): Promise<void> {
 export function assertPathAllowedSync(filePath: string, vaultRoot: string | null): void {
     const resolved = resolveAbsolute(filePath);
 
-    if (isUnder(resolved, DOBBI_SYSTEM_DIR)) return;
+    if (isUnder(resolved, AGENTARY_SYSTEM_DIR)) return;
+    if (isUnder(resolved, LEGACY_SYSTEM_DIR)) return;
     if (vaultRoot && isUnder(resolved, vaultRoot)) return;
 
     throw new FileAccessDeniedError(resolved);

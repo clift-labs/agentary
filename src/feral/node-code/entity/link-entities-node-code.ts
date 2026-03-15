@@ -75,8 +75,4 @@ export class LinkEntitiesNodeCode extends AbstractNodeCode {
         context.set('link', { source: `${sourceType}:${source.meta.id}`, target: linkTarget, label });
         return this.result(ResultStatus.OK, `Linked ${sourceType} "${sourceTitle}" → ${targetType} "${targetTitle}" (${label}).`);
     }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => String(context.get(key) ?? ''));
-    }
 }

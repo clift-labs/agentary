@@ -31,7 +31,7 @@ export class PampCatalogSource implements CatalogSource {
                 nodeCodeKey: 'pamp_share_entity',
                 name: 'PAMP Share Entity',
                 group: 'pamp',
-                description: 'Share a vault entity with another Dobbi via PAMP',
+                description: 'Share a vault entity with another agent via PAMP',
             }),
             createCatalogNode({
                 key: 'pamp_await_reply',

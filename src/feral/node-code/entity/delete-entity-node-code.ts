@@ -9,7 +9,7 @@ import { ResultStatus } from '../../result/result.js';
 import type { ConfigurationDescription, ResultDescription } from '../../configuration/configuration-description.js';
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
-import { findEntityByTitle, slugify, trashEntity, type EntityTypeName } from '../../../entities/entity.js';
+import { findEntityByTitle, trashEntity, type EntityTypeName } from '../../../entities/entity.js';
 import { getEntityIndex } from '../../../entities/entity-index.js';
 import { getEmbeddingIndex } from '../../../entities/embedding-index.js';
 
@@ -55,8 +55,7 @@ export class DeleteEntityNodeCode extends AbstractNodeCode {
         // Update entity index incrementally
         const index = getEntityIndex();
         if (index.isBuilt) {
-            const slug = slugify(title);
-            index.remove(entityType, slug);
+            index.remove(entityType, found.meta.id as string);
         }
 
         // Update embedding index
@@ -73,11 +72,5 @@ export class DeleteEntityNodeCode extends AbstractNodeCode {
         });
 
         return this.result(ResultStatus.OK, `Deleted ${entityType} "${title}".`);
-    }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
     }
 }

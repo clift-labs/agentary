@@ -8,7 +8,9 @@ import { ResultStatus } from '../../result/result.js';
 import type { ConfigurationDescription, ResultDescription } from '../../configuration/configuration-description.js';
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
-import { findEntityByTitle, writeEntity, slugify, type EntityTypeName } from '../../../entities/entity.js';
+import { findEntityByTitle, writeEntity, type EntityTypeName } from '../../../entities/entity.js';
+import { getEntityType } from '../../../entities/entity-type-config.js';
+import { validateEntity, formatValidationErrors } from '../../../entities/entity-validator.js';
 import { getEntityIndex } from '../../../entities/entity-index.js';
 import { getEmbeddingIndex } from '../../../entities/embedding-index.js';
 import { generateEntitySummary } from '../../../entities/entity-summary.js';
@@ -50,12 +52,12 @@ export class UpdateEntityNodeCode extends AbstractNodeCode {
             context.set('content', this.interpolate(configBody, context));
         }
 
-        // Bridge patch field values from config → context
-        // e.g. config has patch_fields="status" and status="complete"
+        // Bridge patch field values from config → context.
+        // Config values OVERRIDE context (e.g. when array_iterator spreads stale values).
         if (patchFieldsStr) {
             for (const field of patchFieldsStr.split(',').map(f => f.trim()).filter(Boolean)) {
                 const configVal = this.getOptionalConfigValue(field) as string | null;
-                if (configVal && context.get(field) === undefined) {
+                if (configVal) {
                     context.set(field, this.interpolate(configVal, context));
                 }
             }
@@ -102,6 +104,22 @@ export class UpdateEntityNodeCode extends AbstractNodeCode {
             if (tags) found.meta.tags = tags;
         }
 
+        // Validate only the patched fields against entity type schema
+        const typeConfig = await getEntityType(entityType);
+        if (typeConfig) {
+            const patchedFields = new Set(
+                patchFieldsStr ? patchFieldsStr.split(',').map(f => f.trim()).filter(Boolean) : []
+            );
+            // Also validate content-related fields if content was changed
+            if (newContent !== undefined) patchedFields.add('content');
+            const errors = validateEntity(found.meta, typeConfig, false, patchedFields.size > 0 ? patchedFields : undefined);
+            if (errors.length > 0) {
+                const msg = `Validation failed for ${entityType}: ${formatValidationErrors(errors)}`;
+                context.set('error', msg);
+                return this.result(ResultStatus.ERROR, msg);
+            }
+        }
+
         await writeEntity(found.filepath, found.meta, content);
 
         // Regenerate summary with updated content
@@ -118,9 +136,9 @@ export class UpdateEntityNodeCode extends AbstractNodeCode {
         // Update entity index incrementally
         const index = getEntityIndex();
         if (index.isBuilt) {
-            const slug = slugify(title);
+            const entityId = found.meta.id as string;
             const updatedTags = Array.isArray(found.meta.tags) ? found.meta.tags as string[] : [];
-            await index.addOrUpdate(entityType, slug, title, found.filepath, updatedTags, summary);
+            await index.addOrUpdate(entityType, entityId, title, found.filepath, updatedTags, summary);
         }
 
         // Update embedding index
@@ -132,14 +150,5 @@ export class UpdateEntityNodeCode extends AbstractNodeCode {
         }
 
         return this.result(ResultStatus.OK, `Updated ${entityType} "${title}".`);
-    }
-
-    /**
-     * Replace {key} tokens in a template with context values.
-     */
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
     }
 }

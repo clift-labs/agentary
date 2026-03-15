@@ -9,7 +9,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { generateEntityId, writeEntity, ensureEntityDir } from './entity.js';
+import { generateEntityId, writeEntity, ensureEntityDir, entityFilename } from './entity.js';
 import { getEntityType, type SpawnerConfig, type EntityTypeConfig } from './entity-type-config.js';
 import { getVaultRoot } from '../state/manager.js';
 import { getEntityIndex } from './entity-index.js';
@@ -233,8 +233,7 @@ export async function spawnDateSeries(
 
         const childTitle = interpolateTitlePattern(titlePattern, templateTitle, date);
         const id = generateEntityId(targetTypeConfig.name);
-        const filename = id + '.md';
-        const filepath = path.join(targetDir, filename);
+        const filepath = path.join(targetDir, entityFilename(childTitle, id));
 
         // Build child meta
         const childMeta: Record<string, unknown> = {
@@ -260,9 +259,8 @@ export async function spawnDateSeries(
         // Update entity index incrementally
         const index = getEntityIndex();
         if (index.isBuilt) {
-            const slug = path.basename(filepath, '.md');
             const tags = Array.isArray(childMeta.tags) ? childMeta.tags as string[] : [];
-            await index.addOrUpdate(targetTypeConfig.name, slug, childTitle, filepath, tags);
+            await index.addOrUpdate(targetTypeConfig.name, id, childTitle, filepath, tags);
         }
 
         debug('spawner', `Created ${targetTypeConfig.name}: ${childTitle}`);
@@ -318,8 +316,7 @@ export async function spawnTemplate(
         }
 
         const id = generateEntityId(targetTypeConfig.name);
-        const filename = id + '.md';
-        const filepath = path.join(targetDir, filename);
+        const filepath = path.join(targetDir, entityFilename(child.title, id));
 
         const childMeta: Record<string, unknown> = {
             id,
@@ -341,9 +338,8 @@ export async function spawnTemplate(
 
         const index = getEntityIndex();
         if (index.isBuilt) {
-            const slug = path.basename(filepath, '.md');
             const tags = Array.isArray(childMeta.tags) ? childMeta.tags as string[] : [];
-            await index.addOrUpdate(targetTypeConfig.name, slug, child.title, filepath, tags);
+            await index.addOrUpdate(targetTypeConfig.name, id, child.title, filepath, tags);
         }
 
         debug('spawner', `Spawned ${targetTypeConfig.name}: ${child.title}`);

@@ -2,7 +2,7 @@
 // Feral CCF — Introspect NodeCode
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Lets Feral processes query Dobbi's own configuration without leaking secrets.
+// Lets Feral processes query the agent's own configuration without leaking secrets.
 // The `target` config param selects which slice of settings to load.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ export class IntrospectNodeCode extends AbstractNodeCode {
         super(
             'introspect',
             'Introspect',
-            'Queries Dobbi\'s own configuration — user profile, providers, capabilities, service status, or vault info.',
+            'Queries the agent\'s own configuration — user profile, providers, capabilities, service status, or vault info.',
             NodeCodeCategory.DATA,
         );
     }

@@ -82,13 +82,4 @@ export class PromptInputNodeCode extends AbstractNodeCode {
         context.set(contextPath, trimmed);
         return this.result(ResultStatus.OK, `Stored "${trimmed}" in ${contextPath}`);
     }
-
-    /**
-     * Replace {key} tokens in a template with context values.
-     */
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
-    }
 }

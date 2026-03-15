@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Feral CCF — Dobbi Speak NodeCode
+// Feral CCF — Agent Speak NodeCode
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Context } from '../../context/context.js';
@@ -10,9 +10,9 @@ import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
 import { getResponseWith, type ResponseKey } from '../../../responses.js';
 
-export class DobbiSpeakNodeCode extends AbstractNodeCode {
+export class AgentSpeakNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
-        { key: 'response_key', name: 'Response Key', description: 'Key from the Dobbi response catalog (e.g. greeting, task_saved, error).', type: 'string' },
+        { key: 'response_key', name: 'Response Key', description: 'Key from the response catalog (e.g. greeting, task_saved, error).', type: 'string' },
         { key: 'context_path', name: 'Context Path', description: 'Where to store the rendered message.', type: 'string', default: 'output', isOptional: true },
         { key: 'extra_tokens', name: 'Extra Tokens', description: 'Comma-separated key=context_path mappings for custom token replacement.', type: 'string', isOptional: true },
     ];
@@ -22,7 +22,7 @@ export class DobbiSpeakNodeCode extends AbstractNodeCode {
     ];
 
     constructor() {
-        super('dobbi_speak', 'Dobbi Speak', 'Picks a random response from the catalog, replaces tokens with context values, and stores the result.', NodeCodeCategory.WORK);
+        super('agent_speak', 'Agent Speak', 'Picks a random response from the catalog, replaces tokens with context values, and stores the result.', NodeCodeCategory.WORK);
     }
 
     async process(context: Context): Promise<Result> {
@@ -59,7 +59,12 @@ export class DobbiSpeakNodeCode extends AbstractNodeCode {
             return this.result(ResultStatus.OK, finalMessage);
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
-            return this.result(ResultStatus.ERROR, `Dobbi speak failed for "${responseKey}": ${msg}`);
+            return this.result(ResultStatus.ERROR, `Agent speak failed for "${responseKey}": ${msg}`);
         }
     }
 }
+
+/**
+ * @deprecated Use AgentSpeakNodeCode instead
+ */
+export const DobbiSpeakNodeCode = AgentSpeakNodeCode;

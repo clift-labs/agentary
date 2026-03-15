@@ -62,8 +62,4 @@ export class DeleteEntityTypeNodeCode extends AbstractNodeCode {
         context.set('deleted_type', typeName);
         return this.result(ResultStatus.OK, `Deleted entity type "${typeName}".`);
     }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => String(context.get(key) ?? ''));
-    }
 }

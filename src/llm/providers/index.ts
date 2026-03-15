@@ -18,7 +18,7 @@ export function registerProvider(
 export function getProvider(name: string, modelId?: string): LLMProvider {
     const factory = providers.get(name);
     if (!factory) {
-        throw new Error(`Unknown LLM provider: ${name}. Dobbi doesn't know this one, sir.`);
+        throw new Error(`Unknown LLM provider: ${name}. This provider is not registered.`);
     }
     return factory(modelId);
 }

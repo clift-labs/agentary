@@ -8,20 +8,20 @@ import { getResponse } from '../responses.js';
  * Service management commands.
  */
 export const serviceCommand = new Command('service')
-    .description('Manage the Dobbi background service');
+    .description('Manage the Agentary background service');
 
-// dobbi service start
+// agentaryservice start
 serviceCommand
     .command('start')
-    .description('Start the Dobbi background service')
+    .description('Start the Agentary background service')
     .action(async () => {
-        console.log(chalk.cyan('Starting Dobbi service...'));
+        console.log(chalk.cyan('Starting Agentary service...'));
 
         try {
             const status = await startDaemon();
 
             if (status.running) {
-                console.log(chalk.green('✓ Dobbi service is running'));
+                console.log(chalk.green('✓ Agentary service is running'));
                 console.log(chalk.dim(`  PID: ${status.pid}`));
                 console.log(chalk.dim(`  Socket: ${status.socketPath}`));
                 console.log(chalk.dim(`  Web: http://localhost:3737`));
@@ -33,18 +33,18 @@ serviceCommand
         }
     });
 
-// dobbi service stop
+// agentaryservice stop
 serviceCommand
     .command('stop')
-    .description('Stop the Dobbi background service')
+    .description('Stop the Agentary background service')
     .action(async () => {
-        console.log(chalk.cyan('Stopping Dobbi service...'));
+        console.log(chalk.cyan('Stopping Agentary service...'));
 
         try {
             const status = await stopDaemon();
 
             if (!status.running) {
-                console.log(chalk.green('✓ Dobbi service stopped'));
+                console.log(chalk.green('✓ Agentary service stopped'));
             } else {
                 console.log(chalk.red('✗ Failed to stop service'));
             }
@@ -53,25 +53,25 @@ serviceCommand
         }
     });
 
-// dobbi service restart
+// agentaryservice restart
 serviceCommand
     .command('restart')
-    .description('Restart the Dobbi background service')
+    .description('Restart the Agentary background service')
     .action(async () => {
         try {
             const status = await getDaemonStatus();
 
             if (status.running) {
-                console.log(chalk.cyan('Stopping Dobbi service...'));
+                console.log(chalk.cyan('Stopping Agentary service...'));
                 await stopDaemon();
                 console.log(chalk.green('✓ Stopped'));
             }
 
-            console.log(chalk.cyan('Starting Dobbi service...'));
+            console.log(chalk.cyan('Starting Agentary service...'));
             const newStatus = await startDaemon();
 
             if (newStatus.running) {
-                console.log(chalk.green('✓ Dobbi service is running'));
+                console.log(chalk.green('✓ Agentary service is running'));
                 console.log(chalk.dim(`  PID: ${newStatus.pid}`));
                 console.log(chalk.dim(`  Socket: ${newStatus.socketPath}`));
                 console.log(chalk.dim(`  Web: http://localhost:3737`));
@@ -83,16 +83,16 @@ serviceCommand
         }
     });
 
-// dobbi service status
+// agentaryservice status
 serviceCommand
     .command('status')
-    .description('Check the status of the Dobbi service')
+    .description('Check the status of the Agentary service')
     .action(async () => {
         try {
             const status = await getDaemonStatus();
 
             if (status.running) {
-                console.log(chalk.green('✓ Dobbi service is running'));
+                console.log(chalk.green('✓ Agentary service is running'));
                 console.log(chalk.dim(`  PID: ${status.pid}`));
                 console.log(chalk.dim(`  Socket: ${status.socketPath}`));
 
@@ -115,8 +115,8 @@ serviceCommand
                     // Service running but can't connect — skip details
                 }
             } else {
-                console.log(chalk.yellow('○ Dobbi service is not running'));
-                console.log(chalk.dim('  Start with: dobbi service start'));
+                console.log(chalk.yellow('○ Agentary service is not running'));
+                console.log(chalk.dim('  Start with: agentary service start'));
             }
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error);
@@ -129,7 +129,7 @@ serviceCommand
 export const queueCommand = new Command('queue')
     .description('Manage the task queue');
 
-// dobbi queue size
+// agentaryqueue size
 queueCommand
     .command('size')
     .description('Get the current queue size')
@@ -147,7 +147,7 @@ queueCommand
         }
     });
 
-// dobbi queue status
+// agentaryqueue status
 queueCommand
     .command('status')
     .description('Get detailed queue status')
@@ -180,7 +180,7 @@ queueCommand
         }
     });
 
-// dobbi queue clear
+// agentaryqueue clear
 queueCommand
     .command('clear')
     .description('Clear all pending tasks from the queue')
@@ -206,7 +206,7 @@ queueCommand
         }
     });
 
-// dobbi queue pause
+// agentaryqueue pause
 queueCommand
     .command('pause')
     .description('Pause queue processing')
@@ -224,7 +224,7 @@ queueCommand
         }
     });
 
-// dobbi queue resume
+// agentaryqueue resume
 queueCommand
     .command('resume')
     .description('Resume queue processing')
@@ -248,7 +248,7 @@ queueCommand
 export const indexCommand = new Command('index')
     .description('Manage the entity index and relationship graph');
 
-// dobbi index stats
+// agentaryindex stats
 indexCommand
     .command('stats')
     .description('Show entity index statistics')
@@ -276,7 +276,7 @@ indexCommand
         }
     });
 
-// dobbi index graph
+// agentaryindex graph
 indexCommand
     .command('graph')
     .description('Show all entity relationships')
@@ -303,7 +303,7 @@ indexCommand
         }
     });
 
-// dobbi index neighbors <key>
+// agentaryindex neighbors <key>
 indexCommand
     .command('neighbors <key>')
     .description('Show neighbors of an entity (e.g. "note:my-note" or "person:gary-clift")')
@@ -331,7 +331,7 @@ indexCommand
         }
     });
 
-// dobbi index rebuild
+// agentaryindex rebuild
 indexCommand
     .command('rebuild')
     .description('Rebuild the entity index')

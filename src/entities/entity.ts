@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ENTITY MODEL
-// All records in Dobbi are Entities — markdown files with gray-matter frontmatter.
+// All records are Entities — markdown files with gray-matter frontmatter.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { promises as fs } from 'fs';
@@ -161,13 +161,22 @@ export function generateEntityId(typeName: string): string {
 }
 
 /**
- * Slugify a title into a URL/filename-safe string.
+ * Slugify a title into a URL/filename-safe snake_case string.
  */
 export function slugify(title: string): string {
     return title
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '');
+}
+
+/**
+ * Build a filename for an entity: `{slug}_{id}.md`
+ * e.g. "Fix the Plumbing" + "task-abc123" → "fix_the_plumbing_task-abc123.md"
+ */
+export function entityFilename(title: string, id: string): string {
+    const slug = slugify(title);
+    return `${slug}_${id}.md`;
 }
 
 /**
@@ -199,7 +208,7 @@ export async function getEntityDir(entityType: EntityTypeName): Promise<string> 
     const vaultRoot = await getVaultRoot();
     const typeConfig = await getEntityType(entityType);
     if (!typeConfig) {
-        throw new Error(`Unknown entity type: "${entityType}". Check ~/.dobbi/entity-types.json.`);
+        throw new Error(`Unknown entity type: "${entityType}". Check ~/.agentary/entity-types.json.`);
     }
     return path.join(vaultRoot, typeConfig.directory);
 }
@@ -257,7 +266,7 @@ export async function trashEntity(filepath: string): Promise<string> {
     const trashRoot = path.join(vaultRoot, '.trash');
 
     // Derive the entity subdirectory from the filepath
-    // e.g. ~/.dobbi/projects/work/todos/foo.md → todos
+    // e.g. ~/.agentary/projects/work/todos/foo.md → todos
     const parentDir = path.basename(path.dirname(filepath));
     const trashDir = path.join(trashRoot, parentDir);
 

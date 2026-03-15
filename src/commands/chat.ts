@@ -20,7 +20,7 @@ import { bootstrapFeral } from '../feral/bootstrap.js';
 import { hydrateProcessFromString } from '../feral/process/process-json-hydrator.js';
 import type { ProcessSource } from '../feral/process/process-factory.js';
 import type { Process } from '../feral/process/process.js';
-import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createSystemPrompt } from '../llm/router.js';
 import { debug } from '../utils/debug.js';
 import { ChatLogger, generateChatId } from '../utils/chat-logger.js';
 import { parseJsonResponse } from '../utils/json-parser.js';
@@ -141,7 +141,7 @@ const EXAMPLE_PROCESSES = [
         },
     },
     {
-        description: 'Create a new content type for something Dobbi doesn\'t track yet',
+        description: 'Create a new content type for something not yet tracked',
         json: {
             schema_version: 1,
             key: 'type.create',
@@ -190,7 +190,7 @@ export async function feralChatHeadless(
     // Fire the chat ID callback immediately so callers can display/send it
     onChatId?.(chatId);
 
-    status('Dobbi is thinking…');
+    status('Thinking…');
 
     try { return await _feralChatHeadlessInner(userInput, status, onProcess, onQuestion, logger, chatId); }
     catch (error) {
@@ -273,7 +273,7 @@ If custom: { "action": "custom", "reasoning": "why no existing process fits" }
 Return ONLY the JSON object, no markdown fences.`,
             }],
             {
-                systemPrompt: 'You are the process matcher for Dobbi. Determine if an existing reusable process can handle the user\'s request. Be conservative — only reuse if the process clearly fits. Better to build custom than force-fit.',
+                systemPrompt: 'You are the process matcher for Agentary. Determine if an existing reusable process can handle the user\'s request. Be conservative — only reuse if the process clearly fits. Better to build custom than force-fit.',
                 temperature: 0.2,
             },
         );
@@ -364,8 +364,8 @@ Return ONLY the JSON object, no markdown fences.`,
 GLOBAL VARIABLES:
 ${globalsBlock}
 
-${vaultContext ? `VAULT CONTEXT (from .socks.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}DOBBI'S ENTITY TYPES:
-Dobbi manages these entity types. When the user mentions something that maps to an entity, prefer creating it:
+${vaultContext ? `VAULT CONTEXT (from .socks.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}ENTITY TYPES:
+The agent manages these entity types. When the user mentions something that maps to an entity, prefer creating it:
 ${entityTypes.map(t => {
     const fieldDesc = t.fields.length > 0
         ? ` Fields: ${t.fields.map(f => `${f.key}${f.type === 'enum' && f.values ? ` (${f.values.join('|')})` : ''}`).join(', ')}.`
@@ -397,7 +397,7 @@ IMPORTANT RULES:
 - Always include "start" and "stop" in your selection
 - The "llm_chat" node sends a prompt to an LLM. It supports {context_key} interpolation in prompts
 - Only select nodes that are directly useful for fulfilling the user's request
-- Prefer entity nodes (list_*, find_*, create_*, complete_*) for data operations — Dobbi acts, not just advises
+- Prefer entity nodes (list_*, find_*, create_*, complete_*) for data operations — act, don't just advise
 - Prefer system nodes (get_time, get_date, etc.) for system information
 - When the user wants to CREATE something, use the create_* nodes — don't just use llm_chat to give advice
 - When the user wants to mark something as done/complete, use complete_* nodes (e.g. complete_task)
@@ -416,7 +416,7 @@ Return a JSON object with this exact structure:
 Return ONLY the JSON object, no markdown fences.`,
         }],
         {
-            systemPrompt: 'You are the reasoning engine for Dobbi, a Personal Digital Agent. Dobbi manages a vault of linked content (tasks, events, notes, goals, people, etc.) stored as Markdown files. Content can be linked in a knowledge graph. Your job is to select the minimal set of catalog nodes to fulfill the user\'s request. Always include "start" and "stop". Prefer creating concrete entities over giving advice. Look for opportunities to link related content.',
+            systemPrompt: 'You are the reasoning engine for Agentary, a Personal Digital Agent. It manages a vault of linked content (tasks, events, notes, goals, people, etc.) stored as Markdown files. Content can be linked in a knowledge graph. Your job is to select the minimal set of catalog nodes to fulfill the user\'s request. Always include "start" and "stop". Prefer creating concrete entities over giving advice. Look for opportunities to link related content.',
             temperature: 0.3,
         },
     );
@@ -594,7 +594,7 @@ IMPORTANT: Keep "reasoning" to ONE sentence. The process JSON is what matters.
 Return ONLY the JSON object, no markdown fences.`,
             }],
             {
-                systemPrompt: 'You are the process designer for Dobbi, a Personal Digital Agent that manages a vault of linked content. Generate a valid process JSON that solves the user\'s request using the provided catalog nodes. The process executes immediately — create real entities, set real values, link real content. Be precise with catalog_node_key values — they must match exactly. Prefer action over advice.',
+                systemPrompt: 'You are the process designer for Agentary, a Personal Digital Agent that manages a vault of linked content. Generate a valid process JSON that solves the user\'s request using the provided catalog nodes. The process executes immediately — create real entities, set real values, link real content. Be precise with catalog_node_key values — they must match exactly. Prefer action over advice.',
                 temperature: 0.3,
                 maxTokens: 16384,
             },
@@ -692,7 +692,7 @@ If MORE WORK NEEDED: { "status": "more_work", "remaining": "Description of what 
 Return ONLY the JSON object, no markdown fences.`,
                 }],
                 {
-                    systemPrompt: 'You are a task completion checker for Dobbi, a Personal Digital Agent. Be thorough — if the user asked for multiple things (e.g., create a goal AND avoid pizza), make sure ALL parts have been addressed. Also check: should any entities be linked together? Was anything implied but not explicitly created?',
+                    systemPrompt: 'You are a task completion checker for Agentary, a Personal Digital Agent. Be thorough — if the user asked for multiple things (e.g., create a goal AND avoid pizza), make sure ALL parts have been addressed. Also check: should any entities be linked together? Was anything implied but not explicitly created?',
                     temperature: 0.2,
                 },
             );
@@ -767,7 +767,7 @@ async function synthesizeResponse(
 ): Promise<string> {
     const synthesisPrompt = `The user said: "${userInput}"
 
-WHAT DOBBI DID:
+WHAT WAS DONE:
 Reasoning: ${reasoning}
 
 ${results.length} process step(s) executed.
@@ -788,7 +788,7 @@ RESPONSE GUIDELINES:
     const response = await llm.chat(
         [{ role: 'user' as const, content: synthesisPrompt }],
         {
-            systemPrompt: createDobbiSystemPrompt(vaultContext || ''),
+            systemPrompt: createSystemPrompt(vaultContext || ''),
             temperature: 0.7,
         },
     );
@@ -801,7 +801,7 @@ RESPONSE GUIDELINES:
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function feralChat(userInput: string): Promise<void> {
-    const spinner = ora({ text: chalk.dim('Dobbi is thinking…'), color: 'cyan' }).start();
+    const spinner = ora({ text: chalk.dim('Thinking…'), color: 'cyan' }).start();
 
     try {
         const response = await feralChatHeadless(
@@ -809,7 +809,7 @@ export async function feralChat(userInput: string): Promise<void> {
             (s) => { spinner.text = chalk.dim(s); },
             undefined,
             undefined,
-            (chatId) => { spinner.text = chalk.dim(`[${chatId}] Dobbi is thinking…`); },
+            (chatId) => { spinner.text = chalk.dim(`[${chatId}] Thinking…`); },
         );
 
         spinner.stop();
@@ -819,10 +819,10 @@ export async function feralChat(userInput: string): Promise<void> {
         const msg = error instanceof Error ? error.message : String(error);
         debug('chat', `Autonomous chat failed: ${msg}`);
         if (msg.includes('credit balance') || msg.includes('too low') || msg.includes('billing')) {
-            console.log(chalk.red('\n  Dobbi\'s AI provider is out of credits.'));
+            console.log(chalk.red('\n  The AI provider is out of credits.'));
             console.log(chalk.dim('  Top up at: https://console.anthropic.com/settings/billing\n'));
         } else {
-            console.log(chalk.yellow(`\n  Hmm, Dobbi tried to think about that but got confused: ${msg}`));
+            console.log(chalk.yellow(`\n  Hmm, something went wrong: ${msg}`));
             console.log(chalk.dim('  Try rephrasing, or use a specific command like "todo", "note", "today".\n'));
         }
     }

@@ -19,14 +19,14 @@ import {
 } from '../pamp/storage.js';
 
 export const pampCommand = new Command('pamp')
-    .description('PAMP messaging — exchange encrypted messages with other Dobbi instances');
+    .description('PAMP messaging — exchange encrypted messages with other Agentary instances');
 
 // Default action — show status if set up, otherwise hint at setup
 pampCommand
     .action(async () => {
         const identity = await loadIdentity();
         if (!identity) {
-            console.log(chalk.yellow(`PAMP not set up yet. Run ${chalk.bold('dobbi pamp setup')} to register a mailbox.`));
+            console.log(chalk.yellow(`PAMP not set up yet. Run ${chalk.bold('agentary pamp setup')} to register a mailbox.`));
             return;
         }
         // Delegate to status
@@ -46,7 +46,7 @@ pampCommand
         const existing = await loadIdentity();
         if (existing) {
             console.log(chalk.yellow(`Already registered as ${chalk.bold(existing.address)}, ${hon}.`));
-            console.log(chalk.gray('To re-register, remove ~/.dobbi/pamp/identity.json first.'));
+            console.log(chalk.gray('To re-register, remove ~/.agentary/pamp/identity.json first.'));
             return;
         }
 
@@ -56,7 +56,7 @@ pampCommand
                 type: 'input',
                 name: 'postOffice',
                 message: 'Post Office URL:',
-                default: 'https://relay.dobbi.dev',
+                default: 'https://relay.agentary.dev',
             }]);
             postOffice = answers.postOffice;
         }
@@ -68,7 +68,7 @@ pampCommand
                 type: 'input',
                 name: 'displayName',
                 message: 'Display name:',
-                default: `${userName}'s Dobbi`,
+                default: `${userName}'s Agent`,
             }]);
             displayName = answers.displayName;
         }

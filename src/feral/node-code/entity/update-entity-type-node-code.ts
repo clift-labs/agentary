@@ -29,7 +29,7 @@ import { getModelForCapability } from '../../../llm/router.js';
 
 const NOT_FOUND = 'not_found';
 
-const SYSTEM_PROMPT = `You are a data modelling assistant for a personal knowledge-management CLI called Dobbi.
+const SYSTEM_PROMPT = `You are a data modelling assistant for a personal knowledge-management CLI called Agentary.
 You will be given the current JSON schema for an entity type and a description of requested changes.
 Apply the changes and return the complete updated schema as a JSON object.
 
@@ -149,9 +149,5 @@ export class UpdateEntityTypeNodeCode extends AbstractNodeCode {
 
         context.set('entity_type', updated);
         return this.result(ResultStatus.OK, `Updated entity type "${typeName}" — now has ${updated.fields.length} field(s).`);
-    }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => String(context.get(key) ?? ''));
     }
 }

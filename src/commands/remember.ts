@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { getVaultRoot } from '../state/manager.js';
 import { getContextString } from '../context/reader.js';
-import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createSystemPrompt } from '../llm/router.js';
 import { appendToMarkdown } from '../markdown/parser.js';
 import { getResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
@@ -27,7 +27,7 @@ export const rememberCommand = new Command('remember')
                 // Try to use AI to format the note
                 const context = await getContextString(vaultRoot);
                 const llm = await getModelForCapability('format');
-                const systemPrompt = createDobbiSystemPrompt(context);
+                const systemPrompt = createSystemPrompt(context);
 
                 const prompt = `The user wants to remember the following. Format it nicely as a markdown note with an appropriate heading. Keep it concise but clear. Add relevant tags if appropriate.
 
@@ -57,7 +57,7 @@ Format the response as markdown that can be appended to an existing document.`;
                 console.log(chalk.gray(formattedNote));
 
             } catch (err) {
-                console.debug('[dobbi:commands:remember]', err);
+                console.debug('[agentary:commands:remember]', err);
                 spinner.stop();
 
                 // Fall back to simple append without AI
@@ -72,8 +72,8 @@ Format the response as markdown that can be appended to an existing document.`;
                     await fs.writeFile(targetPath, simpleNote);
                 }
 
-                console.log(chalk.green('✓ Dobbi has noted that, sir!'));
-                console.log(chalk.gray('(Configure AI with `dobbi config add-provider anthropic` for smart formatting)'));
+                console.log(chalk.green('✓ Noted!'));
+                console.log(chalk.gray('(Configure AI with `agentary config add-provider anthropic` for smart formatting)'));
             }
 
         } catch (error) {

@@ -1,17 +1,17 @@
 /**
- * Centralized debug logger for Dobbi.
+ * Centralized debug logger.
  *
  * By default logs only the error message (single line).
- * Set DOBBI_DEBUG=1 to get full stack traces for troubleshooting.
+ * Set AGENTARY_DEBUG=1 (or legacy DOBBI_DEBUG=1) to get full stack traces.
  */
 
-const VERBOSE = process.env.DOBBI_DEBUG === '1';
+const VERBOSE = process.env.AGENTARY_DEBUG === '1' || process.env.DOBBI_DEBUG === '1';
 
 /**
  * Log a debug/error message in a compact, user-friendly format.
  *
- * In normal mode: `[dobbi:config] ENOENT: no such file or directory, open '...'`
- * In debug mode:  full stack trace (DOBBI_DEBUG=1)
+ * In normal mode: `[agentary:config] ENOENT: no such file or directory, open '...'`
+ * In debug mode:  full stack trace (AGENTARY_DEBUG=1)
  */
 export function debug(tag: string, err: unknown): void {
     if (VERBOSE) {

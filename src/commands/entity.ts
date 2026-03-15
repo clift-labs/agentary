@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic Entity CRUD Command
-// Handles any user-defined entity type: `dobbi entity <type> [list|add|remove|show]`
+// Handles any user-defined entity type: `agentary entity <type> [list|add|remove|show]`
 // The shell maps `car add` → `entity car add` automatically.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -17,6 +17,7 @@ import {
     findEntityByTitle,
     trashEntity,
     listEntities,
+    entityFilename,
 } from '../entities/entity.js';
 import { getEntityIndex } from '../entities/entity-index.js';
 
@@ -71,7 +72,7 @@ async function addEntity(typeName: string, titleArg?: string): Promise<void> {
     const typeConfig = await getEntityType(typeName);
     if (!typeConfig) {
         console.log(chalk.red(`\n  Unknown entity type: "${typeName}"`));
-        console.log(chalk.gray('  Run: dobbi type list'));
+        console.log(chalk.gray('  Run: agentary type list'));
         return;
     }
 
@@ -113,7 +114,7 @@ async function addEntity(typeName: string, titleArg?: string): Promise<void> {
     const dir = await ensureEntityDir(typeName);
     const meta = createEntityMeta(typeName, title!, { tags: typeConfig.defaultTags ?? [typeName] });
     const id = meta.id;
-    const filepath = path.join(dir, `${id}.md`);
+    const filepath = path.join(dir, entityFilename(title!, id));
 
     const fullMeta: Record<string, unknown> = { ...meta, ...fieldValues };
     await writeEntity(filepath, fullMeta, '');

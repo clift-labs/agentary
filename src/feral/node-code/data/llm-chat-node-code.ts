@@ -110,13 +110,4 @@ export class LlmChatNodeCode extends AbstractNodeCode {
             return this.result(ResultStatus.ERROR, `LLM (${capability}) failed: ${message}`);
         }
     }
-
-    /**
-     * Replace {key} tokens in a template with context values.
-     */
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
-    }
 }

@@ -81,8 +81,4 @@ export class SetEntityFieldNodeCode extends AbstractNodeCode {
 
         return this.result(ResultStatus.OK, `Set ${entityType} "${title}" ${field} = ${value}.`);
     }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => String(context.get(key) ?? ''));
-    }
 }

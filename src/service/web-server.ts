@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Web Server — HTTP + WebSocket for the Dobbi browser client
+// Web Server — HTTP + WebSocket for the Agentary browser client
 // ─────────────────────────────────────────────────────────────────────────────
 
 import http from 'http';
@@ -11,8 +11,9 @@ import { listEntities, writeEntity, parseEntity, getEntityDir } from '../entitie
 import { feralChatHeadless } from '../commands/chat.js';
 import { getQueueManager } from './queue/manager.js';
 import { getEntityIndex } from '../entities/entity-index.js';
-import { getVaultRoot } from '../state/manager.js';
+import { getVaultRoot, getAgentName } from '../state/manager.js';
 import { getCronScheduler, loadCronConfig, saveCronConfig } from './cron/scheduler.js';
+import { loadCalConfig } from '../commands/cal.js';
 import { handleApiRoute } from './api-router.js';
 import { debug } from '../utils/debug.js';
 
@@ -104,7 +105,14 @@ export class WebServer {
             if (handled) return;
         }
 
-        // ── Convenience endpoints (legacy) ───────────────────────────
+        // ── Convenience endpoints ─────────────────────────────────────
+
+        if (req.method === 'GET' && url.pathname === '/api/calendars') {
+            const cfg = await loadCalConfig();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(cfg.calendars.map(c => ({ id: c.id, name: c.name }))));
+            return;
+        }
 
         if (req.method === 'GET' && url.pathname === '/api/today') {
             const tasks = await this.getTodayTasks();
@@ -266,7 +274,7 @@ export class WebServer {
             }
 
             // If the chat likely mutated entities, tell clients to refresh
-            const mutationKeywords = /creat|add|delet|remov|updat|done|complet|set /i;
+            const mutationKeywords = /creat|add|delet|remov|updat|done|complet|set |sync|import|mov|schedul/i;
             if (mutationKeywords.test(message)) {
                 this.broadcast('today');
                 this.broadcast('calendar');
@@ -368,11 +376,19 @@ export class WebServer {
             // No vault
         }
 
+        let agentName = 'Agent';
+        try {
+            agentName = await getAgentName();
+        } catch {
+            // default
+        }
+
         return {
             uptime: Math.round(process.uptime()),
             queueSize,
             graph: { nodes: graphNodes, edges: graphEdges },
             vaultRoot,
+            agentName,
             memory: {
                 rss: Math.round(mem.rss / 1024 / 1024),
                 heapUsed: Math.round(mem.heapUsed / 1024 / 1024),

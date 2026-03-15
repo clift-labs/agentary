@@ -15,8 +15,11 @@ import {
     ensureEntityDir,
     findEntityByTitle,
     writeEntity,
+    entityFilename,
     type EntityTypeName,
 } from '../../../entities/entity.js';
+import { getEntityType } from '../../../entities/entity-type-config.js';
+import { validateEntity, formatValidationErrors } from '../../../entities/entity-validator.js';
 import { getEntityIndex } from '../../../entities/entity-index.js';
 import { getEmbeddingIndex } from '../../../entities/embedding-index.js';
 import { generateEntitySummary } from '../../../entities/entity-summary.js';
@@ -83,7 +86,7 @@ export class CreateEntityNodeCode extends AbstractNodeCode {
         const dir = await ensureEntityDir(entityType);
         const entityMeta = createEntityMeta(entityType, title, { tags });
         const id = entityMeta.id;
-        const filepath = path.join(dir, `${id}.md`);
+        const filepath = path.join(dir, entityFilename(title, id));
 
         const meta: Record<string, unknown> = { ...entityMeta };
 
@@ -94,6 +97,17 @@ export class CreateEntityNodeCode extends AbstractNodeCode {
                 if (val !== undefined) {
                     meta[field] = val;
                 }
+            }
+        }
+
+        // Validate fields against entity type schema
+        const typeConfig = await getEntityType(entityType);
+        if (typeConfig) {
+            const errors = validateEntity(meta, typeConfig, true);
+            if (errors.length > 0) {
+                const msg = `Validation failed for ${entityType}: ${formatValidationErrors(errors)}`;
+                context.set('error', msg);
+                return this.result(ResultStatus.ERROR, msg);
             }
         }
 
@@ -120,14 +134,5 @@ export class CreateEntityNodeCode extends AbstractNodeCode {
         }
 
         return this.result(ResultStatus.OK, `Created ${entityType} "${title}" at ${filepath}.`);
-    }
-
-    /**
-     * Replace {key} tokens in a template with context values.
-     */
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
     }
 }

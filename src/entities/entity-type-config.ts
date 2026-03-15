@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ENTITY TYPE CONFIG
-// Loads entity type definitions from {vault}/.dobbi/entity-types.json.
+// Loads entity type definitions from {vault}/.agentary/entity-types.json.
 // Falls back to built-in defaults if the file doesn't exist.
 // Users can add, modify, or extend entity types by editing the JSON file.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -8,7 +8,7 @@
 import { promises as fs } from 'fs';
 import { DEFAULT_ENTITY_TYPES, BUILT_IN_TYPE_NAMES } from './entity-types-defaults.js';
 import { debug } from '../utils/debug.js';
-import { getEntityTypesPath, getVaultDobbiDir } from '../paths.js';
+import { getEntityTypesPath, getVaultConfigDir } from '../paths.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -108,7 +108,7 @@ export async function loadEntityTypes(): Promise<EntityTypeConfig[]> {
  * Save entity type configs to the vault file.
  */
 export async function saveEntityTypes(types: EntityTypeConfig[]): Promise<void> {
-    const dir = await getVaultDobbiDir();
+    const dir = await getVaultConfigDir();
     await fs.mkdir(dir, { recursive: true });
     const typesPath = await getEntityTypesPath();
     const file: EntityTypesFile = { version: 1, entityTypes: types };

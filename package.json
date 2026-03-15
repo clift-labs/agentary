@@ -1,14 +1,14 @@
 {
-  "name": "dobbi",
-  "version": "3.0.10",
-  "description": "An AI-powered Personal Assistant",
+  "name": "agentary",
+  "version": "4.0.0",
+  "description": "An AI-powered Personal Assistant with configurable personalities",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
   },
   "main": "dist/index.js",
   "bin": {
-    "dobbi": "./dist/index.js"
+    "agentary": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -27,12 +27,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/clift-labs/dobbi.git"
+    "url": "https://github.com/clift-labs/agentary.git"
   },
   "license": "MIT",
   "scripts": {
     "prepublishOnly": "npm run build",
-    "build": "tsc && cp src/dobbi.txt dist/dobbi.txt && cp src/service/web-client.html dist/service/web-client.html",
+    "build": "tsc && cp src/agentary.txt dist/agentary.txt && cp src/service/web-client.html dist/service/web-client.html",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run --exclude='tests/integration/**'",

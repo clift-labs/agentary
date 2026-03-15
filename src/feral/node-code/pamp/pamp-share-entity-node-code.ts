@@ -24,7 +24,7 @@ export class PampShareEntityNodeCode extends AbstractNodeCode {
     ];
 
     constructor() {
-        super('pamp_share_entity', 'PAMP Share Entity', 'Share a vault entity with another Dobbi via PAMP.', NodeCodeCategory.DATA);
+        super('pamp_share_entity', 'PAMP Share Entity', 'Share a vault entity with another agent via PAMP.', NodeCodeCategory.DATA);
     }
 
     async process(context: Context): Promise<Result> {

@@ -4,7 +4,7 @@ import { debug } from '../utils/debug.js';
 import { findVaultRoot } from '../state/manager.js';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
-import { SYSTEM_DIR, PID_FILE, SOCKET_PATH, getDaemonLogPath, getVaultDobbiDir } from '../paths.js';
+import { SYSTEM_DIR, PID_FILE, SOCKET_PATH, getDaemonLogPath, getVaultConfigDir } from '../paths.js';
 
 export interface DaemonStatus {
     running: boolean;
@@ -13,12 +13,12 @@ export interface DaemonStatus {
 }
 
 /**
- * Ensures the .dobbi directory exists.
+ * Ensures the system directory exists.
  */
 async function ensureDirs(): Promise<void> {
     await fs.mkdir(SYSTEM_DIR, { recursive: true });
-    const vaultDobbiDir = await getVaultDobbiDir();
-    await fs.mkdir(vaultDobbiDir, { recursive: true });
+    const vaultConfigDir = await getVaultConfigDir();
+    await fs.mkdir(vaultConfigDir, { recursive: true });
 }
 
 /**
@@ -126,7 +126,7 @@ export async function startDaemon(): Promise<DaemonStatus> {
     }
 
     // Start the service process.
-    // DOBBI_SERVICE=1 triggers `service/index.ts` to boot the daemon.
+    // AGENTARY_SERVICE=1 triggers `service/index.ts` to boot the daemon.
     const entryScript = path.join(import.meta.dirname, '..', 'index.js');
 
     const logFile = await getDaemonLogPath();
@@ -137,10 +137,10 @@ export async function startDaemon(): Promise<DaemonStatus> {
     const vaultRoot = await findVaultRoot();
     const childEnv: Record<string, string> = {
         ...process.env as Record<string, string>,
-        DOBBI_SERVICE: '1',
+        AGENTARY_SERVICE: '1',
     };
     if (vaultRoot) {
-        childEnv.DOBBI_VAULT = vaultRoot;
+        childEnv.AGENTARY_VAULT = vaultRoot;
     }
 
     const child = spawn('node', [entryScript], {

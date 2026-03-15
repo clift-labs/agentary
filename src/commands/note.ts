@@ -6,14 +6,14 @@ import path from 'path';
 import matter from 'gray-matter';
 import { getVaultRoot } from '../state/manager.js';
 import { getEnrichedContext } from '../context/reader.js';
-import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, noteHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
 import { getEntityIndex } from '../entities/entity-index.js';
-import { findEntityByTitle, trashEntity, generateEntityId } from '../entities/entity.js';
+import { findEntityByTitle, trashEntity, generateEntityId, entityFilename } from '../entities/entity.js';
 
 interface NoteState {
     title: string;
@@ -37,7 +37,7 @@ async function reviewNote(state: NoteState): Promise<string> {
 
     const context = await getEnrichedContext('notes', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -56,7 +56,7 @@ async function generateQuestions(state: NoteState): Promise<string[]> {
 
     const context = await getEnrichedContext('notes', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -80,7 +80,7 @@ async function modifyNote(state: NoteState, feedback: string): Promise<string> {
 
     const context = await getEnrichedContext('notes', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -105,7 +105,7 @@ async function formatAsMarkdown(state: NoteState): Promise<string> {
     try {
         const context = await getEnrichedContext('notes', state.content);
         const llm = await getModelForCapability('format');
-        const systemPrompt = createDobbiSystemPrompt(context);
+        const systemPrompt = createSystemPrompt(context);
 
         const response = await llm.chat([
             {
@@ -152,9 +152,14 @@ async function saveNote(state: NoteState, formatContent: boolean = true): Promis
 
     // Use existing filepath or create new one
     let filepath = state.filepath;
-    const entityId = filepath ? path.basename(filepath, '.md') : generateEntityId('note');
-    if (!filepath) {
-        filepath = path.join(notesDir, `${entityId}.md`);
+    let entityId: string;
+    if (filepath) {
+        const raw = await fs.readFile(filepath, 'utf-8');
+        const parsed = matter(raw);
+        entityId = (parsed.data.id as string) ?? path.basename(filepath, '.md');
+    } else {
+        entityId = generateEntityId('note');
+        filepath = path.join(notesDir, entityFilename(state.title, entityId));
     }
 
     // Format content as markdown if requested
@@ -180,8 +185,7 @@ ${finalContent}
     // Update entity index
     const index = getEntityIndex();
     if (index.isBuilt) {
-        const slug = path.basename(filepath, '.md');
-        await index.addOrUpdate('note', slug, state.title, filepath);
+        await index.addOrUpdate('note', entityId, state.title, filepath);
     }
 
     return filepath;
@@ -202,7 +206,7 @@ async function generateDiagram(state: NoteState, diagramType: DiagramType): Prom
 
     const context = await getEnrichedContext('notes', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const diagramInstructions: Record<DiagramType, string> = {
         flowchart: `Create a mermaid flowchart diagram that visualizes the process or flow described in the note. Use:
@@ -266,7 +270,7 @@ Commands:
   ${chalk.bold('exit')}       - Save and go back
   ${chalk.bold('back')}       - Save and go back
   ${chalk.bold('abort')}      - Discard changes and go back
-  ${chalk.bold('quit')}       - Quit Dobbi entirely
+  ${chalk.bold('quit')}       - Quit entirely
   ${chalk.bold('help')}       - Show this help
 `));
 }
@@ -276,13 +280,13 @@ export const noteCommand = new Command('note')
     .argument('[words...]', 'Title and optional inline body (e.g. "my-idea Use the Ferral CCI system")')
     .action(async (words: string[]) => {
         try {
-            // Handle: dobbi note list
+            // Handle: note list
             if (words[0] === 'list') {
                 await listEntities('notes');
                 return;
             }
 
-            // Handle: dobbi note remove <title>
+            // Handle: note remove <title>
             if (words[0] === 'remove' || words[0] === 'delete') {
                 const removeTitle = words.slice(1).join(' ');
                 if (!removeTitle) {
@@ -297,8 +301,7 @@ export const noteCommand = new Command('note')
                 const trashPath = await trashEntity(found.filepath);
                 const idx = getEntityIndex();
                 if (idx.isBuilt) {
-                    const slug = path.basename(found.filepath, '.md');
-                    idx.remove('note', slug);
+                    idx.remove('note', found.meta.id as string);
                 }
                 console.log(chalk.green(`\n  🗑  Moved to trash: ${found.meta.title}`));
                 console.log(chalk.gray(`    ${trashPath}\n`));
@@ -315,7 +318,7 @@ export const noteCommand = new Command('note')
                     {
                         type: 'input',
                         name: 'noteTitle',
-                        message: 'What shall Dobbi call this note, sir?',
+                        message: 'What should this note be called?',
                         validate: (input: string) => input.length > 0 || 'Title is required',
                     },
                 ]);
@@ -430,7 +433,7 @@ export const noteCommand = new Command('note')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbi notices unsaved work, sir. Discard changes?',
+                                message: 'There is unsaved work. Discard changes?',
                                 default: false,
                             },
                         ]);
@@ -447,7 +450,7 @@ export const noteCommand = new Command('note')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbi notices unsaved work, sir. Quit Dobbi entirely?',
+                                message: 'There is unsaved work. Quit entirely?',
                                 default: false,
                             },
                         ]);
@@ -492,7 +495,7 @@ export const noteCommand = new Command('note')
                                 {
                                     type: 'list',
                                     name: 'selectedType',
-                                    message: 'What type of diagram shall Dobbi create?',
+                                    message: 'What type of diagram should be created?',
                                     choices: [
                                         { name: 'Flowchart - Process or workflow visualization', value: 'flowchart' },
                                         { name: 'Class - Entities and relationships', value: 'class' },
@@ -520,7 +523,7 @@ export const noteCommand = new Command('note')
                                 {
                                     type: 'input',
                                     name: 'feedback',
-                                    message: 'How should Dobbi modify the note?',
+                                    message: 'How should the note be modified?',
                                 },
                             ]);
                             if (feedback) {

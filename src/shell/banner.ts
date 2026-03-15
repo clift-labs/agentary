@@ -1,8 +1,8 @@
 /**
- * Startup banner for the Dobbi interactive shell.
+ * Startup banner for the Agentary interactive shell.
  *
  * Displays ASCII art, a randomised greeting, and current state
- * (service, project, vault) every time the shell boots.
+ * (service, vault) every time the shell boots.
  */
 
 import { promises as fs } from 'fs';
@@ -10,19 +10,18 @@ import path from 'path';
 import chalk from 'chalk';
 import { getResponse } from '../responses.js';
 import { getDaemonStatus } from '../service/daemon.js';
-import { findVaultRoot } from '../state/manager.js';
+import { findVaultRoot, getAgentName } from '../state/manager.js';
 
 /**
- * Load the ASCII art from dobbi.txt (bundled alongside the source).
+ * Load the ASCII art from agentary.txt (bundled alongside the source).
  */
 async function loadAsciiArt(): Promise<string> {
-    // In dev mode, read from disk
     try {
-        const artPath = path.join(import.meta.dirname, '..', 'dobbi.txt');
+        const artPath = path.join(import.meta.dirname, '..', 'agentary.txt');
         return await fs.readFile(artPath, 'utf-8');
     } catch {
-        // Fallback if the file cannot be found (e.g. in a binary bundle)
-        return '🤖 Dobbi';
+        // Fallback if the file cannot be found
+        return '🤖 Agentary';
     }
 }
 
@@ -32,15 +31,18 @@ async function loadAsciiArt(): Promise<string> {
 async function gatherState(): Promise<{
     serviceRunning: boolean;
     vault: string | null;
+    agentName: string;
 }> {
-    const [daemon, vault] = await Promise.all([
+    const [daemon, vault, agentName] = await Promise.all([
         getDaemonStatus().catch(() => ({ running: false })),
         findVaultRoot().catch(() => null),
+        getAgentName().catch(() => 'Agent'),
     ]);
 
     return {
         serviceRunning: daemon.running,
         vault,
+        agentName,
     };
 }
 
@@ -69,7 +71,7 @@ export async function printStartupBanner(): Promise<void> {
 
     const vaultLabel = state.vault
         ? chalk.white(`🏠 ${path.basename(state.vault)}`)
-        : chalk.yellow('🏠 no vault (run dobbi init)');
+        : chalk.yellow('🏠 no vault (run agentary init)');
 
     console.log(`  ${serviceIcon}  │  ${vaultLabel}`);
     console.log(chalk.gray('  Tab-complete commands • Up/Down for history • Type "exit" or Ctrl+D to leave\n'));

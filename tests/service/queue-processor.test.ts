@@ -37,6 +37,7 @@ vi.mock('../../src/llm/router.js', () => ({
     getModelForCapability: vi.fn().mockReturnValue({
         chat: vi.fn().mockResolvedValue('mock response'),
     }),
+    createSystemPrompt: vi.fn().mockReturnValue('system prompt'),
     createDobbiSystemPrompt: vi.fn().mockReturnValue('system prompt'),
 }));
 

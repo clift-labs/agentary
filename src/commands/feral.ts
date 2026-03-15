@@ -62,7 +62,7 @@ feralCommand
                 console.log('');
             } catch {
                 console.log(chalk.red(`\n  NodeCode "${key}" not found.\n`));
-                console.log(chalk.gray('  Run `dobbi feral nodes` to see all available NodeCodes.\n'));
+                console.log(chalk.gray('  Run `agentary feral nodes` to see all available NodeCodes.\n'));
             }
         } else {
             // List all NodeCodes
@@ -142,7 +142,7 @@ feralCommand
                 console.log('');
             } catch (err) {
                 console.log(chalk.red(`\n  Catalog node "${key}" not found.\n`));
-                console.log(chalk.gray('  Run `dobbi feral catalog` to see all available nodes.\n'));
+                console.log(chalk.gray('  Run `agentary feral catalog` to see all available nodes.\n'));
             }
         } else {
             // List all catalog nodes
@@ -194,7 +194,7 @@ feralCommand
                 console.log('');
             } catch {
                 console.log(chalk.red(`\n  Process "${key}" not found.\n`));
-                console.log(chalk.gray('  Run `dobbi feral process` to see all available processes.\n'));
+                console.log(chalk.gray('  Run `agentary feral process` to see all available processes.\n'));
             }
         } else {
             // List all processes

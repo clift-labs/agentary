@@ -12,23 +12,25 @@ import { startDaemon } from '../service/daemon.js';
 import { SYSTEM_DIR } from '../paths.js';
 
 export const initCommand = new Command('init')
-    .description('Initialize a new dobbi vault in the current directory')
+    .description('Initialize a new agentary vault in the current directory')
     .action(async () => {
         const cwd = process.cwd();
 
-        // Reject init inside the system cupboard or a .dobbi directory
-        if (cwd === path.join(os.homedir(), '.dobbi') || path.basename(cwd) === '.dobbi') {
-            console.log(chalk.red('.dobbi/ directories are reserved for Dobbi\'s config, sir.'));
-            console.log(chalk.gray('Please run `dobbi init` from a different directory.'));
+        // Reject init inside the system directory
+        const systemDir = path.join(os.homedir(), '.agentary');
+        const legacySystemDir = path.join(os.homedir(), '.dobbi');
+        if (cwd === systemDir || cwd === legacySystemDir || path.basename(cwd) === '.agentary' || path.basename(cwd) === '.dobbi') {
+            console.log(chalk.red('System directories are reserved for configuration.'));
+            console.log(chalk.gray('Please run `agentary init` from a different directory.'));
             return;
         }
 
-        const socksPath = path.join(cwd, '.socks.md');
+        const vaultFilePath = path.join(cwd, '.vault.md');
 
         // Check if already a vault
         const existingVault = await findVaultRoot();
         if (existingVault === cwd) {
-            console.log(chalk.yellow('This directory is already a dobbi vault.'));
+            console.log(chalk.yellow('This directory is already an agentary vault.'));
             return;
         }
 
@@ -38,22 +40,22 @@ export const initCommand = new Command('init')
             return;
         }
 
-        // Check if .socks.md already exists
+        // Check if .vault.md already exists
         try {
-            await fs.access(socksPath);
-            console.log(chalk.yellow('.socks.md already exists. This is already a vault.'));
+            await fs.access(vaultFilePath);
+            console.log(chalk.yellow('.vault.md already exists. This is already a vault.'));
             return;
         } catch {
             // Good, doesn't exist
         }
 
-        console.log(chalk.gray('Creating a new dobbi vault...'));
+        console.log(chalk.gray('Creating a new agentary vault...'));
 
         const today = new Date().toISOString().split('T')[0];
         const vaultName = path.basename(cwd);
 
-        // Create root .socks.md
-        const rootSocks = `---
+        // Create root .vault.md
+        const rootVaultFile = `---
 title: "${vaultName} Vault"
 created: ${today}
 tags: [context, system, root]
@@ -61,13 +63,13 @@ tags: [context, system, root]
 
 # ${vaultName}
 
-## Dobbi
+## Agent
 
-Dobbi is a Personal Digital Agent — a loyal, polite English house-elf who helps you get organised and manage your time. He speaks in the third person, uses varied honorifics, and is genuinely delighted to help.
+This vault is managed by a Personal Digital Agent that helps you get organised and manage your time. The agent's personality and name are configured during the onboarding interview.
 
 ## Memory
 
-This vault is Dobbi's memory. Content is stored as Markdown files with YAML frontmatter, organised by type (tasks, events, notes, goals, people, etc.). All content can be linked in a knowledge graph — content items are nodes, relationships are edges. Dobbi should proactively link related content and use these connections to give better advice.
+This vault is the agent's memory. Content is stored as Markdown files with YAML frontmatter, organised by type (tasks, events, notes, goals, people, etc.). All content can be linked in a knowledge graph — content items are nodes, relationships are edges. The agent should proactively link related content and use these connections to give better advice.
 
 ## Rules
 
@@ -83,15 +85,15 @@ This vault is Dobbi's memory. Content is stored as Markdown files with YAML fron
 - Timezone: Local machine time
 - Date format: YYYY-MM-DD
 `;
-        await fs.writeFile(socksPath, rootSocks);
+        await fs.writeFile(vaultFilePath, rootVaultFile);
 
-        // Ensure ~/.dobbi/ exists for secrets
+        // Ensure ~/.agentary/ exists for secrets
         await fs.mkdir(SYSTEM_DIR, { recursive: true });
 
-        // Create vault-scoped .dobbi/ for config, logs, processes
-        await fs.mkdir(path.join(cwd, '.dobbi'), { recursive: true });
+        // Create vault-scoped .agentary/ for config, logs, processes
+        await fs.mkdir(path.join(cwd, '.agentary'), { recursive: true });
 
-        // Seed entity-types.json in vault/.dobbi/
+        // Seed entity-types.json in vault/.agentary/
         await initEntityTypes();
 
         // Create entity type directories directly in vault root
@@ -106,6 +108,7 @@ This vault is Dobbi's memory. Content is stored as Markdown files with YAML fron
 
         // Create .gitignore
         const gitignore = `.state.json
+.agentary/
 .dobbi/
 .DS_Store
 `;
@@ -118,10 +121,10 @@ This vault is Dobbi's memory. Content is stored as Markdown files with YAML fron
 
         console.log(chalk.green('\n✓ Vault created!'));
 
-        // ── Cupboard setup (only on first-ever init) ────────────────────
+        // ── System setup (only on first-ever init) ────────────────────
         const configured = await getConfiguredProviders();
         if (configured.length === 0) {
-            console.log(chalk.cyan('\n🔑 Dobbi needs an API key to think, sir.\n'));
+            console.log(chalk.cyan('\n🔑 An API key is needed for AI capabilities.\n'));
 
             const knownProviders = Object.keys(PROVIDER_MODELS);
             const { provider } = await inquirer.prompt([{
@@ -141,30 +144,30 @@ This vault is Dobbi's memory. Content is stored as Markdown files with YAML fron
             }]);
 
             await setApiKey(provider, apiKey);
-            console.log(chalk.green(`\n✓ ${provider} API key saved to ~/.dobbi/`));
+            console.log(chalk.green(`\n✓ ${provider} API key saved to ~/.agentary/`));
 
             // Start service on first setup
-            console.log(chalk.gray('\nStarting Dobbi service...'));
+            console.log(chalk.gray('\nStarting service...'));
             try {
                 const status = await startDaemon();
                 if (status.running) {
                     console.log(chalk.green('✓ Service running!'));
                     console.log(chalk.cyan('  Web client: http://localhost:3737\n'));
                 } else {
-                    console.log(chalk.yellow('Service did not start. Run `dobbi service start` to try again.\n'));
+                    console.log(chalk.yellow('Service did not start. Run `agentary service start` to try again.\n'));
                 }
             } catch (err) {
                 debug('init', err);
-                console.log(chalk.yellow('Could not auto-start service. Run `dobbi service start` manually.\n'));
+                console.log(chalk.yellow('Could not auto-start service. Run `agentary service start` manually.\n'));
             }
         }
 
         console.log(chalk.gray(`Created:`));
-        console.log(chalk.gray(`  .socks.md           - Root context`));
+        console.log(chalk.gray(`  .vault.md            - Root context`));
         for (const folder of folders) {
             console.log(chalk.gray(`  ${folder}/`));
         }
-        console.log(chalk.cyan('\nRun `dobbi` to meet Dobbi and get started!'));
+        console.log(chalk.cyan('\nRun `agentary` to get started!'));
     });
 
 export default initCommand;

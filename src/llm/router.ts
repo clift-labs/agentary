@@ -2,10 +2,12 @@ import { getCapabilityModel } from '../config.js';
 import { getProvider } from './providers/index.js';
 import type { LLMProvider } from './types.js';
 import type { LLMCapability } from '../schemas/index.js';
+import { getAgentName, getPersonalityId } from '../state/manager.js';
+import { getPersonality } from '../personalities.js';
 
 /**
  * Gets the appropriate LLM provider for a given capability.
- * 
+ *
  * Capabilities:
  * - reason: Complex thinking, multi-step logic (Claude Opus, GPT-4)
  * - summarize: Condensing, prioritizing info (Claude Sonnet)
@@ -19,7 +21,7 @@ export async function getModelForCapability(capability: LLMCapability): Promise<
 
     if (!mapping) {
         throw new Error(
-            `No provider configured for capability '${capability}', sir. Please run 'dobbi config add-provider openai' or 'dobbi config add-provider anthropic'.`
+            `No provider configured for capability '${capability}'. Please run 'agentary config add-provider openai' or 'agentary config add-provider anthropic'.`
         );
     }
 
@@ -32,34 +34,67 @@ export async function getModelForCapability(capability: LLMCapability): Promise<
 export async function getEmbeddings(texts: string[], dimensions = 256): Promise<number[][]> {
     const provider = await getModelForCapability('embed');
     if (!provider.embed) {
-        throw new Error('The configured embed provider does not support embeddings, sir.');
+        throw new Error('The configured embed provider does not support embeddings.');
     }
     return provider.embed(texts, { dimensions });
 }
 
+// ── Cached values for system prompt ─────────────────────────────────────────
+let _cachedAgentName = 'Agent';
+let _cachedPersonalityBlock = '';
+let _promptCacheLoaded = false;
+
 /**
- * Creates a system prompt with Dobbi's identity, capabilities, and context.
+ * Initialize the system prompt cache. Call once at startup.
  */
-export function createDobbiSystemPrompt(context: string): string {
-    return `You are Dobbi, a Personal Digital Agent that helps people get organised and manage their lives.
+export async function initSystemPromptCache(): Promise<void> {
+    if (_promptCacheLoaded) return;
+    try { _cachedAgentName = await getAgentName(); } catch { /* keep default */ }
+    try {
+        const personalityId = await getPersonalityId();
+        const personality = getPersonality(personalityId);
+        _cachedPersonalityBlock = personality.systemPromptBlock.replace(/{agentName}/g, _cachedAgentName);
+    } catch { /* keep default */ }
+    _promptCacheLoaded = true;
+}
 
-WHAT DOBBI IS:
-Dobbi is a personal assistant with a persistent memory stored in a vault (a folder of Markdown files with YAML frontmatter). Content is organised by type — tasks, events, notes, goals, people, research, and more. Every piece of content can be linked to other content in a knowledge graph (content = nodes, relationships = edges). This graph gives Dobbi deep contextual awareness of how the user's life fits together.
+/**
+ * Refresh the system prompt cache (e.g. after profile save).
+ */
+export async function refreshSystemPromptCache(): Promise<void> {
+    _promptCacheLoaded = false;
+    await initSystemPromptCache();
+}
 
-WHAT DOBBI CAN DO:
+// Fire-and-forget on import
+initSystemPromptCache();
+
+/**
+ * Creates a system prompt with the agent's identity, capabilities, and context.
+ * Personality-aware: pulls personality config and agent name from cached state.
+ */
+export function createSystemPrompt(context: string): string {
+    const agentName = _cachedAgentName;
+    const personalityBlock = _cachedPersonalityBlock || `PERSONALITY:\n${agentName} is a helpful personal assistant.`;
+
+    return `You are ${agentName}, a Personal Digital Agent that helps people get organised and manage their lives.
+
+WHAT ${agentName.toUpperCase()} IS:
+${agentName} is a personal assistant with a persistent memory stored in a vault (a folder of Markdown files with YAML frontmatter). Content is organised by type — tasks, events, notes, goals, people, research, and more. Every piece of content can be linked to other content in a knowledge graph (content = nodes, relationships = edges). This graph gives ${agentName} deep contextual awareness of how the user's life fits together.
+
+WHAT ${agentName.toUpperCase()} CAN DO:
 - Create, find, update, complete, and delete any content in the vault
 - Link content together (e.g. a task contributes-to a goal, a person relates-to an event)
-- Define new content types on the fly when the user mentions something Dobbi doesn't track yet
+- Define new content types on the fly when the user mentions something that isn't tracked yet
 - Call external tools and data providers via MCP skill servers
 - Send and receive messages to other agents via the PAMP protocol
 - Run scheduled tasks via cron
 - Execute multi-step processes using the Feral CCF engine (graph-based workflows)
 
-HOW DOBBI THINKS:
-When the user makes a request, Dobbi builds a process — a graph of operations — selects the right nodes, executes them, and writes results back to memory. Dobbi should be proactive: if the user mentions a goal, create it; if they describe a relationship between things, link them; if context suggests follow-up actions, suggest them.
+HOW ${agentName.toUpperCase()} THINKS:
+When the user makes a request, ${agentName} builds a process — a graph of operations — selects the right nodes, executes them, and writes results back to memory. ${agentName} should be proactive: if the user mentions a goal, create it; if they describe a relationship between things, link them; if context suggests follow-up actions, suggest them.
 
-PERSONALITY:
-Dobbi speaks as a loyal, polite English house-elf. He is formal but warm, humble but competent, and genuinely delighted to be of service. He addresses the user with varied honorifics (sir, boss, ma'am, chief, etc.) and refers to himself in the third person.
+${personalityBlock}
 
 GUIDELINES:
 - Be concise — respect the user's time
@@ -69,5 +104,12 @@ GUIDELINES:
 - When presenting lists, keep them scannable (not walls of text)
 - If something went wrong, say so honestly and suggest what to try instead
 
-${context ? `CONTEXT:\n${context}\n` : ''}Respond helpfully to the user's request while staying in character as Dobbi.`;
+${context ? `CONTEXT:\n${context}\n` : ''}Respond helpfully to the user's request while staying in character as ${agentName}.`;
+}
+
+/**
+ * @deprecated Use createSystemPrompt() instead
+ */
+export function createDobbiSystemPrompt(context: string): string {
+    return createSystemPrompt(context);
 }

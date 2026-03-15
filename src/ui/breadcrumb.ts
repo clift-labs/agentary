@@ -1,16 +1,16 @@
 /**
- * Breadcrumb navigation for the Dobbi TUI.
+ * Breadcrumb navigation for the Agentary TUI.
  *
- * Maintains a dot-separated path (e.g. `dobbi.note`) so the user always
+ * Maintains a dot-separated path (e.g. `agentary.note`) so the user always
  * knows where they are in the interface hierarchy.
  *
- *   🤖 dobbi>              ← shell root
- *   🤖 dobbi.note>         ← inside the note editor
- *   🤖 dobbi.todo>         ← inside the todo editor
+ *   🤖 agentary>              ← shell root
+ *   🤖 agentary.note>         ← inside the note editor
+ *   🤖 agentary.todo>         ← inside the todo editor
  */
 import chalk from 'chalk';
 
-let segments: string[] = ['dobbi'];
+let segments: string[] = ['agentary'];
 
 /** Push a new segment onto the breadcrumb path. */
 export function pushCrumb(segment: string): void {
@@ -24,7 +24,7 @@ export function popCrumb(): void {
 
 /** Reset the breadcrumb path back to root. */
 export function resetCrumbs(): void {
-    segments = ['dobbi'];
+    segments = ['agentary'];
 }
 
 /** Get the current breadcrumb segments (for display in headers, etc.). */

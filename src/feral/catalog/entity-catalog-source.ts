@@ -42,7 +42,7 @@ export class EntityCatalogSource implements CatalogSource {
             nodeCodeKey: 'create_entity_type',
             name: 'Create Content Type',
             group: 'entity',
-            description: 'Creates a new content type (entity type) with LLM-designed fields. Use when the user mentions a kind of thing Dobbi doesn\'t have yet (e.g. "recipe", "habit", "bookmark"). Requires type_name (singular slug) and description (what it represents).',
+            description: 'Creates a new content type (entity type) with LLM-designed fields. Use when the user mentions a kind of thing that doesn\'t exist yet (e.g. "recipe", "habit", "bookmark"). Requires type_name (singular slug) and description (what it represents).',
             configuration: {},
         });
 

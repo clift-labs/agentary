@@ -3,10 +3,12 @@ import path from 'path';
 import os from 'os';
 import { StateSchema, type State } from '../schemas/index.js';
 import { getResponse } from '../responses.js';
+import { getPersonality } from '../personalities.js';
 import { debug } from '../utils/debug.js';
 import chalk from 'chalk';
 
-const SOCKS_FILE = '.socks.md';
+const VAULT_FILE = '.vault.md';
+const LEGACY_VAULT_FILE = '.socks.md';
 const STATE_FILE = '.state.json';
 
 let cachedVaultRoot: string | null = null;
@@ -20,8 +22,8 @@ export function resetVaultCache(): void {
 }
 
 /**
- * Finds the vault root by looking for .socks.md in cwd or parent directories.
- * Also checks the DOBBI_VAULT env var (set by the daemon on startup).
+ * Finds the vault root by looking for .vault.md (or legacy .socks.md) in cwd or parent directories.
+ * Also checks the AGENTARY_VAULT env var (with DOBBI_VAULT as fallback).
  * Returns null if no vault is found.
  */
 export async function findVaultRoot(): Promise<string | null> {
@@ -29,37 +31,44 @@ export async function findVaultRoot(): Promise<string | null> {
         return cachedVaultRoot;
     }
 
-    // If DOBBI_VAULT is set (e.g. by the daemon), trust it directly
-    const envVault = process.env.DOBBI_VAULT;
+    // Check AGENTARY_VAULT first, then DOBBI_VAULT as fallback
+    const envVault = process.env.AGENTARY_VAULT || process.env.DOBBI_VAULT;
     if (envVault) {
-        const socksPath = path.join(envVault, SOCKS_FILE);
-        try {
-            await fs.access(socksPath);
-            cachedVaultRoot = envVault;
-            return envVault;
-        } catch {
-            // Env var points to invalid vault, fall through to cwd scan
+        // Check for .vault.md first, then legacy .socks.md
+        for (const marker of [VAULT_FILE, LEGACY_VAULT_FILE]) {
+            const markerPath = path.join(envVault, marker);
+            try {
+                await fs.access(markerPath);
+                cachedVaultRoot = envVault;
+                return envVault;
+            } catch {
+                // Try next marker
+            }
         }
     }
 
-    const systemCupboard = path.join(os.homedir(), '.dobbi');
+    const systemDir = path.join(os.homedir(), '.agentary');
+    const legacySystemDir = path.join(os.homedir(), '.dobbi');
     let currentDir = process.cwd();
 
     while (currentDir !== path.dirname(currentDir)) {
-        // Never treat the system cupboard (~/.dobbi/) as a vault
-        if (currentDir === systemCupboard) {
+        // Never treat the system directory as a vault
+        if (currentDir === systemDir || currentDir === legacySystemDir) {
             currentDir = path.dirname(currentDir);
             continue;
         }
-        const socksPath = path.join(currentDir, SOCKS_FILE);
-        try {
-            await fs.access(socksPath);
-            cachedVaultRoot = currentDir;
-            return currentDir;
-        } catch {
-            // No .socks.md here, try parent
-            currentDir = path.dirname(currentDir);
+        // Check for .vault.md first, then legacy .socks.md
+        for (const marker of [VAULT_FILE, LEGACY_VAULT_FILE]) {
+            const markerPath = path.join(currentDir, marker);
+            try {
+                await fs.access(markerPath);
+                cachedVaultRoot = currentDir;
+                return currentDir;
+            } catch {
+                // Try next marker
+            }
         }
+        currentDir = path.dirname(currentDir);
     }
 
     return null;
@@ -72,9 +81,10 @@ export async function getVaultRoot(): Promise<string> {
     const root = await findVaultRoot();
 
     if (!root) {
-        console.error(chalk.red('\n🤖 Dobbi cannot find a vault here, sir.'));
-        console.error(chalk.gray('No .socks.md found in this directory or any parent.'));
-        console.error(chalk.gray('\nTo create a vault, run: dobbi init'));
+        const agentName = await getAgentName();
+        console.error(chalk.red(`\n🤖 ${agentName} cannot find a vault here.`));
+        console.error(chalk.gray('No .vault.md found in this directory or any parent.'));
+        console.error(chalk.gray('\nTo create a vault, run: agentary init'));
         throw new Error('No vault found in current directory tree');
     }
 
@@ -117,7 +127,7 @@ export async function saveState(state: State): Promise<void> {
  */
 export async function getUserName(): Promise<string> {
     const state = await loadState();
-    return state.userName || os.userInfo().username || 'sir';
+    return state.userName || os.userInfo().username || 'friend';
 }
 
 /**
@@ -130,22 +140,45 @@ export async function setUserName(name: string): Promise<void> {
 }
 
 /**
- * Honorific pools by gender — Dobbi picks randomly from these each time.
+ * Gets the agent name from state, falling back to 'Agent'.
  */
-export const HONORIFIC_POOLS: Record<string, string[]> = {
-    male: ['sir', 'boss', 'master', 'chief', 'captain', 'guv', 'my lord', 'good sir'],
-    female: ['ma\'am', 'miss', 'madam', 'my lady', 'boss', 'chief', 'mistress'],
-    other: ['boss', 'chief', 'captain', 'friend', 'guv', 'my liege', 'comrade'],
-};
+export async function getAgentName(): Promise<string> {
+    try {
+        const state = await loadState();
+        return state.agentName || 'Agent';
+    } catch {
+        return 'Agent';
+    }
+}
 
 /**
- * Gets a random honorific from the user's gender pool.
- * Falls back to 'friend' if gender isn't set.
+ * Gets the personality ID from state, falling back to 'butler'.
+ */
+export async function getPersonalityId(): Promise<string> {
+    try {
+        const state = await loadState();
+        return state.personality || 'butler';
+    } catch {
+        return 'butler';
+    }
+}
+
+/**
+ * Gets a random honorific from the user's gender pool, based on personality.
+ * For 'executive' personality (empty honorific pool), returns the user's name.
  */
 export async function getUserHonorific(): Promise<string> {
     const state = await loadState();
     const gender = state.gender || 'other';
-    const pool = HONORIFIC_POOLS[gender] || HONORIFIC_POOLS.other;
+    const personalityId = state.personality || 'butler';
+    const personality = getPersonality(personalityId);
+    const pool = personality.honorifics[gender] || personality.honorifics.other || [];
+
+    // Executive personality has no honorifics — use name
+    if (pool.length === 0) {
+        return state.userName || os.userInfo().username || 'friend';
+    }
+
     return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -179,6 +212,8 @@ export async function isInterviewComplete(): Promise<boolean> {
  */
 export async function saveProfile(profile: {
     userName: string;
+    agentName?: string;
+    personality?: 'butler' | 'rockstar' | 'executive' | 'friend';
     honorific?: string;
     gender?: 'male' | 'female' | 'other';
     workType?: string;
@@ -191,6 +226,8 @@ export async function saveProfile(profile: {
 }): Promise<void> {
     const state = await loadState();
     state.userName = profile.userName;
+    if (profile.agentName) state.agentName = profile.agentName;
+    if (profile.personality) state.personality = profile.personality;
     if (profile.honorific) state.honorific = profile.honorific;
     if (profile.gender) state.gender = profile.gender;
     state.workType = profile.workType;
@@ -202,11 +239,4 @@ export async function saveProfile(profile: {
     state.workCalUrl = profile.workCalUrl;
     state.interviewComplete = true;
     await saveState(state);
-}
-
-/**
- * @deprecated Use getVaultRoot() instead
- */
-export async function getDobbiRootPath(): Promise<string> {
-    return getVaultRoot();
 }

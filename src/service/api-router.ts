@@ -6,6 +6,9 @@
 //
 //   GET    /api/types                     — list all entity types with schemas
 //   GET    /api/types/:type               — get one entity type schema
+//   POST   /api/types                     — create a new entity type
+//   PUT    /api/types/:type               — update an entity type
+//   DELETE /api/types/:type               — remove an entity type (non-built-in)
 //
 //   GET    /api/entities/:type            — list entities (optional ?status=&tag=&due=)
 //   GET    /api/entities/:type/:id        — get single entity
@@ -32,9 +35,11 @@ import {
     generateEntityId,
     ensureEntityDir,
     getEntityDir,
+    entityFilename,
 } from '../entities/entity.js';
-import { loadEntityTypes, getEntityType } from '../entities/entity-type-config.js';
+import { loadEntityTypes, getEntityType, addEntityType, updateEntityType, removeEntityType, type EntityTypeConfig } from '../entities/entity-type-config.js';
 import { getEntityIndex } from '../entities/entity-index.js';
+import { validateEntity, formatValidationErrors } from '../entities/entity-validator.js';
 import { bootstrapFeral, type FeralRuntime } from '../feral/bootstrap.js';
 import { debug } from '../utils/debug.js';
 
@@ -109,7 +114,52 @@ export async function handleApiRoute(
         return true;
     }
 
+    // POST /api/types — create a new entity type
+    if (method === 'POST' && pathname === '/api/types') {
+        let body: Record<string, unknown>;
+        try {
+            body = await parseJsonBody(req);
+        } catch {
+            error(res, 400, 'Invalid JSON body');
+            return true;
+        }
+
+        if (!body.name || typeof body.name !== 'string') {
+            error(res, 400, 'Field "name" is required');
+            return true;
+        }
+        if (!body.plural || typeof body.plural !== 'string') {
+            error(res, 400, 'Field "plural" is required');
+            return true;
+        }
+        if (!body.directory || typeof body.directory !== 'string') {
+            error(res, 400, 'Field "directory" is required');
+            return true;
+        }
+
+        const config: EntityTypeConfig = {
+            name: body.name,
+            plural: body.plural,
+            directory: body.directory,
+            description: typeof body.description === 'string' ? body.description : undefined,
+            defaultTags: Array.isArray(body.defaultTags) ? body.defaultTags as string[] : [],
+            fields: Array.isArray(body.fields) ? body.fields as EntityTypeConfig['fields'] : [],
+            completionField: typeof body.completionField === 'string' ? body.completionField : undefined,
+            completionValue: typeof body.completionValue === 'string' ? body.completionValue : undefined,
+        };
+
+        try {
+            await addEntityType(config);
+            json(res, 201, config);
+        } catch (err) {
+            error(res, 409, err instanceof Error ? err.message : String(err));
+        }
+        return true;
+    }
+
     const typeMatch = pathname.match(/^\/api\/types\/([^/]+)$/);
+
+    // GET /api/types/:type — get one entity type schema
     if (method === 'GET' && typeMatch) {
         const typeName = decodeURIComponent(typeMatch[1]);
         const typeConfig = await getEntityType(typeName);
@@ -127,6 +177,49 @@ export async function handleApiRoute(
             completionField: typeConfig.completionField,
             completionValue: typeConfig.completionValue,
         });
+        return true;
+    }
+
+    // PUT /api/types/:type — update an entity type
+    if (method === 'PUT' && typeMatch) {
+        const typeName = decodeURIComponent(typeMatch[1]);
+        let body: Record<string, unknown>;
+        try {
+            body = await parseJsonBody(req);
+        } catch {
+            error(res, 400, 'Invalid JSON body');
+            return true;
+        }
+
+        const config: EntityTypeConfig = {
+            name: typeof body.name === 'string' ? body.name : typeName,
+            plural: typeof body.plural === 'string' ? body.plural : typeName + 's',
+            directory: typeof body.directory === 'string' ? body.directory : typeName + 's',
+            description: typeof body.description === 'string' ? body.description : undefined,
+            defaultTags: Array.isArray(body.defaultTags) ? body.defaultTags as string[] : [],
+            fields: Array.isArray(body.fields) ? body.fields as EntityTypeConfig['fields'] : [],
+            completionField: typeof body.completionField === 'string' ? body.completionField : undefined,
+            completionValue: typeof body.completionValue === 'string' ? body.completionValue : undefined,
+        };
+
+        try {
+            await updateEntityType(typeName, config);
+            json(res, 200, config);
+        } catch (err) {
+            error(res, 404, err instanceof Error ? err.message : String(err));
+        }
+        return true;
+    }
+
+    // DELETE /api/types/:type — remove an entity type
+    if (method === 'DELETE' && typeMatch) {
+        const typeName = decodeURIComponent(typeMatch[1]);
+        try {
+            await removeEntityType(typeName);
+            json(res, 200, { ok: true, name: typeName });
+        } catch (err) {
+            error(res, 400, err instanceof Error ? err.message : String(err));
+        }
         return true;
     }
 
@@ -265,7 +358,8 @@ export async function handleApiRoute(
 
         const id = generateEntityId(typeName);
         const dir = await ensureEntityDir(typeName);
-        const filepath = path.join(dir, `${id}.md`);
+        const title = body.title as string;
+        const filepath = path.join(dir, entityFilename(title, id));
 
         const content = typeof body.content === 'string' ? body.content : '';
         delete body.content;
@@ -283,6 +377,13 @@ export async function handleApiRoute(
             if (meta[fieldDef.key] === undefined && fieldDef.default !== undefined) {
                 meta[fieldDef.key] = fieldDef.default;
             }
+        }
+
+        // Validate against schema
+        const validationErrors = validateEntity(meta, typeConfig, true);
+        if (validationErrors.length > 0) {
+            error(res, 400, `Validation failed: ${formatValidationErrors(validationErrors)}`);
+            return true;
         }
 
         await writeEntity(filepath, meta, content);
@@ -353,6 +454,13 @@ export async function handleApiRoute(
                 updatedMeta[key] = value;
             }
 
+            // Validate against schema
+            const validationErrors = validateEntity(updatedMeta, typeConfig, false);
+            if (validationErrors.length > 0) {
+                error(res, 400, `Validation failed: ${formatValidationErrors(validationErrors)}`);
+                return true;
+            }
+
             await writeEntity(entity.filepath, updatedMeta, content);
 
             // Update index
@@ -407,15 +515,20 @@ async function findEntityById(
     typeName: string,
     entityId: string,
 ): Promise<{ filepath: string; meta: Record<string, unknown>; content: string } | null> {
-    // Try direct file path first (id is the filename stem)
-    try {
-        const dir = await getEntityDir(typeName);
-        const filepath = path.join(dir, `${entityId}.md`);
-        const raw = await fs.readFile(filepath, 'utf-8');
-        const { meta, content } = parseEntity(filepath, raw);
-        return { filepath, meta, content };
-    } catch {
-        // Not found by filename — scan for id field match
+    // Fast path: check entity index first
+    const index = getEntityIndex();
+    if (index.isBuilt) {
+        const key = `${typeName}:${entityId}`;
+        const node = index.getNode(key);
+        if (node) {
+            try {
+                const raw = await fs.readFile(node.filepath, 'utf-8');
+                const { meta, content } = parseEntity(node.filepath, raw);
+                return { filepath: node.filepath, meta, content };
+            } catch {
+                // File gone — fall through to scan
+            }
+        }
     }
 
     // Scan directory for matching id field

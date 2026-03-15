@@ -42,7 +42,7 @@ const INTROSPECT_NODES: IntrospectEntry[] = [
     {
         key: 'get_service_status',
         name: 'Get Service Status',
-        description: 'Checks whether the Dobbi daemon is running and its PID.',
+        description: 'Checks whether the Agentary daemon is running and its PID.',
         target: 'service',
         contextPath: 'service_status',
     },

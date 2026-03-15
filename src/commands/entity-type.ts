@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Entity Type Management — `dobbi type`
+// Entity Type Management — `agentary type`
 // Lets users list, add, edit, and remove custom entity types.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -252,7 +252,7 @@ const addCmd = new Command('add')
         const config = await runTypeWizard();
         await addEntityType(config);
         console.log(chalk.green(`\n✓ Entity type "${config.name}" created!`));
-        console.log(chalk.gray(`  Use it with: dobbi chat — or via Feral flows.`));
+        console.log(chalk.gray(`  Use it with: agentary chat — or via Feral flows.`));
     });
 
 const editCmd = new Command('edit')

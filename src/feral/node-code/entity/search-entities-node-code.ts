@@ -76,10 +76,4 @@ export class SearchEntitiesNodeCode extends AbstractNodeCode {
             return this.result(ResultStatus.ERROR, `Search failed: ${message}`);
         }
     }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
-    }
 }

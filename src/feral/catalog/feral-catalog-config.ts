@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Feral CCF — Catalog Configuration (JSON file at {vault}/.dobbi/feral-catalog.json)
+// Feral CCF — Catalog Configuration (JSON file at {vault}/.agentary/feral-catalog.json)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { promises as fs } from 'fs';
-import { getFeralCatalogPath, getVaultDobbiDir } from '../../paths.js';
+import { getFeralCatalogPath, getVaultConfigDir } from '../../paths.js';
 
 /**
  * JSON shape for a single user-defined CatalogNode.
@@ -46,7 +46,7 @@ export async function loadFeralCatalogConfig(): Promise<FeralCatalogConfigJson> 
  * Save the catalog config to disk.
  */
 export async function saveFeralCatalogConfig(config: FeralCatalogConfigJson): Promise<void> {
-    const dir = await getVaultDobbiDir();
+    const dir = await getVaultConfigDir();
     await fs.mkdir(dir, { recursive: true });
     const configPath = await getFeralCatalogPath();
     await fs.writeFile(configPath, JSON.stringify(config, null, 2));

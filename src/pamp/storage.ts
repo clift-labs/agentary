@@ -2,7 +2,7 @@
 // PAMP — Local Storage
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Manages {vault}/.dobbi/pamp/ directory structure:
+// Manages {vault}/.agentary/pamp/ directory structure:
 //   identity.json, sessions/, contacts/, inbox/, sent/, threads/
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ export async function loadIdentity(): Promise<PampIdentity | null> {
 export async function requireIdentity(): Promise<PampIdentity> {
     const identity = await loadIdentity();
     if (!identity) {
-        throw new Error('PAMP not set up. Run `dobbi pamp setup` first.');
+        throw new Error('PAMP not set up. Run `agentary pamp setup` first.');
     }
     return identity;
 }

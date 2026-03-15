@@ -13,7 +13,7 @@ import { evaluateProcessLifecycle } from './process-lifecycle.js';
 import { checkPampMail } from './pamp-checker.js';
 import { getEntityIndex } from '../../entities/entity-index.js';
 import { getEmbeddingIndex } from '../../entities/embedding-index.js';
-import { getCronConfigPath, getVaultDobbiDir } from '../../paths.js';
+import { getCronConfigPath, getVaultConfigDir } from '../../paths.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIG
@@ -54,7 +54,7 @@ export async function loadCronConfig(): Promise<CronConfig> {
 }
 
 export async function saveCronConfig(config: CronConfig): Promise<void> {
-    const dir = await getVaultDobbiDir();
+    const dir = await getVaultConfigDir();
     await fs.mkdir(dir, { recursive: true });
     const configPath = await getCronConfigPath();
     await fs.writeFile(configPath, JSON.stringify(config, null, 2));

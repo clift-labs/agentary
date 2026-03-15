@@ -19,7 +19,7 @@ import { getCronScheduler } from './cron/scheduler.js';
 import type { ServiceRequest, ServiceResponse, Task } from './protocol.js';
 
 // Only run if this is the service process
-const isService = process.env.DOBBI_SERVICE === '1';
+const isService = process.env.AGENTARY_SERVICE === '1' || process.env.DOBBI_SERVICE === '1';
 
 async function handleRequest(request: ServiceRequest): Promise<ServiceResponse> {
     const queueManager = await getQueueManager();
@@ -210,7 +210,7 @@ async function handleRequest(request: ServiceRequest): Promise<ServiceResponse> 
 }
 
 async function main(): Promise<void> {
-    console.log('Dobbi service starting...');
+    console.log('Agentary service starting...');
 
     const server = new ServiceServer();
     const webServer = new WebServer();
@@ -272,7 +272,7 @@ async function main(): Promise<void> {
         console.error('Failed to start web server:', err);
     }
 
-    console.log(`Dobbi service running on ${SOCKET_PATH}`);
+    console.log(`Agentary service running on ${SOCKET_PATH}`);
 }
 
 if (isService) {

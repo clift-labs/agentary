@@ -169,14 +169,14 @@ function buildCompleter(): (line: string) => [string[], string] {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Run a dobbi command in a subprocess.
+ * Run a command in a subprocess.
  *
  * This completely isolates Commander from readline — the child process has its
  * own stdin/stdout and can never interfere with the shell's character echo.
  */
 function runCommand(args: string[]): Promise<'continue' | 'quit'> {
     return new Promise((resolve) => {
-        // Spawn dobbi as a subprocess: node <script> <args...>
+        // Spawn as a subprocess: node <script> <args...>
         const child = spawn(process.argv[0], [process.argv[1], ...args], {
             stdio: 'inherit',
             cwd: process.cwd(),
@@ -210,9 +210,9 @@ export function createShellCommand(_program: Command): Command {
         .action(async () => {
             // Guard: vault must exist
             if (!(await isInVault())) {
-                console.log(chalk.red('\n🤖 Dobbi cannot find a vault here, sir.'));
+                console.log(chalk.red('\nCannot find a vault here.'));
                 console.log(chalk.gray('No .socks.md found in this directory or any parent.'));
-                console.log(chalk.gray('\nTo create a vault, run: dobbi init\n'));
+                console.log(chalk.gray('\nTo create a vault, run: agentary init\n'));
                 return;
             }
 

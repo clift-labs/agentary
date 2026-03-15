@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { getVaultRoot } from '../state/manager.js';
 import { getContextString } from '../context/reader.js';
-import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { debug } from '../utils/debug.js';
 import { getActiveTodonts } from './todont.js';
@@ -70,7 +70,7 @@ export const todayCommand = new Command('today')
             try {
                 const context = await getContextString(vaultRoot);
                 const llm = await getModelForCapability('summarize');
-                const systemPrompt = createDobbiSystemPrompt(context);
+                const systemPrompt = createSystemPrompt(context);
 
                 const prompt = `Please provide a helpful summary of today's tasks and schedule for the user. Be concise and prioritize the most important items.
 
@@ -113,7 +113,7 @@ Provide a prioritized summary of what the user should focus on today. If there a
                     console.log('');
                 }
 
-                console.log(chalk.gray('\n(Configure AI with `dobbi config add-provider anthropic` for smart summaries)'));
+                console.log(chalk.gray('\n(Configure AI with `agentary config add-provider anthropic` for smart summaries)'));
             }
 
         } catch (error) {

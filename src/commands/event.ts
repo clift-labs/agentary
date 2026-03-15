@@ -6,14 +6,14 @@ import path from 'path';
 import matter from 'gray-matter';
 import { getVaultRoot } from '../state/manager.js';
 import { getEnrichedContext } from '../context/reader.js';
-import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, eventHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
 import { getEntityIndex } from '../entities/entity-index.js';
-import { findEntityByTitle, trashEntity, generateEntityId } from '../entities/entity.js';
+import { findEntityByTitle, trashEntity, generateEntityId, entityFilename } from '../entities/entity.js';
 
 interface EventState {
     title: string;
@@ -60,11 +60,11 @@ async function findExistingEvent(titleOrFilename: string): Promise<EventState | 
 }
 
 async function clarifyEvent(state: EventState): Promise<string> {
-    console.log(chalk.gray('\nDobbi is clarifying the event, sir...'));
+    console.log(chalk.gray('\nClarifying the event...'));
 
     const context = await getEnrichedContext('events', state.description);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -88,11 +88,11 @@ ${state.description || '(No description yet)'}`,
 }
 
 async function suggestTime(state: EventState): Promise<void> {
-    console.log(chalk.gray('\nDobbi is analyzing timing, sir...'));
+    console.log(chalk.gray('\nAnalyzing timing...'));
 
     const context = await getEnrichedContext('events', state.description);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -119,11 +119,11 @@ ${state.description || '(No description)'}`,
 }
 
 async function modifyEvent(state: EventState, feedback: string): Promise<string> {
-    console.log(chalk.gray('\nDobbi is modifying the event, sir...'));
+    console.log(chalk.gray('\nModifying the event...'));
 
     const context = await getEnrichedContext('events', state.description);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -152,9 +152,14 @@ async function saveEvent(state: EventState): Promise<string> {
     await fs.mkdir(eventsDir, { recursive: true });
 
     let filepath = state.filepath;
-    const entityId = filepath ? path.basename(filepath, '.md') : generateEntityId('event');
-    if (!filepath) {
-        filepath = path.join(eventsDir, `${entityId}.md`);
+    let entityId: string;
+    if (filepath) {
+        const raw = await fs.readFile(filepath, 'utf-8');
+        const parsed = matter(raw);
+        entityId = (parsed.data.id as string) ?? path.basename(filepath, '.md');
+    } else {
+        entityId = generateEntityId('event');
+        filepath = path.join(eventsDir, entityFilename(state.title, entityId));
     }
 
     const markdown = `---
@@ -174,8 +179,7 @@ ${state.description}
     // Update entity index
     const index = getEntityIndex();
     if (index.isBuilt) {
-        const slug = path.basename(filepath, '.md');
-        await index.addOrUpdate('event', slug, state.title, filepath);
+        await index.addOrUpdate('event', entityId, state.title, filepath);
     }
 
     return filepath;
@@ -211,7 +215,7 @@ Commands:
   ${chalk.bold('exit')}         - Save and go back
   ${chalk.bold('back')}         - Save and go back
   ${chalk.bold('abort')}        - Discard changes and go back
-  ${chalk.bold('quit')}         - Quit Dobbi entirely
+  ${chalk.bold('quit')}         - Quit entirely
   ${chalk.bold('help')}         - Show this help
 `));
 }
@@ -238,13 +242,13 @@ export const eventCommand = new Command('event')
     .argument('[words...]', 'Title and optional inline description (e.g. "dentist Need to schedule cleaning")')
     .action(async (words: string[]) => {
         try {
-            // Handle: dobbi event list
+            // Handle: event list
             if (words[0] === 'list') {
                 await listEntities('events');
                 return;
             }
 
-            // Handle: dobbi event remove <title>
+            // Handle: event remove <title>
             if (words[0] === 'remove' || words[0] === 'delete') {
                 const removeTitle = words.slice(1).join(' ');
                 if (!removeTitle) {
@@ -259,8 +263,7 @@ export const eventCommand = new Command('event')
                 const trashPath = await trashEntity(found.filepath);
                 const idx = getEntityIndex();
                 if (idx.isBuilt) {
-                    const slug = path.basename(found.filepath, '.md');
-                    idx.remove('event', slug);
+                    idx.remove('event', found.meta.id as string);
                 }
                 console.log(chalk.green(`\n  🗑  Moved to trash: ${found.meta.title}`));
                 console.log(chalk.gray(`    ${trashPath}\n`));
@@ -276,7 +279,7 @@ export const eventCommand = new Command('event')
                     {
                         type: 'input',
                         name: 'eventTitle',
-                        message: 'What event shall Dobbi schedule, sir?',
+                        message: 'What event should be scheduled?',
                         validate: (input: string) => input.length > 0 || 'Title is required',
                     },
                 ]);
@@ -319,7 +322,7 @@ export const eventCommand = new Command('event')
                 return;
             } else {
                 // Create new event with full prompts
-                console.log(chalk.gray('\nLet\'s set up the event details, sir.'));
+                console.log(chalk.gray('\nLet\'s set up the event details.'));
 
                 const startTime = await promptDateTime('Start time (e.g., "2026-02-01 14:00"):');
                 const endTime = await promptDateTime('End time:', new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString());
@@ -400,7 +403,7 @@ export const eventCommand = new Command('event')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbi notices unsaved work, sir. Discard changes?',
+                                message: 'There is unsaved work. Discard changes?',
                                 default: false,
                             },
                         ]);
@@ -417,7 +420,7 @@ export const eventCommand = new Command('event')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbi notices unsaved work, sir. Quit Dobbi entirely?',
+                                message: 'There is unsaved work. Quit entirely?',
                                 default: false,
                             },
                         ]);
@@ -454,7 +457,7 @@ export const eventCommand = new Command('event')
                                 {
                                     type: 'input',
                                     name: 'feedback',
-                                    message: 'How should Dobbi modify the event?',
+                                    message: 'How should the event be modified?',
                                 },
                             ]);
                             if (feedback) {
@@ -560,7 +563,7 @@ export const eventCommand = new Command('event')
             popCrumb();
 
         } catch (error) {
-            console.error(chalk.red('Dobbi encountered an error, sir:'), error);
+            console.error(chalk.red('An error occurred:'), error);
         }
     });
 

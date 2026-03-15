@@ -68,10 +68,4 @@ export class FindEntityNodeCode extends AbstractNodeCode {
 
         return this.result(ResultStatus.OK, `Found ${entityType} "${title}".`);
     }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
-    }
 }

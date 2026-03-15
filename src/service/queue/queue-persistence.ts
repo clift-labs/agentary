@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import { debug } from '../../utils/debug.js';
-import { getQueueStatePath, getVaultDobbiDir } from '../../paths.js';
+import { getQueueStatePath, getVaultConfigDir } from '../../paths.js';
 import type { Task } from '../protocol.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,7 +23,7 @@ export async function saveQueueState(
     errorCount: number,
 ): Promise<void> {
     try {
-        const dir = await getVaultDobbiDir();
+        const dir = await getVaultConfigDir();
         await fs.mkdir(dir, { recursive: true });
         const statePath = await getQueueStatePath();
         const state: PersistedQueueState = {

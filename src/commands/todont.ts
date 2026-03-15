@@ -16,6 +16,7 @@ import {
     trashEntity,
     parseEntity,
     getEntityDir,
+    entityFilename,
 } from '../entities/entity.js';
 import { listEntities } from './list.js';
 import { getEntityIndex } from '../entities/entity-index.js';
@@ -35,7 +36,7 @@ interface TodontState {
 async function saveTodont(state: TodontState): Promise<string> {
     const dir = await ensureEntityDir('todont');
     const id = generateEntityId('todont');
-    const filepath = path.join(dir, `${id}.md`);
+    const filepath = path.join(dir, entityFilename(state.title, id));
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -152,13 +153,13 @@ export const todontCommand = new Command('todont')
     .argument('[words...]', 'Title or subcommand (list, remove)')
     .action(async (words: string[]) => {
         try {
-            // Handle: dobbi todont list
+            // Handle: agentary todont list
             if (words[0] === 'list') {
                 await listEntities('todonts');
                 return;
             }
 
-            // Handle: dobbi todont remove <title>
+            // Handle: agentary todont remove <title>
             if (words[0] === 'remove' || words[0] === 'delete') {
                 const removeTitle = words.slice(1).join(' ');
                 if (!removeTitle) {
@@ -173,8 +174,7 @@ export const todontCommand = new Command('todont')
                 const trashPath = await trashEntity(found.filepath);
                 const idx = getEntityIndex();
                 if (idx.isBuilt) {
-                    const slug = path.basename(found.filepath, '.md');
-                    idx.remove('todont', slug);
+                    idx.remove('todont', found.meta.id as string);
                 }
                 console.log(chalk.green(`\n  🗑  Moved to trash: ${found.meta.title}`));
                 console.log(chalk.gray(`    ${trashPath}\n`));

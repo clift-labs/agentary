@@ -6,14 +6,14 @@ import path from 'path';
 import matter from 'gray-matter';
 import { getVaultRoot } from '../state/manager.js';
 import { getEnrichedContext } from '../context/reader.js';
-import { getModelForCapability, createDobbiSystemPrompt } from '../llm/router.js';
+import { getModelForCapability, createSystemPrompt } from '../llm/router.js';
 import { getResponse } from '../responses.js';
 import { renderEntityHeader, entityPrompt, todoHeaderConfig } from '../ui/entity-prompt.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
 import { debug } from '../utils/debug.js';
 import { listEntities } from './list.js';
 import { getEntityIndex } from '../entities/entity-index.js';
-import { findEntityByTitle, trashEntity, generateEntityId } from '../entities/entity.js';
+import { findEntityByTitle, trashEntity, generateEntityId, entityFilename } from '../entities/entity.js';
 
 interface TodoState {
     title: string;
@@ -43,7 +43,7 @@ async function breakdownTodo(state: TodoState): Promise<string> {
 
     const context = await getEnrichedContext('todos', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -76,7 +76,7 @@ async function clarifyTodo(state: TodoState): Promise<string> {
 
     const context = await getEnrichedContext('todos', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -111,7 +111,7 @@ async function estimateTodo(state: TodoState): Promise<string> {
 
     const context = await getEnrichedContext('todos', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -141,7 +141,7 @@ async function modifyTodo(state: TodoState, feedback: string): Promise<string> {
 
     const context = await getEnrichedContext('todos', state.content);
     const llm = await getModelForCapability('reason');
-    const systemPrompt = createDobbiSystemPrompt(context);
+    const systemPrompt = createSystemPrompt(context);
 
     const response = await llm.chat([
         {
@@ -177,7 +177,7 @@ async function formatTodo(state: TodoState): Promise<string> {
     try {
         const context = await getEnrichedContext('todos', state.content);
         const llm = await getModelForCapability('format');
-        const systemPrompt = createDobbiSystemPrompt(context);
+        const systemPrompt = createSystemPrompt(context);
 
         const response = await llm.chat([
             {
@@ -223,9 +223,15 @@ async function saveTodo(state: TodoState): Promise<string> {
 
     // Use existing filepath or create new one
     let filepath = state.filepath;
-    const entityId = filepath ? path.basename(filepath, '.md') : generateEntityId('task');
-    if (!filepath) {
-        filepath = path.join(todosDir, `${entityId}.md`);
+    let entityId: string;
+    if (filepath) {
+        // Editing — read id from existing frontmatter
+        const raw = await fs.readFile(filepath, 'utf-8');
+        const parsed = matter(raw);
+        entityId = (parsed.data.id as string) ?? path.basename(filepath, '.md');
+    } else {
+        entityId = generateEntityId('task');
+        filepath = path.join(todosDir, entityFilename(state.title, entityId));
     }
 
     // Format content before saving
@@ -251,8 +257,7 @@ ${finalContent}
     // Update entity index
     const index = getEntityIndex();
     if (index.isBuilt) {
-        const slug = path.basename(filepath, '.md');
-        await index.addOrUpdate('task', slug, state.title, filepath);
+        await index.addOrUpdate('task', entityId, state.title, filepath);
     }
 
     return filepath;
@@ -294,7 +299,7 @@ Commands:
   ${chalk.bold('exit')}       - Save and go back
   ${chalk.bold('back')}       - Save and go back
   ${chalk.bold('abort')}      - Discard changes and go back
-  ${chalk.bold('quit')}       - Quit Dobbi entirely
+  ${chalk.bold('quit')}       - Quit entirely
   ${chalk.bold('help')}       - Show this help
 `));
 }
@@ -304,13 +309,13 @@ export const todoCommand = new Command('todo')
     .argument('[words...]', 'Title and optional inline description (e.g. "fix-login The login 500s with plus signs")')
     .action(async (words: string[]) => {
         try {
-            // Handle: dobbi todo list
+            // Handle: todo list
             if (words[0] === 'list') {
                 await listEntities('todos');
                 return;
             }
 
-            // Handle: dobbi todo done <title>
+            // Handle: todo done <title>
             if (words[0] === 'done') {
                 const doneTitle = words.slice(1).join(' ');
                 if (!doneTitle) {
@@ -338,7 +343,7 @@ export const todoCommand = new Command('todo')
                 return;
             }
 
-            // Handle: dobbi todo remove <title>
+            // Handle: todo remove <title>
             if (words[0] === 'remove' || words[0] === 'delete') {
                 const removeTitle = words.slice(1).join(' ');
                 if (!removeTitle) {
@@ -350,12 +355,14 @@ export const todoCommand = new Command('todo')
                     console.log(chalk.red(`\n  ✗ Task "${removeTitle}" not found\n`));
                     return;
                 }
+                // Read id from frontmatter before trashing
+                const raw = await fs.readFile(existing.filepath, 'utf-8');
+                const taskId = (matter(raw).data.id as string) ?? path.basename(existing.filepath, '.md');
                 const trashPath = await trashEntity(existing.filepath);
                 // Update entity index
                 const idx = getEntityIndex();
                 if (idx.isBuilt) {
-                    const slug = path.basename(existing.filepath, '.md');
-                    idx.remove('task', slug);
+                    idx.remove('task', taskId);
                 }
                 console.log(chalk.green(`\n  🗑  Moved to trash: ${existing.title}`));
                 console.log(chalk.gray(`    ${trashPath}\n`));
@@ -372,7 +379,7 @@ export const todoCommand = new Command('todo')
                     {
                         type: 'input',
                         name: 'todoTitle',
-                        message: 'What task shall Dobbi track, sir?',
+                        message: 'What task should be tracked?',
                         validate: (input: string) => input.length > 0 || 'Title is required',
                     },
                 ]);
@@ -524,7 +531,7 @@ export const todoCommand = new Command('todo')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbi notices unsaved work, sir. Discard changes?',
+                                message: 'There is unsaved work. Discard changes?',
                                 default: false,
                             },
                         ]);
@@ -541,7 +548,7 @@ export const todoCommand = new Command('todo')
                             {
                                 type: 'confirm',
                                 name: 'confirm',
-                                message: 'Dobbi notices unsaved work, sir. Quit Dobbi entirely?',
+                                message: 'There is unsaved work. Quit entirely?',
                                 default: false,
                             },
                         ]);
@@ -593,7 +600,7 @@ export const todoCommand = new Command('todo')
                                 {
                                     type: 'input',
                                     name: 'feedback',
-                                    message: 'How should Dobbi modify the todo?',
+                                    message: 'How should the todo be modified?',
                                 },
                             ]);
                             if (feedback) {

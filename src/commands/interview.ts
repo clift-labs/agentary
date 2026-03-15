@@ -1,12 +1,12 @@
 /**
- * Dobbi's "10 Questions" — a personal-assistant onboarding interview.
+ * Agentary "10 Questions" — a personal-assistant onboarding interview.
  *
- * Covers identity, work, relationships, health, growth, and how
- * the user wants Dobbi to help. Answers are stored as a concise
- * AI-context block in the vault root .socks.md so every LLM call
- * has the full picture.
+ * Covers personality selection, agent naming, identity, work, relationships,
+ * health, growth, and how the user wants their agent to help.
+ * Answers are stored as a concise AI-context block in the vault root .vault.md
+ * so every LLM call has the full picture.
  *
- * Run automatically on first launch, or manually via `dobbi interview`.
+ * Run automatically on first launch, or manually via `agentary interview`.
  */
 
 import { Command } from 'commander';
@@ -17,45 +17,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import { saveProfile, getVaultRoot } from '../state/manager.js';
 import { loadCalConfig, saveCalConfig } from './cal.js';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DIALOGUE
-// ─────────────────────────────────────────────────────────────────────────────
-
-const INTRO_LINES = [
-    `\n🤖 ${chalk.cyan('*peeks out from behind a stack of scrolls*')}`,
-    `\n   Oh! A new face! Dobbi is ${chalk.bold('so')} excited!`,
-    `   Before Dobbi can truly help, Dobbi needs to understand ${chalk.bold('you')}.`,
-    `   ${chalk.gray('*pulls out a special parchment labelled "The 10 Questions"*')}\n`,
-    `   These questions help Dobbi become your ${chalk.bold('personal assistant')}.`,
-    `   Answer as much or as little as you like — press Enter to skip any.\n`,
-];
-
-const REACTIONS: Record<string, ((v: string) => string)[]> = {
-    name: [
-        (n) => `   ${chalk.cyan('*bounces with joy*')} What a wonderful name! ${chalk.bold(n)}! Dobbi will remember it forever!`,
-        (n) => `   ${chalk.cyan('*scribbles furiously on parchment*')} ${chalk.bold(n)}... got it!`,
-    ],
-    generic: [
-        () => `   ${chalk.cyan('*nods thoughtfully*')} Dobbi has noted that carefully.`,
-        () => `   ${chalk.cyan('*scribbles on parchment*')} Very good, very good!`,
-        () => `   ${chalk.cyan('*taps chin*')} That helps Dobbi understand you better.`,
-        () => `   ${chalk.cyan('*files it under "important"*')} Noted!`,
-    ],
-    deep: [
-        () => `   ${chalk.cyan('*wipes a tear*')} Dobbi is touched you shared that.`,
-        () => `   ${chalk.cyan('*clutches heart*')} Dobbi will keep this close.`,
-        () => `   ${chalk.cyan('*smiles warmly*')} Dobbi understands. Thank you for trusting Dobbi.`,
-    ],
-};
-
-const OUTRO_LINES = [
-    `\n🤖 ${chalk.cyan('*rolls up the parchment and stores it carefully*')}`,
-    `   Splendid! The 10 Questions are complete!`,
-    `   Dobbi now knows you ${chalk.bold('properly')} — not just your name, but what matters to you.`,
-    `   Dobbi is ${chalk.bold('fully calibrated')} and ready to serve.`,
-    `   ${chalk.gray('(You can re-do this anytime with: dobbi interview)')}\n`,
-];
+import { PERSONALITIES, getPersonality, type Personality } from '../personalities.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -85,6 +47,8 @@ function sectionHeader(n: number, label: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface TenQAnswers {
+    personality: 'butler' | 'rockstar' | 'executive' | 'friend';
+    agentName: string;
     name: string;
     gender: 'male' | 'female' | 'other';
     location: string;
@@ -101,30 +65,70 @@ interface TenQAnswers {
 }
 
 export async function runInterview(): Promise<void> {
-    await printLines(INTRO_LINES);
+    // ── Q0: Personality selection ────────────────────────────────────────
+    console.log(chalk.cyan('\n🤖 Welcome to Agentary!\n'));
+    console.log(chalk.gray('   First, choose the personality for your agent:\n'));
+
+    const { personalityId } = await inquirer.prompt([{
+        type: 'list',
+        name: 'personalityId',
+        message: chalk.cyan('Choose your agent\'s personality:'),
+        choices: Object.values(PERSONALITIES).map(p => ({
+            name: `${p.label} — ${p.description}`,
+            value: p.id,
+        })),
+        default: 'butler',
+    }]);
+
+    const personality = getPersonality(personalityId);
+    console.log(chalk.green(`\n   ✓ ${personality.label} selected!\n`));
+    await pause();
+
+    // ── Q0b: Agent name ─────────────────────────────────────────────────
+    const { agentName } = await inquirer.prompt([{
+        type: 'input',
+        name: 'agentName',
+        message: chalk.cyan('🤖 What would you like to name your agent?'),
+        default: 'Agent',
+        validate: (v: string) => v.trim().length > 0 || 'Please enter at least one character.',
+    }]);
+
+    console.log(chalk.green(`\n   ✓ Your agent is now named "${agentName.trim()}"!\n`));
+    await pause();
+
+    // ── Print personality-driven intro ───────────────────────────────────
+    const introLines = personality.introLines.map(l =>
+        `   ${chalk.cyan(l.replace(/{agent}/g, agentName.trim()))}`
+    );
+    await printLines(introLines);
 
     // ── Q1: Name ─────────────────────────────────────────────────────────
     const { name } = await inquirer.prompt([{
         type: 'input',
         name: 'name',
         message: sectionHeader(1, 'What\'s your name?'),
-        validate: (v: string) => v.trim().length > 0 || 'Dobbi needs at least one letter!',
+        validate: (v: string) => v.trim().length > 0 || 'Need at least one letter!',
     }]);
-    console.log(pick(REACTIONS.name)(name.trim()));
+    console.log(pick(personality.reactions.name)(name.trim()));
     await pause();
 
     // ── Q2: Gender ───────────────────────────────────────────────────────
+    // Build preview honorifics from the selected personality
+    const malePreview = personality.honorifics.male.slice(0, 3).join(' / ') || '(uses name)';
+    const femalePreview = personality.honorifics.female.slice(0, 3).join(' / ') || '(uses name)';
+    const otherPreview = personality.honorifics.other.slice(0, 3).join(' / ') || '(uses name)';
+
     const { gender } = await inquirer.prompt([{
         type: 'list',
         name: 'gender',
-        message: sectionHeader(2, 'How should Dobbi address you?'),
+        message: sectionHeader(2, 'How should your agent address you?'),
         choices: [
-            { name: 'Sir / Master / Boss  (male)', value: 'male' },
-            { name: 'Ma\'am / Miss / My Lady  (female)', value: 'female' },
-            { name: 'Boss / Chief / Captain  (neutral)', value: 'other' },
+            { name: `${malePreview}  (male)`, value: 'male' },
+            { name: `${femalePreview}  (female)`, value: 'female' },
+            { name: `${otherPreview}  (neutral)`, value: 'other' },
         ],
     }]);
-    console.log(pick(REACTIONS.generic)(''));
+    console.log(pick(personality.reactions.generic)(''));
     await pause();
 
     // ── Q3: Location ─────────────────────────────────────────────────────
@@ -135,7 +139,7 @@ export async function runInterview(): Promise<void> {
         default: '',
     }]);
     if (location.trim()) {
-        console.log(pick(REACTIONS.generic)(''));
+        console.log(pick(personality.reactions.generic)(''));
         await pause();
     }
 
@@ -147,7 +151,7 @@ export async function runInterview(): Promise<void> {
         default: '',
     }]);
     if (work.trim()) {
-        console.log(pick(REACTIONS.generic)(''));
+        console.log(pick(personality.reactions.generic)(''));
         await pause();
     }
 
@@ -159,7 +163,7 @@ export async function runInterview(): Promise<void> {
         default: '',
     }]);
     if (workGoals.trim()) {
-        console.log(pick(REACTIONS.generic)(''));
+        console.log(pick(personality.reactions.generic)(''));
         await pause();
     }
 
@@ -167,11 +171,11 @@ export async function runInterview(): Promise<void> {
     const { relationships } = await inquirer.prompt([{
         type: 'input',
         name: 'relationships',
-        message: sectionHeader(6, 'Tell Dobbi about your people — partner, kids, family, close friends?'),
+        message: sectionHeader(6, 'Tell me about your people — partner, kids, family, close friends?'),
         default: '',
     }]);
     if (relationships.trim()) {
-        console.log(pick(REACTIONS.deep)(''));
+        console.log(pick(personality.reactions.deep)(''));
         await pause();
     }
 
@@ -183,7 +187,7 @@ export async function runInterview(): Promise<void> {
         default: '',
     }]);
     if (health.trim()) {
-        console.log(pick(REACTIONS.generic)(''));
+        console.log(pick(personality.reactions.generic)(''));
         await pause();
     }
 
@@ -195,7 +199,7 @@ export async function runInterview(): Promise<void> {
         default: '',
     }]);
     if (growth.trim()) {
-        console.log(pick(REACTIONS.generic)(''));
+        console.log(pick(personality.reactions.generic)(''));
         await pause();
     }
 
@@ -203,11 +207,11 @@ export async function runInterview(): Promise<void> {
     const { struggles } = await inquirer.prompt([{
         type: 'input',
         name: 'struggles',
-        message: sectionHeader(9, 'What do you struggle with? (procrastination, focus, balance, stress — anything Dobbi should watch for)'),
+        message: sectionHeader(9, 'What do you struggle with? (procrastination, focus, balance, stress — anything to watch for)'),
         default: '',
     }]);
     if (struggles.trim()) {
-        console.log(pick(REACTIONS.deep)(''));
+        console.log(pick(personality.reactions.deep)(''));
         await pause();
     }
 
@@ -215,11 +219,11 @@ export async function runInterview(): Promise<void> {
     const { helpStyle } = await inquirer.prompt([{
         type: 'input',
         name: 'helpStyle',
-        message: sectionHeader(10, 'How do you want Dobbi to help? (gentle nudges, strict accountability, just organise, be proactive, etc.)'),
+        message: sectionHeader(10, 'How do you want your agent to help? (gentle nudges, strict accountability, just organise, be proactive, etc.)'),
         default: '',
     }]);
     if (helpStyle.trim()) {
-        console.log(pick(REACTIONS.generic)(''));
+        console.log(pick(personality.reactions.generic)(''));
         await pause();
     }
 
@@ -243,6 +247,8 @@ export async function runInterview(): Promise<void> {
     // ── Save ──────────────────────────────────────────────────────────────
 
     const answers: TenQAnswers = {
+        personality: personalityId,
+        agentName: agentName.trim(),
         name: name.trim(),
         gender,
         location: location.trim(),
@@ -260,6 +266,8 @@ export async function runInterview(): Promise<void> {
     // 1. Save basic profile to .state.json (for honorifics, name lookup)
     await saveProfile({
         userName: answers.name,
+        agentName: answers.agentName,
+        personality: answers.personality,
         gender: answers.gender,
         workType: answers.work || undefined,
         familySituation: answers.relationships || undefined,
@@ -268,8 +276,8 @@ export async function runInterview(): Promise<void> {
         workCalUrl: answers.workCalUrl,
     });
 
-    // 2. Write the full context to vault .socks.md
-    await writeAnswersToSocks(answers);
+    // 2. Write the full context to vault .vault.md
+    await writeAnswersToVaultFile(answers);
 
     // 3. Auto-configure calendars
     if (answers.personalCalUrl || answers.workCalUrl) {
@@ -283,11 +291,16 @@ export async function runInterview(): Promise<void> {
         await saveCalConfig(cfg);
     }
 
-    await printLines(OUTRO_LINES);
+    // Print personality-driven outro
+    const outroLines = personality.outroLines.map(l =>
+        `   ${chalk.cyan(l.replace(/{agent}/g, answers.agentName))}`
+    );
+    outroLines.push(`   ${chalk.gray(`(You can re-do this anytime with: agentary interview)`)}\n`);
+    await printLines(outroLines);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SOCKS WRITER
+// VAULT FILE WRITER
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ABOUT_HEADING = '## About You';
@@ -322,11 +335,11 @@ function buildAboutBlock(a: TenQAnswers): string {
 }
 
 /**
- * Insert or replace the "About You" block in the vault root .socks.md.
+ * Insert or replace the "About You" block in the vault root .vault.md.
  * If the file has existing 10Q markers, replaces that section.
  * Otherwise appends after the frontmatter/personality section.
  */
-async function writeAnswersToSocks(answers: TenQAnswers): Promise<void> {
+async function writeAnswersToVaultFile(answers: TenQAnswers): Promise<void> {
     let vaultRoot: string;
     try {
         vaultRoot = await getVaultRoot();
@@ -335,21 +348,34 @@ async function writeAnswersToSocks(answers: TenQAnswers): Promise<void> {
         return;
     }
 
-    const socksPath = path.join(vaultRoot, '.socks.md');
+    // Try .vault.md first, then legacy .socks.md
+    let vaultFilePath = path.join(vaultRoot, '.vault.md');
+    try {
+        await fs.access(vaultFilePath);
+    } catch {
+        const legacyPath = path.join(vaultRoot, '.socks.md');
+        try {
+            await fs.access(legacyPath);
+            vaultFilePath = legacyPath;
+        } catch {
+            // Neither exists — use .vault.md
+        }
+    }
+
     const aboutBlock = buildAboutBlock(answers);
 
     let fileContent: string;
     try {
-        fileContent = await fs.readFile(socksPath, 'utf-8');
+        fileContent = await fs.readFile(vaultFilePath, 'utf-8');
     } catch {
-        // No .socks.md yet — create a minimal one
+        // No vault file yet — create a minimal one
         const today = new Date().toISOString().split('T')[0];
         const vaultName = path.basename(vaultRoot);
         fileContent = matter.stringify(
             `\n# ${vaultName}\n\n${aboutBlock}\n`,
             { title: `${vaultName} Vault`, created: today, tags: ['context', 'system', 'root'] },
         );
-        await fs.writeFile(socksPath, fileContent);
+        await fs.writeFile(vaultFilePath, fileContent);
         return;
     }
 
@@ -380,7 +406,7 @@ async function writeAnswersToSocks(answers: TenQAnswers): Promise<void> {
     parsed.data.modified = new Date().toISOString().split('T')[0];
 
     const output = matter.stringify(body, parsed.data);
-    await fs.writeFile(socksPath, output);
+    await fs.writeFile(vaultFilePath, output);
 }
 
 function escapeRegex(s: string): string {
@@ -392,7 +418,7 @@ function escapeRegex(s: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const interviewCommand = new Command('interview')
-    .description('Run (or re-run) Dobbi\'s "10 Questions" personal assistant interview')
+    .description('Run (or re-run) the "10 Questions" personal assistant interview')
     .action(async () => {
         await runInterview();
     });

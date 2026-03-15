@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT ENTITY TYPE DEFINITIONS
 // Only the two built-in types: task (todos) and note.
-// All other types are user-defined via `dobbi type add`.
+// All other types are user-defined via `agentary type add`.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { EntityTypeConfig } from './entity-type-config.js';

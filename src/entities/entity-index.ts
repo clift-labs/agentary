@@ -100,12 +100,12 @@ export class EntityIndex {
                     if (!file.endsWith('.md') || file.startsWith('.')) continue;
 
                     const filepath = path.join(dir, file);
-                    const id = path.basename(file, '.md');
-                    const key = EntityIndex.key(entityType, id);
 
                     try {
                         const raw = await fs.readFile(filepath, 'utf-8');
                         const { meta } = parseEntity(filepath, raw);
+                        const id = (meta.id as string) || path.basename(file, '.md');
+                        const key = EntityIndex.key(entityType, id);
 
                         this.nodes.set(key, {
                             id,
@@ -136,12 +136,12 @@ export class EntityIndex {
                     if (!file.endsWith('.md') || file.startsWith('.')) continue;
 
                     const filepath = path.join(dir, file);
-                    const id = path.basename(file, '.md');
-                    const sourceKey = EntityIndex.key(entityType, id);
 
                     try {
                         const raw = await fs.readFile(filepath, 'utf-8');
                         const { meta, content } = parseEntity(filepath, raw);
+                        const id = (meta.id as string) || path.basename(file, '.md');
+                        const sourceKey = EntityIndex.key(entityType, id);
 
                         // @slug → person mention edges
                         const peopleSlugs = extractPeopleMentions(content);
@@ -191,7 +191,7 @@ export class EntityIndex {
         }
 
         this._builtAt = new Date();
-        if (process.env.DOBBI_DEBUG === '1') {
+        if (process.env.AGENTARY_DEBUG === '1' || process.env.DOBBI_DEBUG === '1') {
             console.debug(`[index] Built index: ${this.nodes.size} nodes, ${this.edges.length} edges`);
         }
     }

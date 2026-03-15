@@ -10,6 +10,7 @@ import {
     writeEntity,
     findEntityByTitle,
     trashEntity,
+    entityFilename,
 } from '../entities/entity.js';
 import { listEntities } from './list.js';
 import { pushCrumb, popCrumb } from '../ui/breadcrumb.js';
@@ -40,8 +41,8 @@ async function savePerson(state: PersonState): Promise<string> {
     const meta = createEntityMeta('person', state.name, {
         tags: state.tags,
     });
-    const id = state.filepath ? path.basename(state.filepath, '.md') : meta.id;
-    const filepath = state.filepath ?? path.join(dir, `${id}.md`);
+    const id = meta.id;
+    const filepath = state.filepath ?? path.join(dir, entityFilename(state.name, id));
 
     const fullMeta: Record<string, unknown> = {
         ...meta,
@@ -103,8 +104,8 @@ async function editPerson(titleOrFilename: string): Promise<void> {
     // Update entity index
     const index = getEntityIndex();
     if (index.isBuilt) {
-        const slug = path.basename(filepath, '.md');
-        await index.addOrUpdate('person', slug, answers.name, filepath);
+        const personId = updatedMeta.id as string;
+        await index.addOrUpdate('person', personId, answers.name, filepath);
     }
 
     console.log(chalk.green(`\n✓ Person updated: ${answers.name}`));
@@ -134,8 +135,7 @@ async function deletePerson(titleOrFilename: string): Promise<void> {
         // Update entity index
         const index = getEntityIndex();
         if (index.isBuilt) {
-            const slug = path.basename(found.filepath, '.md');
-            index.remove('person', slug);
+            index.remove('person', found.meta.id as string);
         }
 
         console.log(chalk.green(`🗑  Moved to trash: ${found.meta.title}`));

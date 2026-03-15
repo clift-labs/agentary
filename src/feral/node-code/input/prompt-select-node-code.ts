@@ -76,10 +76,4 @@ export class PromptSelectNodeCode extends AbstractNodeCode {
         context.set(contextPath, selection);
         return this.result(ResultStatus.OK, `User selected "${selection}", stored in ${contextPath}`);
     }
-
-    private interpolate(template: string, context: Context): string {
-        return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-            return String(context.get(key) ?? '');
-        });
-    }
 }
