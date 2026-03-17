@@ -211,7 +211,7 @@ export function createShellCommand(_program: Command): Command {
             // Guard: vault must exist
             if (!(await isInVault())) {
                 console.log(chalk.red('\nCannot find a vault here.'));
-                console.log(chalk.gray('No .socks.md found in this directory or any parent.'));
+                console.log(chalk.gray('No .vault.md found in this directory or any parent.'));
                 console.log(chalk.gray('\nTo create a vault, run: agentary init\n'));
                 return;
             }

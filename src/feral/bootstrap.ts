@@ -104,7 +104,7 @@ import { CliCommandNodeCode } from './node-code/system/cli-command-node-code.js'
 import { IntrospectNodeCode } from './node-code/system/introspect-node-code.js';
 import { ListProcessesNodeCode } from './node-code/system/list-processes-node-code.js';
 import { ListCatalogNodesNodeCode } from './node-code/system/list-catalog-nodes-node-code.js';
-import { AgentSpeakNodeCode } from './node-code/output/dobbi-speak-node-code.js';
+import { AgentSpeakNodeCode } from './node-code/output/agent-speak-node-code.js';
 
 // Input node codes
 import { PromptInputNodeCode } from './node-code/input/prompt-input-node-code.js';
@@ -221,12 +221,6 @@ export async function bootstrapFeral(
     const nodeCodeFactory = new NodeCodeFactory([
         { getNodeCodes: () => getBuiltInNodeCodes() },
     ]);
-
-    // Backward compat: register dobbi_speak as alias for agent_speak
-    const agentSpeak = nodeCodeFactory.getNodeCode('agent_speak');
-    const dobbiSpeakAlias = Object.create(agentSpeak);
-    dobbiSpeakAlias.key = 'dobbi_speak';
-    nodeCodeFactory.register(dobbiSpeakAlias);
 
     // 2. Load catalog config, entity types, and MCP tools (parallel — independent)
     const { mcpManager } = await import('../skills/mcp-manager.js');

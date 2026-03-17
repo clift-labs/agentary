@@ -191,7 +191,7 @@ export class EntityIndex {
         }
 
         this._builtAt = new Date();
-        if (process.env.AGENTARY_DEBUG === '1' || process.env.DOBBI_DEBUG === '1') {
+        if (process.env.AGENTARY_DEBUG === '1') {
             console.debug(`[index] Built index: ${this.nodes.size} nodes, ${this.edges.length} edges`);
         }
     }

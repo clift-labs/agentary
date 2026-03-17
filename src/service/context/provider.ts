@@ -86,7 +86,7 @@ export class ContextProvider {
     }
 
     /**
-     * Get vault context from vault root .socks.md.
+     * Get vault context from vault root .vault.md.
      */
     async getVaultContext(): Promise<string> {
         return this.getCachedContext('vault', async () => {

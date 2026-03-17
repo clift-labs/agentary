@@ -14,8 +14,6 @@ import os from 'os';
 import { findVaultRoot } from '../../state/manager.js';
 
 const AGENTARY_SYSTEM_DIR = path.join(os.homedir(), '.agentary');
-/** Legacy path — kept for backward compatibility */
-const LEGACY_SYSTEM_DIR = path.join(os.homedir(), '.dobbi');
 
 export class FileAccessDeniedError extends Error {
     constructor(filePath: string) {
@@ -52,14 +50,12 @@ function isUnder(filePath: string, allowedDir: string): boolean {
  * Allowed directories:
  *   - The active vault root (if one exists)
  *   - ~/.agentary/ (always allowed for config/state access)
- *   - ~/.dobbi/ (legacy, still allowed for backward compatibility)
  */
 export async function assertPathAllowed(filePath: string): Promise<void> {
     const resolved = resolveAbsolute(filePath);
 
-    // Always allow ~/.agentary/ and legacy ~/.dobbi/
+    // Always allow ~/.agentary/
     if (isUnder(resolved, AGENTARY_SYSTEM_DIR)) return;
-    if (isUnder(resolved, LEGACY_SYSTEM_DIR)) return;
 
     // Allow the vault root (if one is active)
     const vaultRoot = await findVaultRoot();
@@ -76,7 +72,6 @@ export function assertPathAllowedSync(filePath: string, vaultRoot: string | null
     const resolved = resolveAbsolute(filePath);
 
     if (isUnder(resolved, AGENTARY_SYSTEM_DIR)) return;
-    if (isUnder(resolved, LEGACY_SYSTEM_DIR)) return;
     if (vaultRoot && isUnder(resolved, vaultRoot)) return;
 
     throw new FileAccessDeniedError(resolved);

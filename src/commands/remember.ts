@@ -18,7 +18,7 @@ export const rememberCommand = new Command('remember')
             const vaultRoot = await getVaultRoot();
             const today = new Date().toISOString().split('T')[0];
 
-            const targetPath = path.join(vaultRoot, '.socks.md');
+            const targetPath = path.join(vaultRoot, '.vault.md');
             console.log(chalk.gray('Adding to vault context, sir.'));
 
             const spinner = ora(getResponse('processing')).start();

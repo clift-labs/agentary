@@ -162,6 +162,6 @@ program
 
 // In service daemon mode, service/index.ts already started the server —
 // skip Commander parsing so we don't print help text or launch the shell.
-if (process.env.AGENTARY_SERVICE !== '1' && process.env.DOBBI_SERVICE !== '1') {
+if (process.env.AGENTARY_SERVICE !== '1') {
   program.parse();
 }

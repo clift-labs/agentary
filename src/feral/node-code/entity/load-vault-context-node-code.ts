@@ -2,7 +2,7 @@
 // Feral CCF — Load Vault Context NodeCode
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Collects the hierarchical .socks.md context chain for an entity type
+// Collects the hierarchical .vault.md context chain for an entity type
 // (vault root → projects → project → entity subdirectory) and stores
 // the combined text in the Feral context for downstream LLM nodes.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ export class LoadVaultContextNodeCode extends AbstractNodeCode {
         {
             key: 'entity_type',
             name: 'Entity Type',
-            description: 'The entity type whose .socks.md context to collect (note, task, event, research, goal).',
+            description: 'The entity type whose .vault.md context to collect (note, task, event, research, goal).',
             type: 'string',
         },
         {
@@ -53,7 +53,7 @@ export class LoadVaultContextNodeCode extends AbstractNodeCode {
         super(
             'load_vault_context',
             'Load Vault Context',
-            'Collects .socks.md context from vault root through entity subdirectory.',
+            'Collects .vault.md context from vault root through entity subdirectory.',
             NodeCodeCategory.DATA,
         );
     }

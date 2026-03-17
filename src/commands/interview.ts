@@ -348,19 +348,7 @@ async function writeAnswersToVaultFile(answers: TenQAnswers): Promise<void> {
         return;
     }
 
-    // Try .vault.md first, then legacy .socks.md
-    let vaultFilePath = path.join(vaultRoot, '.vault.md');
-    try {
-        await fs.access(vaultFilePath);
-    } catch {
-        const legacyPath = path.join(vaultRoot, '.socks.md');
-        try {
-            await fs.access(legacyPath);
-            vaultFilePath = legacyPath;
-        } catch {
-            // Neither exists — use .vault.md
-        }
-    }
+    const vaultFilePath = path.join(vaultRoot, '.vault.md');
 
     const aboutBlock = buildAboutBlock(answers);
 

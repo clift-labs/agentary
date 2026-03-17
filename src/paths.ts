@@ -31,31 +31,9 @@ export const SOCKET_PATH = path.join(SYSTEM_DIR, 'agentary.sock');
 export async function getVaultConfigDir(): Promise<string> {
     const vaultRoot = await findVaultRoot();
     if (vaultRoot) {
-        // Prefer .agentary/, fall back to legacy .dobbi/
-        const agentaryDir = path.join(vaultRoot, '.agentary');
-        const legacyDir = path.join(vaultRoot, '.dobbi');
-        try {
-            const { promises: fs } = await import('fs');
-            await fs.access(agentaryDir);
-            return agentaryDir;
-        } catch {
-            try {
-                const { promises: fs } = await import('fs');
-                await fs.access(legacyDir);
-                return legacyDir;
-            } catch {
-                return agentaryDir; // default for new vaults
-            }
-        }
+        return path.join(vaultRoot, '.agentary');
     }
     return SYSTEM_DIR;
-}
-
-/**
- * @deprecated Use getVaultConfigDir() instead
- */
-export async function getVaultDobbiDir(): Promise<string> {
-    return getVaultConfigDir();
 }
 
 // ── Vault-scoped config paths ────────────────────────────────────────────────

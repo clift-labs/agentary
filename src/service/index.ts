@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Dobbi Service - Background daemon for task processing.
- * 
+ * Agentary Service - Background daemon for task processing.
+ *
  * This is the main entry point for the service when run as a daemon.
  * It starts the Unix socket server and queue processor.
  */
@@ -19,7 +19,7 @@ import { getCronScheduler } from './cron/scheduler.js';
 import type { ServiceRequest, ServiceResponse, Task } from './protocol.js';
 
 // Only run if this is the service process
-const isService = process.env.AGENTARY_SERVICE === '1' || process.env.DOBBI_SERVICE === '1';
+const isService = process.env.AGENTARY_SERVICE === '1';
 
 async function handleRequest(request: ServiceRequest): Promise<ServiceResponse> {
     const queueManager = await getQueueManager();

@@ -2,10 +2,10 @@
  * Centralized debug logger.
  *
  * By default logs only the error message (single line).
- * Set AGENTARY_DEBUG=1 (or legacy DOBBI_DEBUG=1) to get full stack traces.
+ * Set AGENTARY_DEBUG=1 to get full stack traces.
  */
 
-const VERBOSE = process.env.AGENTARY_DEBUG === '1' || process.env.DOBBI_DEBUG === '1';
+const VERBOSE = process.env.AGENTARY_DEBUG === '1';
 
 /**
  * Log a debug/error message in a compact, user-friendly format.

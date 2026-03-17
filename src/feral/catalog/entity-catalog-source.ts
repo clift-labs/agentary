@@ -171,7 +171,7 @@ export class EntityCatalogSource implements CatalogSource {
             nodeCodeKey: 'load_vault_context',
             name: `Load Vault Context for ${cap(type)}`,
             group: 'entity',
-            description: `Collects .socks.md context chain for ${plural}.`,
+            description: `Collects .vault.md context chain for ${plural}.`,
             configuration: { entity_type: type, context_path: 'vault_context' },
         });
 

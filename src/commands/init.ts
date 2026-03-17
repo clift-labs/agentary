@@ -18,8 +18,7 @@ export const initCommand = new Command('init')
 
         // Reject init inside the system directory
         const systemDir = path.join(os.homedir(), '.agentary');
-        const legacySystemDir = path.join(os.homedir(), '.dobbi');
-        if (cwd === systemDir || cwd === legacySystemDir || path.basename(cwd) === '.agentary' || path.basename(cwd) === '.dobbi') {
+        if (cwd === systemDir || path.basename(cwd) === '.agentary') {
             console.log(chalk.red('System directories are reserved for configuration.'));
             console.log(chalk.gray('Please run `agentary init` from a different directory.'));
             return;
@@ -109,7 +108,6 @@ This vault is the agent's memory. Content is stored as Markdown files with YAML 
         // Create .gitignore
         const gitignore = `.state.json
 .agentary/
-.dobbi/
 .DS_Store
 `;
         try {

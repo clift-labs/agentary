@@ -219,8 +219,8 @@ async function _feralChatHeadlessInner(
 
     await logger.log('start', { chatId, userInput });
 
-    // Load vault context (.socks.md chain)
-    // Scrub any secrets that may have been accidentally pasted into .socks.md files
+    // Load vault context (.vault.md chain)
+    // Scrub any secrets that may have been accidentally pasted into .vault.md files
     const vaultContext = scrubSecrets(await getVaultContext().catch(() => '')) as string;
 
     // Build global variables block for the LLM
@@ -364,7 +364,7 @@ Return ONLY the JSON object, no markdown fences.`,
 GLOBAL VARIABLES:
 ${globalsBlock}
 
-${vaultContext ? `VAULT CONTEXT (from .socks.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}ENTITY TYPES:
+${vaultContext ? `VAULT CONTEXT (from .vault.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}ENTITY TYPES:
 The agent manages these entity types. When the user mentions something that maps to an entity, prefer creating it:
 ${entityTypes.map(t => {
     const fieldDesc = t.fields.length > 0
@@ -555,7 +555,7 @@ ${gatheredInfoStr}${previousResultsStr}${existingEntitiesBlock}
 GLOBAL VARIABLES:
 ${globalsBlock}
 
-${vaultContext ? `VAULT CONTEXT (from .socks.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}SELECTED CATALOG NODES (you must only use nodes from this list):
+${vaultContext ? `VAULT CONTEXT (from .vault.md files — project goals, notes, and preferences):\n${vaultContext}\n` : ''}SELECTED CATALOG NODES (you must only use nodes from this list):
 ${selectedNodeDetails}
 
 NODE CONFIGURATION DETAILS:

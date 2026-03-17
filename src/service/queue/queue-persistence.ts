@@ -37,7 +37,7 @@ export async function saveQueueState(
         };
         await fs.writeFile(statePath, JSON.stringify(state, null, 2));
     } catch (err) {
-        console.debug('[dobbi:queue-persistence] Failed to save state:', (err as Error).message);
+        console.debug('[agentary:queue-persistence] Failed to save state:', (err as Error).message);
     }
 }
 

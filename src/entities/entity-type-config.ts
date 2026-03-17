@@ -118,7 +118,7 @@ export async function saveEntityTypes(types: EntityTypeConfig[]): Promise<void> 
 
 /**
  * Write entity-types.json with built-in defaults if it doesn't already exist.
- * Called by `dobbi init`.
+ * Called by `agentary init`.
  */
 export async function initEntityTypes(): Promise<void> {
     try {

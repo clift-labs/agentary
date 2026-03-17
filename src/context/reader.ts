@@ -3,16 +3,16 @@ import path from 'path';
 import { debug } from '../utils/debug.js';
 import { getVaultRoot } from '../state/manager.js';
 
-const SOCKS_FILE = '.socks.md';
+const VAULT_FILE = '.vault.md';
 
 /**
- * Reads a single .socks.md file if it exists.
+ * Reads a single .vault.md file if it exists.
  * Returns the content or null if not found.
  */
-async function readSocksFile(dirPath: string): Promise<string | null> {
-    const socksPath = path.join(dirPath, SOCKS_FILE);
+async function readVaultFile(dirPath: string): Promise<string | null> {
+    const vaultFilePath = path.join(dirPath, VAULT_FILE);
     try {
-        return await fs.readFile(socksPath, 'utf-8');
+        return await fs.readFile(vaultFilePath, 'utf-8');
     } catch (err) {
         debug('context', err);
         return null;
@@ -20,7 +20,7 @@ async function readSocksFile(dirPath: string): Promise<string | null> {
 }
 
 /**
- * Reads .socks.md files from the target path up to the vault root.
+ * Reads .vault.md files from the target path up to the vault root.
  * Returns an array of context strings, ordered from deepest to root.
  */
 export async function buildContextChain(targetPath: string): Promise<string[]> {
@@ -32,7 +32,7 @@ export async function buildContextChain(targetPath: string): Promise<string[]> {
 
     // Walk up the directory tree
     while (currentPath.startsWith(rootPath)) {
-        const content = await readSocksFile(currentPath);
+        const content = await readVaultFile(currentPath);
         if (content) {
             contexts.push(content);
         }
@@ -83,9 +83,9 @@ export async function getNotesContext(): Promise<string> {
 
 /**
  * Gets context for a specific subdirectory within the vault.
- * Gathers .socks.md files in this order (broadest to most specific):
- * 1. .socks.md (vault root)
- * 2. {subdirectory}/.socks.md
+ * Gathers .vault.md files in this order (broadest to most specific):
+ * 1. .vault.md (vault root)
+ * 2. {subdirectory}/.vault.md
  *
  * @param subdirectory - The subdirectory within the vault (e.g., 'notes', 'research', 'todos')
  */
@@ -95,12 +95,12 @@ export async function getSubdirectoryContext(subdirectory: string): Promise<stri
 
     // Define the hierarchy from root to subdirectory (broadest to most specific)
     const hierarchy = [
-        vaultRoot,                                              // .socks.md
-        path.join(vaultRoot, subdirectory),                     // {subdirectory}/.socks.md
+        vaultRoot,                                              // .vault.md
+        path.join(vaultRoot, subdirectory),                     // {subdirectory}/.vault.md
     ];
 
     for (const dirPath of hierarchy) {
-        const content = await readSocksFile(dirPath);
+        const content = await readVaultFile(dirPath);
         if (content) {
             contexts.push(content);
         }
@@ -142,7 +142,7 @@ export async function getPeopleContext(): Promise<string> {
 }
 
 /**
- * Gets enriched context that includes .socks.md chain PLUS resolved
+ * Gets enriched context that includes .vault.md chain PLUS resolved
  * @mentions and entity:slug cross-references found in the entity content.
  */
 export async function getEnrichedContext(

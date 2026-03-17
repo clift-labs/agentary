@@ -8,7 +8,6 @@ import { debug } from '../utils/debug.js';
 import chalk from 'chalk';
 
 const VAULT_FILE = '.vault.md';
-const LEGACY_VAULT_FILE = '.socks.md';
 const STATE_FILE = '.state.json';
 
 let cachedVaultRoot: string | null = null;
@@ -22,8 +21,8 @@ export function resetVaultCache(): void {
 }
 
 /**
- * Finds the vault root by looking for .vault.md (or legacy .socks.md) in cwd or parent directories.
- * Also checks the AGENTARY_VAULT env var (with DOBBI_VAULT as fallback).
+ * Finds the vault root by looking for .vault.md in cwd or parent directories.
+ * Also checks the AGENTARY_VAULT env var.
  * Returns null if no vault is found.
  */
 export async function findVaultRoot(): Promise<string | null> {
@@ -31,42 +30,34 @@ export async function findVaultRoot(): Promise<string | null> {
         return cachedVaultRoot;
     }
 
-    // Check AGENTARY_VAULT first, then DOBBI_VAULT as fallback
-    const envVault = process.env.AGENTARY_VAULT || process.env.DOBBI_VAULT;
+    const envVault = process.env.AGENTARY_VAULT;
     if (envVault) {
-        // Check for .vault.md first, then legacy .socks.md
-        for (const marker of [VAULT_FILE, LEGACY_VAULT_FILE]) {
-            const markerPath = path.join(envVault, marker);
-            try {
-                await fs.access(markerPath);
-                cachedVaultRoot = envVault;
-                return envVault;
-            } catch {
-                // Try next marker
-            }
+        const markerPath = path.join(envVault, VAULT_FILE);
+        try {
+            await fs.access(markerPath);
+            cachedVaultRoot = envVault;
+            return envVault;
+        } catch {
+            // Marker not found
         }
     }
 
     const systemDir = path.join(os.homedir(), '.agentary');
-    const legacySystemDir = path.join(os.homedir(), '.dobbi');
     let currentDir = process.cwd();
 
     while (currentDir !== path.dirname(currentDir)) {
         // Never treat the system directory as a vault
-        if (currentDir === systemDir || currentDir === legacySystemDir) {
+        if (currentDir === systemDir) {
             currentDir = path.dirname(currentDir);
             continue;
         }
-        // Check for .vault.md first, then legacy .socks.md
-        for (const marker of [VAULT_FILE, LEGACY_VAULT_FILE]) {
-            const markerPath = path.join(currentDir, marker);
-            try {
-                await fs.access(markerPath);
-                cachedVaultRoot = currentDir;
-                return currentDir;
-            } catch {
-                // Try next marker
-            }
+        const markerPath = path.join(currentDir, VAULT_FILE);
+        try {
+            await fs.access(markerPath);
+            cachedVaultRoot = currentDir;
+            return currentDir;
+        } catch {
+            // Not found, try parent
         }
         currentDir = path.dirname(currentDir);
     }

@@ -63,8 +63,3 @@ export class AgentSpeakNodeCode extends AbstractNodeCode {
         }
     }
 }
-
-/**
- * @deprecated Use AgentSpeakNodeCode instead
- */
-export const DobbiSpeakNodeCode = AgentSpeakNodeCode;
