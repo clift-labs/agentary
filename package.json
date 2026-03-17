@@ -1,6 +1,6 @@
 {
   "name": "agentary",
-  "version": "4.0.6",
+  "version": "4.0.7",
   "description": "An AI-powered Personal Assistant with configurable personalities",
   "type": "module",
   "engines": {
