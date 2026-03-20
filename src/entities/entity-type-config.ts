@@ -6,9 +6,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { promises as fs } from 'fs';
+import path from 'path';
 import { DEFAULT_ENTITY_TYPES, BUILT_IN_TYPE_NAMES } from './entity-types-defaults.js';
 import { debug } from '../utils/debug.js';
 import { getEntityTypesPath, getVaultConfigDir } from '../paths.js';
+import { getVaultRoot } from '../state/manager.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -166,6 +168,7 @@ export async function getSpawnerTypes(): Promise<EntityTypeConfig[]> {
 
 /**
  * Add a new entity type. Throws if name already exists.
+ * Creates the entity directory and a .vault.md context file.
  */
 export async function addEntityType(config: EntityTypeConfig): Promise<void> {
     const types = await loadEntityTypes();
@@ -174,6 +177,47 @@ export async function addEntityType(config: EntityTypeConfig): Promise<void> {
     }
     types.push(config);
     await saveEntityTypes(types);
+
+    // Create entity directory + .vault.md context file
+    try {
+        const vaultRoot = await getVaultRoot();
+        const entityDir = path.join(vaultRoot, config.directory);
+        await fs.mkdir(entityDir, { recursive: true });
+
+        const vaultMdPath = path.join(entityDir, '.vault.md');
+        const fieldLines = config.fields.map(f => {
+            let desc = `- **${f.key}** (${f.type})`;
+            if (f.label) desc += ` — ${f.label}`;
+            if (f.type === 'enum' && f.values) desc += `: ${f.values.join(', ')}`;
+            if (f.default !== undefined) desc += ` [default: ${f.default}]`;
+            return desc;
+        });
+
+        const completionNote = config.completionField
+            ? `\nCompletion: set \`${config.completionField}\` to \`${config.completionValue ?? 'done'}\` to mark as complete.\n`
+            : '';
+
+        const content = `# ${config.plural.charAt(0).toUpperCase() + config.plural.slice(1)}
+
+${config.description || `A collection of ${config.plural}.`}
+
+## Fields
+
+${fieldLines.join('\n')}
+${completionNote}
+## Guidelines
+
+- Use the exact field names above when creating or updating ${config.plural}.
+- Titles should be concise and descriptive.
+- When the user refers to "${config.plural}" or "${config.name}", this is the entity type to use.
+`;
+
+        await fs.writeFile(vaultMdPath, content);
+        debug('entity-types', `Created ${vaultMdPath}`);
+    } catch (err) {
+        debug('entity-types', `Failed to create .vault.md for ${config.name}: ${err}`);
+        // Non-fatal — type is already registered
+    }
 }
 
 /**

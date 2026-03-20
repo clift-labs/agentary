@@ -12,7 +12,7 @@ import { runInterview } from './interview.js';
 import { getEntityIndex } from '../entities/entity-index.js';
 import type { EntityTypeName } from '../entities/entity.js';
 import { loadEntityTypes } from '../entities/entity-type-config.js';
-import { feralChat } from './chat.js';
+import { feralChat, type ChatHistoryEntry } from './chat.js';
 
 // ── Dynamic entity type names (loaded once at shell startup) ─────────────────
 let _dynamicEntityTypes: Set<string> = new Set();
@@ -216,6 +216,7 @@ export function createShellCommand(_program: Command): Command {
                 process.exit(1);
             }
 
+            const chatHistory: ChatHistoryEntry[] = [];
             const bar = new StatusBar();
             const poller = new StatusPoller(bar);
 
@@ -300,7 +301,13 @@ export function createShellCommand(_program: Command): Command {
                         // Any unrecognised input → autonomous chat
                         rl.pause();
                         try {
-                            await feralChat(input);
+                            const response = await feralChat(input, chatHistory);
+                            if (response) {
+                                chatHistory.push({ role: 'user', content: input });
+                                chatHistory.push({ role: 'assistant', content: response });
+                                // Keep only the last 3 pairs (6 entries)
+                                while (chatHistory.length > 6) chatHistory.splice(0, 2);
+                            }
                         } finally {
                             if (process.stdin.isTTY) process.stdin.setRawMode(true);
                             rl.resume();

@@ -545,6 +545,29 @@
     cursor: not-allowed;
   }
 
+  .chat-msg.question .question-cancel-btn {
+    background: transparent;
+    color: var(--dim);
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .chat-msg.question .question-cancel-btn:hover {
+    color: var(--text);
+    border-color: var(--dim);
+  }
+
+  .chat-msg.question .question-cancel-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   .chat-process {
     margin-bottom: 12px;
   }
@@ -1386,6 +1409,8 @@
     qText.textContent = question || 'A question for you:';
     bubble.appendChild(qText);
 
+    var cancelled = false;
+
     function sendAnswer(answer) {
       // Show user's answer as a message
       addMessage('user', answer);
@@ -1395,6 +1420,17 @@
       }
       // Show thinking again while process resumes
       showThinking('Resuming…');
+    }
+
+    function sendCancel() {
+      if (cancelled) return;
+      cancelled = true;
+      addMessage('user', 'Cancelled');
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'chat.answer', answer: '__cancel__' }));
+      }
+      // Disable all interactive elements in this question
+      bubble.querySelectorAll('button, input').forEach(function(el) { el.disabled = true; });
     }
 
     if (options && options.length > 0) {
@@ -1411,6 +1447,11 @@
         });
         optWrap.appendChild(btn);
       });
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'question-cancel-btn';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', sendCancel);
+      optWrap.appendChild(cancelBtn);
       bubble.appendChild(optWrap);
     } else {
       const inputWrap = document.createElement('div');
@@ -1422,22 +1463,29 @@
       const submitBtn = document.createElement('button');
       submitBtn.className = 'question-submit-btn';
       submitBtn.textContent = 'Send';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'question-cancel-btn';
+      cancelBtn.textContent = 'Cancel';
 
       function submitAnswer() {
         const val = input.value.trim();
         if (!val) return;
         input.disabled = true;
         submitBtn.disabled = true;
+        cancelBtn.disabled = true;
         sendAnswer(val);
       }
 
       submitBtn.addEventListener('click', submitAnswer);
+      cancelBtn.addEventListener('click', sendCancel);
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') { e.preventDefault(); submitAnswer(); }
+        if (e.key === 'Escape') { e.preventDefault(); sendCancel(); }
       });
 
       inputWrap.appendChild(input);
       inputWrap.appendChild(submitBtn);
+      inputWrap.appendChild(cancelBtn);
       bubble.appendChild(inputWrap);
 
       // Auto-focus the question input

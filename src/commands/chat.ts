@@ -173,6 +173,28 @@ const EXAMPLE_PROCESSES = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CONVERSATION HISTORY
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ChatHistoryEntry {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+const MAX_HISTORY_PAIRS = 3;
+
+/**
+ * Format recent history into a block the LLM can reference.
+ */
+function formatHistoryBlock(history: ChatHistoryEntry[]): string {
+    if (history.length === 0) return '';
+    const lines = history.map(h =>
+        h.role === 'user' ? `User: ${h.content}` : `Assistant: ${h.content}`,
+    );
+    return `\nRECENT CONVERSATION (last ${Math.ceil(history.length / 2)} exchange(s) — use this for context when the user refers to previous requests):\n${lines.join('\n')}\n`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CORE: feralChatHeadless — headless pipeline, returns the response string
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -182,6 +204,7 @@ export async function feralChatHeadless(
     onProcess?: (processJson: Record<string, unknown>) => void,
     onQuestion?: (question: string, options?: string[]) => Promise<string>,
     onChatId?: (chatId: string) => void,
+    history?: ChatHistoryEntry[],
 ): Promise<string> {
     const status = (s: string) => onStatus?.(s);
     const chatId = generateChatId();
@@ -192,7 +215,7 @@ export async function feralChatHeadless(
 
     status('Thinking…');
 
-    try { return await _feralChatHeadlessInner(userInput, status, onProcess, onQuestion, logger, chatId); }
+    try { return await _feralChatHeadlessInner(userInput, status, onProcess, onQuestion, logger, chatId, history ?? []); }
     catch (error) {
         await logger.log('error', { message: error instanceof Error ? error.message : String(error) });
         throw error;
@@ -208,6 +231,7 @@ async function _feralChatHeadlessInner(
     onQuestion: ((question: string, options?: string[]) => Promise<string>) | undefined,
     logger: ChatLogger,
     chatId: string,
+    history: ChatHistoryEntry[],
 ): Promise<string> {
     // ── Bootstrap Feral + load entity types + vault context ────────
     const inMemorySource = new InMemoryProcessSource();
@@ -254,11 +278,13 @@ async function _feralChatHeadlessInner(
             .map(p => `- ${p.key}: ${p.description}`)
             .join('\n');
 
+        const historyBlock = formatHistoryBlock(history);
+
         const phase1Response = await llm.chat(
             [{
                 role: 'user' as const,
                 content: `The user said: "${userInput}"
-
+${historyBlock}
 AVAILABLE PROCESSES:
 ${processSummary}
 
@@ -325,7 +351,7 @@ Return ONLY the JSON object, no markdown fences.`,
                 // Synthesize response
                 const finalResponse = await synthesizeResponse(
                     llm, userInput, matchResult.reasoning,
-                    [scrubbedResult], [], vaultContext,
+                    [scrubbedResult], [], vaultContext, history,
                 );
                 await logger.log('response', { response: finalResponse });
 
@@ -356,11 +382,13 @@ Return ONLY the JSON object, no markdown fences.`,
     // ── STEP 1: Select catalog nodes ─────────────────────────────────
     status('Selecting capabilities…');
 
+    const historyBlock = formatHistoryBlock(history);
+
     const step1Response = await llm.chat(
         [{
             role: 'user' as const,
             content: `The user said: "${userInput}"
-
+${historyBlock}
 GLOBAL VARIABLES:
 ${globalsBlock}
 
@@ -551,7 +579,7 @@ Return ONLY the JSON object, no markdown fences.`,
             [{
                 role: 'user' as const,
                 content: `Build a Feral process to handle: "${remainingWork}"
-${gatheredInfoStr}${previousResultsStr}${existingEntitiesBlock}
+${historyBlock}${gatheredInfoStr}${previousResultsStr}${existingEntitiesBlock}
 GLOBAL VARIABLES:
 ${globalsBlock}
 
@@ -729,7 +757,7 @@ Return ONLY the JSON object, no markdown fences.`,
 
     const finalResponse = await synthesizeResponse(
         llm, userInput, nodeSelection.reasoning,
-        allResults, nodesUsed, vaultContext,
+        allResults, nodesUsed, vaultContext, history,
     );
     await logger.log('response', { response: finalResponse });
 
@@ -764,9 +792,10 @@ async function synthesizeResponse(
     results: Record<string, unknown>[],
     nodesUsed: string[],
     vaultContext: string,
+    history: ChatHistoryEntry[] = [],
 ): Promise<string> {
     const synthesisPrompt = `The user said: "${userInput}"
-
+${formatHistoryBlock(history)}
 WHAT WAS DONE:
 Reasoning: ${reasoning}
 
@@ -800,7 +829,7 @@ RESPONSE GUIDELINES:
 // CORE: feralChat — CLI wrapper with ora spinner
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function feralChat(userInput: string): Promise<void> {
+export async function feralChat(userInput: string, history?: ChatHistoryEntry[]): Promise<string | null> {
     const spinner = ora({ text: chalk.dim('Thinking…'), color: 'cyan' }).start();
 
     try {
@@ -810,10 +839,12 @@ export async function feralChat(userInput: string): Promise<void> {
             undefined,
             undefined,
             (chatId) => { spinner.text = chalk.dim(`[${chatId}] Thinking…`); },
+            history,
         );
 
         spinner.stop();
         console.log(chalk.cyan(`\n  ${response.split('\n').join('\n  ')}\n`));
+        return response;
     } catch (error) {
         spinner.stop();
         const msg = error instanceof Error ? error.message : String(error);
@@ -825,6 +856,7 @@ export async function feralChat(userInput: string): Promise<void> {
             console.log(chalk.yellow(`\n  Hmm, something went wrong: ${msg}`));
             console.log(chalk.dim('  Try rephrasing, or use a specific command like "todo", "note", "today".\n'));
         }
+        return null;
     }
 }
 

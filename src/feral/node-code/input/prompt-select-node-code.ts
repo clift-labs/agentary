@@ -40,6 +40,7 @@ export class PromptSelectNodeCode extends AbstractNodeCode {
 
     static readonly resultDescriptions: ResultDescription[] = [
         { status: ResultStatus.OK, description: 'User selected a choice.' },
+        { status: ResultStatus.STOP, description: 'User cancelled the selection.' },
     ];
 
     constructor() {
@@ -59,6 +60,7 @@ export class PromptSelectNodeCode extends AbstractNodeCode {
         const prompt = this.interpolate(promptTemplate, context);
         const choices = optionsRaw.split(',').map(s => s.trim()).filter(Boolean);
 
+        const CANCEL_SENTINEL = '__cancel__';
         const askQuestion = context.get('_askQuestion') as ((q: string, opts?: string[]) => Promise<string>) | null;
         let selection: string;
         if (askQuestion) {
@@ -71,6 +73,11 @@ export class PromptSelectNodeCode extends AbstractNodeCode {
                 choices,
             }]);
             selection = result.selection as string;
+        }
+
+        if (selection === CANCEL_SENTINEL) {
+            context.set('_cancelled', true);
+            return this.result(ResultStatus.STOP, 'User cancelled.');
         }
 
         context.set(contextPath, selection);

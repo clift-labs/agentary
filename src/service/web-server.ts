@@ -8,7 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { listEntities, writeEntity, parseEntity, getEntityDir } from '../entities/entity.js';
-import { feralChatHeadless } from '../commands/chat.js';
+import { feralChatHeadless, type ChatHistoryEntry } from '../commands/chat.js';
 import { appendReaction } from '../utils/chat-logger.js';
 import { getQueueManager } from './queue/manager.js';
 import { getEntityIndex } from '../entities/entity-index.js';
@@ -206,6 +206,7 @@ export class WebServer {
         debug('web', 'WebSocket client connected');
 
         let pendingAnswer: { resolve: (answer: string) => void } | null = null;
+        const chatHistory: ChatHistoryEntry[] = [];
 
         ws.on('message', async (data) => {
             let msg: { type: string; message?: string; answer?: string; chatId?: string; reaction?: string; details?: string };
@@ -245,7 +246,7 @@ export class WebServer {
                         }
                     });
                 };
-                await this.handleChat(ws, msg.message, onQuestion);
+                await this.handleChat(ws, msg.message, onQuestion, chatHistory);
             }
         });
 
@@ -258,6 +259,7 @@ export class WebServer {
         ws: WebSocket,
         message: string,
         onQuestion?: (question: string, options?: string[]) => Promise<string>,
+        chatHistory?: ChatHistoryEntry[],
     ): Promise<void> {
         let currentChatId: string | undefined;
         try {
@@ -280,7 +282,15 @@ export class WebServer {
                         ws.send(JSON.stringify({ type: 'chat.start', chatId }));
                     }
                 },
+                chatHistory,
             );
+
+            // Track conversation history (last 3 exchanges)
+            if (chatHistory) {
+                chatHistory.push({ role: 'user', content: message });
+                chatHistory.push({ role: 'assistant', content: response });
+                while (chatHistory.length > 6) chatHistory.splice(0, 2);
+            }
 
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'chat.response', message: response, chatId: currentChatId }));

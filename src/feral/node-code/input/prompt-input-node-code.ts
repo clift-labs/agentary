@@ -42,6 +42,7 @@ export class PromptInputNodeCode extends AbstractNodeCode {
     static readonly resultDescriptions: ResultDescription[] = [
         { status: ResultStatus.OK, description: 'User provided an answer.' },
         { status: 'skipped', description: 'User provided no answer (empty input).' },
+        { status: ResultStatus.STOP, description: 'User cancelled the prompt.' },
     ];
 
     constructor() {
@@ -61,6 +62,7 @@ export class PromptInputNodeCode extends AbstractNodeCode {
         // Interpolate {context_key} tokens
         const prompt = this.interpolate(promptTemplate, context);
 
+        const CANCEL_SENTINEL = '__cancel__';
         const askQuestion = context.get('_askQuestion') as ((q: string, opts?: string[]) => Promise<string>) | null;
         let trimmed: string;
         if (askQuestion) {
@@ -73,6 +75,11 @@ export class PromptInputNodeCode extends AbstractNodeCode {
                 ...(defaultValue ? { default: this.interpolate(defaultValue, context) } : {}),
             }]);
             trimmed = (answer as string).trim();
+        }
+
+        if (trimmed === CANCEL_SENTINEL) {
+            context.set('_cancelled', true);
+            return this.result(ResultStatus.STOP, 'User cancelled.');
         }
 
         if (!trimmed) {

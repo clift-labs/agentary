@@ -14,25 +14,14 @@ import type { ConfigurationDescription, ResultDescription } from '../../configur
 import { AbstractNodeCode } from '../abstract-node-code.js';
 import { NodeCodeCategory } from '../node-code.js';
 import { getSubdirectoryContext } from '../../../context/reader.js';
-import type { EntityTypeName } from '../../../entities/entity.js';
-
-/**
- * Maps entity type names to their vault subdirectory names.
- */
-const ENTITY_DIR_MAP: Record<string, string> = {
-    note: 'notes',
-    task: 'todos',
-    event: 'events',
-    research: 'research',
-    goal: 'goals',
-};
+import { getEntityType } from '../../../entities/entity-type-config.js';
 
 export class LoadVaultContextNodeCode extends AbstractNodeCode {
     static readonly configDescriptions: ConfigurationDescription[] = [
         {
             key: 'entity_type',
             name: 'Entity Type',
-            description: 'The entity type whose .vault.md context to collect (note, task, event, research, goal).',
+            description: 'The entity type whose .vault.md context to collect (any registered entity type).',
             type: 'string',
         },
         {
@@ -59,20 +48,21 @@ export class LoadVaultContextNodeCode extends AbstractNodeCode {
     }
 
     async process(context: Context): Promise<Result> {
-        const entityType = this.getRequiredConfigValue('entity_type') as EntityTypeName;
+        const entityType = this.getRequiredConfigValue('entity_type') as string;
         const contextPath = this.getRequiredConfigValue('context_path', 'vault_context') as string;
 
-        const subdirectory = ENTITY_DIR_MAP[entityType];
-        if (!subdirectory) {
+        // Dynamically resolve directory from entity type config
+        const typeConfig = await getEntityType(entityType);
+        if (!typeConfig) {
             context.set('error', `Unknown entity type: ${entityType}`);
             return this.result(ResultStatus.ERROR, `Unknown entity type "${entityType}".`);
         }
 
         try {
-            const vaultContext = await getSubdirectoryContext(subdirectory);
+            const vaultContext = await getSubdirectoryContext(typeConfig.directory);
             context.set(contextPath, vaultContext);
 
-            return this.result(ResultStatus.OK, `Loaded vault context for ${entityType} (${subdirectory}).`);
+            return this.result(ResultStatus.OK, `Loaded vault context for ${entityType} (${typeConfig.directory}).`);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             context.set('error', message);

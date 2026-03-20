@@ -218,20 +218,21 @@ export async function spawnDateSeries(
         }
 
         const dateStr = formatDate(date);
+        const childTitle = interpolateTitlePattern(titlePattern, templateTitle, date);
 
         // Idempotency check using dedupeFields
         if (dedupeFields.length > 0) {
             const mappedFields = applyFieldMapping(spawnerConfig.fieldMapping, template, date);
+            // Include the computed title so dedup can match on it
+            const candidateFields: Record<string, unknown> = { title: childTitle, ...mappedFields };
             const alreadyExists = existingMetas.some(m =>
-                dedupeFields.every(f => m[f] === mappedFields[f]),
+                dedupeFields.every(f => m[f] === candidateFields[f]),
             );
             if (alreadyExists) {
                 skipped++;
                 continue;
             }
         }
-
-        const childTitle = interpolateTitlePattern(titlePattern, templateTitle, date);
         const id = generateEntityId(targetTypeConfig.name);
         const filepath = path.join(targetDir, entityFilename(childTitle, id));
 
