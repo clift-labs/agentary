@@ -8,20 +8,20 @@ import { getResponse } from '../responses.js';
  * Service management commands.
  */
 export const serviceCommand = new Command('service')
-    .description('Manage the Agentary background service');
+    .description('Manage the Phaibel background service');
 
-// agentaryservice start
+// phaibelservice start
 serviceCommand
     .command('start')
-    .description('Start the Agentary background service')
+    .description('Start the Phaibel background service')
     .action(async () => {
-        console.log(chalk.cyan('Starting Agentary service...'));
+        console.log(chalk.cyan('Starting Phaibel service...'));
 
         try {
             const status = await startDaemon();
 
             if (status.running) {
-                console.log(chalk.green('✓ Agentary service is running'));
+                console.log(chalk.green('✓ Phaibel service is running'));
                 console.log(chalk.dim(`  PID: ${status.pid}`));
                 console.log(chalk.dim(`  Socket: ${status.socketPath}`));
                 console.log(chalk.dim(`  Web: http://localhost:3737`));
@@ -31,47 +31,49 @@ serviceCommand
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error);
         }
+        process.exit(0);
     });
 
-// agentaryservice stop
+// phaibelservice stop
 serviceCommand
     .command('stop')
-    .description('Stop the Agentary background service')
+    .description('Stop the Phaibel background service')
     .action(async () => {
-        console.log(chalk.cyan('Stopping Agentary service...'));
+        console.log(chalk.cyan('Stopping Phaibel service...'));
 
         try {
             const status = await stopDaemon();
 
             if (!status.running) {
-                console.log(chalk.green('✓ Agentary service stopped'));
+                console.log(chalk.green('✓ Phaibel service stopped'));
             } else {
                 console.log(chalk.red('✗ Failed to stop service'));
             }
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error);
         }
+        process.exit(0);
     });
 
-// agentaryservice restart
+// phaibelservice restart
 serviceCommand
     .command('restart')
-    .description('Restart the Agentary background service')
+    .description('Restart the Phaibel background service')
     .action(async () => {
         try {
             const status = await getDaemonStatus();
 
             if (status.running) {
-                console.log(chalk.cyan('Stopping Agentary service...'));
+                console.log(chalk.cyan('Stopping Phaibel service...'));
                 await stopDaemon();
                 console.log(chalk.green('✓ Stopped'));
             }
 
-            console.log(chalk.cyan('Starting Agentary service...'));
+            console.log(chalk.cyan('Starting Phaibel service...'));
             const newStatus = await startDaemon();
 
             if (newStatus.running) {
-                console.log(chalk.green('✓ Agentary service is running'));
+                console.log(chalk.green('✓ Phaibel service is running'));
                 console.log(chalk.dim(`  PID: ${newStatus.pid}`));
                 console.log(chalk.dim(`  Socket: ${newStatus.socketPath}`));
                 console.log(chalk.dim(`  Web: http://localhost:3737`));
@@ -81,18 +83,19 @@ serviceCommand
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error);
         }
+        process.exit(0);
     });
 
-// agentaryservice status
+// phaibelservice status
 serviceCommand
     .command('status')
-    .description('Check the status of the Agentary service')
+    .description('Check the status of the Phaibel service')
     .action(async () => {
         try {
             const status = await getDaemonStatus();
 
             if (status.running) {
-                console.log(chalk.green('✓ Agentary service is running'));
+                console.log(chalk.green('✓ Phaibel service is running'));
                 console.log(chalk.dim(`  PID: ${status.pid}`));
                 console.log(chalk.dim(`  Socket: ${status.socketPath}`));
 
@@ -115,8 +118,8 @@ serviceCommand
                     // Service running but can't connect — skip details
                 }
             } else {
-                console.log(chalk.yellow('○ Agentary service is not running'));
-                console.log(chalk.dim('  Start with: agentary service start'));
+                console.log(chalk.yellow('○ Phaibel service is not running'));
+                console.log(chalk.dim('  Start with: phaibel service start'));
             }
         } catch (error) {
             console.error(chalk.red(getResponse('error')), error);
@@ -129,7 +132,7 @@ serviceCommand
 export const queueCommand = new Command('queue')
     .description('Manage the task queue');
 
-// agentaryqueue size
+// phaibelqueue size
 queueCommand
     .command('size')
     .description('Get the current queue size')
@@ -147,7 +150,7 @@ queueCommand
         }
     });
 
-// agentaryqueue status
+// phaibelqueue status
 queueCommand
     .command('status')
     .description('Get detailed queue status')
@@ -180,7 +183,7 @@ queueCommand
         }
     });
 
-// agentaryqueue clear
+// phaibelqueue clear
 queueCommand
     .command('clear')
     .description('Clear all pending tasks from the queue')
@@ -206,7 +209,7 @@ queueCommand
         }
     });
 
-// agentaryqueue pause
+// phaibelqueue pause
 queueCommand
     .command('pause')
     .description('Pause queue processing')
@@ -224,7 +227,7 @@ queueCommand
         }
     });
 
-// agentaryqueue resume
+// phaibelqueue resume
 queueCommand
     .command('resume')
     .description('Resume queue processing')
@@ -248,7 +251,7 @@ queueCommand
 export const indexCommand = new Command('index')
     .description('Manage the entity index and relationship graph');
 
-// agentaryindex stats
+// phaibelindex stats
 indexCommand
     .command('stats')
     .description('Show entity index statistics')
@@ -276,7 +279,7 @@ indexCommand
         }
     });
 
-// agentaryindex graph
+// phaibelindex graph
 indexCommand
     .command('graph')
     .description('Show all entity relationships')
@@ -303,7 +306,7 @@ indexCommand
         }
     });
 
-// agentaryindex neighbors <key>
+// phaibelindex neighbors <key>
 indexCommand
     .command('neighbors <key>')
     .description('Show neighbors of an entity (e.g. "note:my-note" or "person:gary-clift")')
@@ -331,7 +334,7 @@ indexCommand
         }
     });
 
-// agentaryindex rebuild
+// phaibelindex rebuild
 indexCommand
     .command('rebuild')
     .description('Rebuild the entity index')

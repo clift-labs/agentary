@@ -20,7 +20,7 @@ export interface ExecutionLog {
 }
 
 /**
- * Write a single execution log as a JSON file to {vault}/.agentary/logs/.
+ * Write a single execution log as a JSON file to {vault}/.phaibel/logs/.
  */
 export async function writeExecutionLog(log: ExecutionLog): Promise<void> {
     const dir = await getLogsDir();

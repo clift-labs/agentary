@@ -12,15 +12,15 @@ import { startDaemon } from '../service/daemon.js';
 import { SYSTEM_DIR } from '../paths.js';
 
 export const initCommand = new Command('init')
-    .description('Initialize a new agentary vault in the current directory')
+    .description('Initialize a new phaibel vault in the current directory')
     .action(async () => {
         const cwd = process.cwd();
 
         // Reject init inside the system directory
-        const systemDir = path.join(os.homedir(), '.agentary');
-        if (cwd === systemDir || path.basename(cwd) === '.agentary') {
+        const systemDir = path.join(os.homedir(), '.phaibel');
+        if (cwd === systemDir || path.basename(cwd) === '.phaibel') {
             console.log(chalk.red('System directories are reserved for configuration.'));
-            console.log(chalk.gray('Please run `agentary init` from a different directory.'));
+            console.log(chalk.gray('Please run `phaibel init` from a different directory.'));
             return;
         }
 
@@ -29,7 +29,7 @@ export const initCommand = new Command('init')
         // Check if already a vault
         const existingVault = await findVaultRoot();
         if (existingVault === cwd) {
-            console.log(chalk.yellow('This directory is already an agentary vault.'));
+            console.log(chalk.yellow('This directory is already an phaibel vault.'));
             return;
         }
 
@@ -48,7 +48,7 @@ export const initCommand = new Command('init')
             // Good, doesn't exist
         }
 
-        console.log(chalk.gray('Creating a new agentary vault...'));
+        console.log(chalk.gray('Creating a new phaibel vault...'));
 
         const today = new Date().toISOString().split('T')[0];
         const vaultName = path.basename(cwd);
@@ -86,13 +86,13 @@ This vault is the agent's memory. Content is stored as Markdown files with YAML 
 `;
         await fs.writeFile(vaultFilePath, rootVaultFile);
 
-        // Ensure ~/.agentary/ exists for secrets
+        // Ensure ~/.phaibel/ exists for secrets
         await fs.mkdir(SYSTEM_DIR, { recursive: true });
 
-        // Create vault-scoped .agentary/ for config, logs, processes
-        await fs.mkdir(path.join(cwd, '.agentary'), { recursive: true });
+        // Create vault-scoped .phaibel/ for config, logs, processes
+        await fs.mkdir(path.join(cwd, '.phaibel'), { recursive: true });
 
-        // Seed entity-types.json in vault/.agentary/
+        // Seed entity-types.json in vault/.phaibel/
         await initEntityTypes();
 
         // Create entity type directories directly in vault root
@@ -107,7 +107,7 @@ This vault is the agent's memory. Content is stored as Markdown files with YAML 
 
         // Create .gitignore
         const gitignore = `.state.json
-.agentary/
+.phaibel/
 .DS_Store
 `;
         try {
@@ -142,7 +142,7 @@ This vault is the agent's memory. Content is stored as Markdown files with YAML 
             }]);
 
             await setApiKey(provider, apiKey);
-            console.log(chalk.green(`\n✓ ${provider} API key saved to ~/.agentary/`));
+            console.log(chalk.green(`\n✓ ${provider} API key saved to ~/.phaibel/`));
 
             // Start service on first setup
             console.log(chalk.gray('\nStarting service...'));
@@ -152,11 +152,11 @@ This vault is the agent's memory. Content is stored as Markdown files with YAML 
                     console.log(chalk.green('✓ Service running!'));
                     console.log(chalk.cyan('  Web client: http://localhost:3737\n'));
                 } else {
-                    console.log(chalk.yellow('Service did not start. Run `agentary service start` to try again.\n'));
+                    console.log(chalk.yellow('Service did not start. Run `phaibel service start` to try again.\n'));
                 }
             } catch (err) {
                 debug('init', err);
-                console.log(chalk.yellow('Could not auto-start service. Run `agentary service start` manually.\n'));
+                console.log(chalk.yellow('Could not auto-start service. Run `phaibel service start` manually.\n'));
             }
         }
 
@@ -165,7 +165,7 @@ This vault is the agent's memory. Content is stored as Markdown files with YAML 
         for (const folder of folders) {
             console.log(chalk.gray(`  ${folder}/`));
         }
-        console.log(chalk.cyan('\nRun `agentary` to get started!'));
+        console.log(chalk.cyan('\nRun `phaibel` to get started!'));
     });
 
 export default initCommand;

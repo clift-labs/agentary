@@ -1,5 +1,5 @@
 /**
- * Agentary personality response catalog.
+ * Phaibel personality response catalog.
  * Each key maps to an array of possible responses.
  * Use getResponse(key) to get a random response with {name}, {honorific}, and {agent} auto-substituted.
  *
@@ -126,10 +126,10 @@ const responses: Record<ResponseKey, string[]> = {
     no_vault: [
         '{agent} cannot find a vault here, {honorific}.',
         'This directory has no vault, {name}. {agent} cannot proceed.',
-        '{honorific}, {agent} needs a vault to work. Please run agentary init.',
+        '{honorific}, {agent} needs a vault to work. Please run phaibel init.',
         'No vault found, {name}. {agent} is lost without one.',
         '{agent} requires a vault, {honorific}. This directory has none.',
-        '{name}, please create a vault first with agentary init.',
+        '{name}, please create a vault first with phaibel init.',
         '{agent} looked everywhere, {honorific}, but found no vault.',
     ],
     need_project: [

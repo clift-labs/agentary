@@ -137,7 +137,7 @@ Return a JSON object:
 If no actions needed, return empty arrays. Return ONLY the JSON object, no markdown fences.`,
         }],
         {
-            systemPrompt: 'You are the process lifecycle engine for Agentary, a Personal Digital Agent. Analyze execution logs and process performance to create new processes, improve underperforming ones, and retire broken or unused ones. Quality over quantity — only act when the data clearly supports it.',
+            systemPrompt: 'You are the process lifecycle engine for Phaibel, a Personal Digital Agent. Analyze execution logs and process performance to create new processes, improve underperforming ones, and retire broken or unused ones. Quality over quantity — only act when the data clearly supports it.',
             temperature: 0.3,
         },
     );

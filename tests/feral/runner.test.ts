@@ -47,7 +47,7 @@ describe('Runner — End-to-End', () => {
                 {
                     key: 'set_name',
                     catalog_node_key: 'catalog_set_value',
-                    configuration: { value: 'Dobbi', context_path: 'assistant', value_type: 'string' },
+                    configuration: { value: 'Phaibel', context_path: 'assistant', value_type: 'string' },
                     edges: { ok: 'count_up' },
                 },
                 {
@@ -70,7 +70,7 @@ describe('Runner — End-to-End', () => {
         // Process context should be merged
         expect(ctx.get('initial')).toBe('from-process');
         // Set value node should have set 'assistant'
-        expect(ctx.get('assistant')).toBe('Dobbi');
+        expect(ctx.get('assistant')).toBe('Phaibel');
         // Counter should have incremented
         expect(ctx.get('visits')).toBe(6);
     });

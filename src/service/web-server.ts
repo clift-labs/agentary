@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Web Server — HTTP + WebSocket for the Agentary browser client
+// Web Server — HTTP + WebSocket for the Phaibel browser client
 // ─────────────────────────────────────────────────────────────────────────────
 
 import http from 'http';
@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { listEntities, writeEntity, parseEntity, getEntityDir } from '../entities/entity.js';
 import { feralChatHeadless } from '../commands/chat.js';
+import { appendReaction } from '../utils/chat-logger.js';
 import { getQueueManager } from './queue/manager.js';
 import { getEntityIndex } from '../entities/entity-index.js';
 import { getVaultRoot, getAgentName } from '../state/manager.js';
@@ -207,7 +208,7 @@ export class WebServer {
         let pendingAnswer: { resolve: (answer: string) => void } | null = null;
 
         ws.on('message', async (data) => {
-            let msg: { type: string; message?: string; answer?: string };
+            let msg: { type: string; message?: string; answer?: string; chatId?: string; reaction?: string; details?: string };
             try {
                 msg = JSON.parse(data.toString());
             } catch {
@@ -219,6 +220,18 @@ export class WebServer {
                 if (pendingAnswer) {
                     pendingAnswer.resolve(msg.answer);
                     pendingAnswer = null;
+                }
+                return;
+            }
+
+            if (msg.type === 'chat.reaction') {
+                if (msg.chatId && (msg.reaction === 'positive' || msg.reaction === 'negative')) {
+                    try {
+                        await appendReaction(msg.chatId, msg.reaction, msg.details);
+                        debug('web', `Reaction logged: ${msg.reaction} for ${msg.chatId}`);
+                    } catch (err) {
+                        debug('web', `Failed to log reaction: ${err}`);
+                    }
                 }
                 return;
             }

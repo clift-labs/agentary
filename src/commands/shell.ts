@@ -212,8 +212,8 @@ export function createShellCommand(_program: Command): Command {
             if (!(await isInVault())) {
                 console.log(chalk.red('\nCannot find a vault here.'));
                 console.log(chalk.gray('No .vault.md found in this directory or any parent.'));
-                console.log(chalk.gray('\nTo create a vault, run: agentary init\n'));
-                return;
+                console.log(chalk.gray('\nTo create a vault, run: phaibel init\n'));
+                process.exit(1);
             }
 
             const bar = new StatusBar();

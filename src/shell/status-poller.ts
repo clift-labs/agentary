@@ -1,5 +1,5 @@
 /**
- * Background status poller for the Agentary shell.
+ * Background status poller for the Phaibel shell.
  *
  * Polls service status and queue size on a timer
  * and updates the StatusBar data.

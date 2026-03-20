@@ -21,7 +21,7 @@ export async function getModelForCapability(capability: LLMCapability): Promise<
 
     if (!mapping) {
         throw new Error(
-            `No provider configured for capability '${capability}'. Please run 'agentary config add-provider openai' or 'agentary config add-provider anthropic'.`
+            `No provider configured for capability '${capability}'. Please run 'phaibel config add-provider openai' or 'phaibel config add-provider anthropic'.`
         );
     }
 
@@ -105,11 +105,4 @@ GUIDELINES:
 - If something went wrong, say so honestly and suggest what to try instead
 
 ${context ? `CONTEXT:\n${context}\n` : ''}Respond helpfully to the user's request while staying in character as ${agentName}.`;
-}
-
-/**
- * @deprecated Use createSystemPrompt() instead
- */
-export function createDobbiSystemPrompt(context: string): string {
-    return createSystemPrompt(context);
 }

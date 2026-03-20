@@ -208,7 +208,7 @@ export async function getEntityDir(entityType: EntityTypeName): Promise<string> 
     const vaultRoot = await getVaultRoot();
     const typeConfig = await getEntityType(entityType);
     if (!typeConfig) {
-        throw new Error(`Unknown entity type: "${entityType}". Check ~/.agentary/entity-types.json.`);
+        throw new Error(`Unknown entity type: "${entityType}". Check ~/.phaibel/entity-types.json.`);
     }
     return path.join(vaultRoot, typeConfig.directory);
 }
@@ -266,7 +266,7 @@ export async function trashEntity(filepath: string): Promise<string> {
     const trashRoot = path.join(vaultRoot, '.trash');
 
     // Derive the entity subdirectory from the filepath
-    // e.g. ~/.agentary/projects/work/todos/foo.md → todos
+    // e.g. ~/.phaibel/projects/work/todos/foo.md → todos
     const parentDir = path.basename(path.dirname(filepath));
     const trashDir = path.join(trashRoot, parentDir);
 

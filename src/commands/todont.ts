@@ -153,13 +153,13 @@ export const todontCommand = new Command('todont')
     .argument('[words...]', 'Title or subcommand (list, remove)')
     .action(async (words: string[]) => {
         try {
-            // Handle: agentary todont list
+            // Handle: phaibel todont list
             if (words[0] === 'list') {
                 await listEntities('todonts');
                 return;
             }
 
-            // Handle: agentary todont remove <title>
+            // Handle: phaibel todont remove <title>
             if (words[0] === 'remove' || words[0] === 'delete') {
                 const removeTitle = words.slice(1).join(' ');
                 if (!removeTitle) {

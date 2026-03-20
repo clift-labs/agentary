@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // CAL COMMAND
-// Google Calendar ICS feed sync — read-only, one-way: Google Calendar → Agentary.
+// Google Calendar ICS feed sync — read-only, one-way: Google Calendar → Phaibel.
 // Supports multiple named calendar feeds.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -109,14 +109,14 @@ calCommand
 
         if (cfg.calendars.some(c => c.id === id)) {
             console.log(chalk.yellow(`\n  A calendar with id "${id}" already exists, sir.`));
-            console.log(chalk.gray(`  Use ${chalk.bold(`agentary cal set-url ${id} <url>`)} to update it.\n`));
+            console.log(chalk.gray(`  Use ${chalk.bold(`phaibel cal set-url ${id} <url>`)} to update it.\n`));
             return;
         }
 
         cfg.calendars.push({ id, name, url });
         await saveCalConfig(cfg);
         console.log(chalk.green(`\n  Calendar "${name}" (${id}) added, sir.`));
-        console.log(chalk.gray(`  Run ${chalk.bold('agentary cal sync')} to pull events.\n`));
+        console.log(chalk.gray(`  Run ${chalk.bold('phaibel cal sync')} to pull events.\n`));
     });
 
 // ── remove ────────────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ calCommand
 
         if (cfg.calendars.length === 0) {
             console.log(chalk.yellow('\n  No calendars configured.'));
-            console.log(chalk.gray(`  Use ${chalk.bold('agentary cal add <name> <url>')} to add one.\n`));
+            console.log(chalk.gray(`  Use ${chalk.bold('phaibel cal add <name> <url>')} to add one.\n`));
             return;
         }
 
@@ -177,7 +177,7 @@ calCommand
         cal.url = url;
         await saveCalConfig(cfg);
         console.log(chalk.green(`\n  URL updated for "${cal.name}" (${cal.id}), sir.`));
-        console.log(chalk.gray(`  Run ${chalk.bold('agentary cal sync')} to pull events.\n`));
+        console.log(chalk.gray(`  Run ${chalk.bold('phaibel cal sync')} to pull events.\n`));
     });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -304,7 +304,7 @@ export async function syncCalendar(opts?: { days?: number; calendarId?: string }
     const cfg = await loadCalConfig();
 
     if (cfg.calendars.length === 0) {
-        throw new Error('No calendars configured. Use "agentary cal add <name> <url>" first.');
+        throw new Error('No calendars configured. Use "phaibel cal add <name> <url>" first.');
     }
 
     await ensureEventType();

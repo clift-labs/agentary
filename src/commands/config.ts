@@ -26,7 +26,7 @@ configCommand
         ]);
         const config = await loadConfig();
 
-        console.log(chalk.cyan('\n  Agentary Configuration\n'));
+        console.log(chalk.cyan('\n  Phaibel Configuration\n'));
 
         // Providers
         console.log(chalk.bold('API Keys:'));
@@ -34,7 +34,7 @@ configCommand
         for (const provider of knownProviders) {
             const configured = configuredProviders.includes(provider);
             const tick = configured ? chalk.green('✓') : chalk.gray('○');
-            const hint = configured ? '' : chalk.gray('  run: agentary config add-provider ' + provider);
+            const hint = configured ? '' : chalk.gray('  run: phaibel config add-provider ' + provider);
             console.log(`  ${tick} ${provider}${hint}`);
         }
         console.log('');
@@ -66,7 +66,7 @@ configCommand
         console.log('');
 
         if (Object.keys(config.capabilityMapping).length > 0) {
-            console.log(chalk.gray('  Capabilities marked [override] have manual settings. Run `agentary config reset-capability <cap>` to restore auto-selection.'));
+            console.log(chalk.gray('  Capabilities marked [override] have manual settings. Run `phaibel config reset-capability <cap>` to restore auto-selection.'));
             console.log('');
         }
     });
@@ -108,15 +108,15 @@ configCommand
         await setApiKey(name, apiKey);
         console.log(chalk.green(`\n✓ ${name} API key saved, sir!\n`));
 
-        // Show what Agentary will use with this provider
+        // Show what Phaibel will use with this provider
         const providerModels = PROVIDER_MODELS[name];
         if (providerModels) {
-            console.log(chalk.bold(`Agentary will automatically use these ${name} models:\n`));
+            console.log(chalk.bold(`Phaibel will automatically use these ${name} models:\n`));
             for (const [cap, model] of Object.entries(providerModels)) {
                 console.log(`  ${chalk.gray(cap.padEnd(12))} ${model}`);
             }
             console.log('');
-            console.log(chalk.gray('Run `agentary config` to see the full effective configuration.'));
+            console.log(chalk.gray('Run `phaibel config` to see the full effective configuration.'));
             console.log('');
         }
     });
@@ -133,7 +133,7 @@ configCommand
         }
         await setCapabilityModel(capability as LLMCapability, provider, model);
         console.log(chalk.green(`✓ Capability "${capability}" will now use ${provider}/${model}, sir!`));
-        console.log(chalk.gray(`  Run 'agentary config reset-capability ${capability}' to restore auto-selection.`));
+        console.log(chalk.gray(`  Run 'phaibel config reset-capability ${capability}' to restore auto-selection.`));
     });
 
 // Reset a capability override back to auto-selection
@@ -194,7 +194,7 @@ configCommand
             console.log('');
         }
 
-        console.log(chalk.gray('Add a key: agentary config add-provider <name>'));
+        console.log(chalk.gray('Add a key: phaibel config add-provider <name>'));
         console.log('');
     });
 

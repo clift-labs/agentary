@@ -1,12 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// PATHS — Central path resolution for Agentary
+// PATHS — Central path resolution for Phaibel
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Two root directories:
-//   ~/.agentary/              Secrets + daemon runtime (pid, sock)
-//   {vault}/.agentary/        All other config, logs, processes, caches
+//   ~/.phaibel/              Secrets + daemon runtime (pid, sock)
+//   {vault}/.phaibel/        All other config, logs, processes, caches
 //
-// The vault/.agentary directory is the "working" config directory. Everything
+// The vault/.phaibel directory is the "working" config directory. Everything
 // except LLM API keys and daemon transient files lives there.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -15,23 +15,23 @@ import os from 'os';
 import { findVaultRoot } from './state/manager.js';
 
 /** System-level directory — only secrets and daemon runtime. */
-export const SYSTEM_DIR = path.join(os.homedir(), '.agentary');
+export const SYSTEM_DIR = path.join(os.homedir(), '.phaibel');
 
-/** Secrets always live in ~/.agentary/ — never in the vault. */
+/** Secrets always live in ~/.phaibel/ — never in the vault. */
 export const SECRETS_PATH = path.join(SYSTEM_DIR, 'secrets.json');
 
 // Daemon transient files
-export const PID_FILE = path.join(SYSTEM_DIR, 'agentary.pid');
-export const SOCKET_PATH = path.join(SYSTEM_DIR, 'agentary.sock');
+export const PID_FILE = path.join(SYSTEM_DIR, 'phaibel.pid');
+export const SOCKET_PATH = path.join(SYSTEM_DIR, 'phaibel.sock');
 
 /**
- * Resolve the vault-scoped .agentary directory: {vault}/.agentary/.
- * Falls back to ~/.agentary/ if no vault is found (e.g. daemon started outside vault).
+ * Resolve the vault-scoped .phaibel directory: {vault}/.phaibel/.
+ * Falls back to ~/.phaibel/ if no vault is found (e.g. daemon started outside vault).
  */
 export async function getVaultConfigDir(): Promise<string> {
     const vaultRoot = await findVaultRoot();
     if (vaultRoot) {
-        return path.join(vaultRoot, '.agentary');
+        return path.join(vaultRoot, '.phaibel');
     }
     return SYSTEM_DIR;
 }
@@ -71,7 +71,7 @@ export async function getCronConfigPath(): Promise<string> {
 }
 
 export async function getDaemonLogPath(): Promise<string> {
-    return path.join(await getVaultConfigDir(), 'agentary.log');
+    return path.join(await getVaultConfigDir(), 'phaibel.log');
 }
 
 export async function getProcessesDir(): Promise<string> {

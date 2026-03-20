@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ENTITY TYPE CONFIG
-// Loads entity type definitions from {vault}/.agentary/entity-types.json.
+// Loads entity type definitions from {vault}/.phaibel/entity-types.json.
 // Falls back to built-in defaults if the file doesn't exist.
 // Users can add, modify, or extend entity types by editing the JSON file.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ export async function saveEntityTypes(types: EntityTypeConfig[]): Promise<void> 
 
 /**
  * Write entity-types.json with built-in defaults if it doesn't already exist.
- * Called by `agentary init`.
+ * Called by `phaibel init`.
  */
 export async function initEntityTypes(): Promise<void> {
     try {

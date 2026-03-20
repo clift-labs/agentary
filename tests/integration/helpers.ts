@@ -35,7 +35,7 @@ let originalCwd: string;
  */
 export async function createTempVault(): Promise<string> {
     originalCwd = process.cwd();
-    vaultDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentary-test-'));
+    vaultDir = await fs.mkdtemp(path.join(os.tmpdir(), 'phaibel-test-'));
 
     // Create the vault marker
     await fs.writeFile(path.join(vaultDir, '.vault.md'), '---\ntitle: Test Vault\n---\n');

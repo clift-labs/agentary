@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Import service module — its own `if (AGENTARY_SERVICE)` guard starts
+// Import service module — its own `if (PHAIBEL_SERVICE)` guard starts
 // the daemon when re-spawned with that env var.
 import './service/index.js';
 
@@ -43,8 +43,8 @@ const pkg = require('../package.json');
 export const program = new Command();
 
 program
-  .name('agentary')
-  .description(chalk.cyan('🤖 Agentary - Your AI personal assistant'))
+  .name('phaibel')
+  .description(chalk.cyan('🤖 Phaibel - Your AI personal assistant'))
   .version(pkg.version);
 
 // Register commands
@@ -157,11 +157,11 @@ program
 program
   .action(async () => {
     // Delegate to the shell command
-    await program.parseAsync(['node', 'agentary', 'shell']);
+    await program.parseAsync(['node', 'phaibel', 'shell']);
   });
 
 // In service daemon mode, service/index.ts already started the server —
 // skip Commander parsing so we don't print help text or launch the shell.
-if (process.env.AGENTARY_SERVICE !== '1') {
+if (process.env.PHAIBEL_SERVICE !== '1') {
   program.parse();
 }

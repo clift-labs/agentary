@@ -161,7 +161,7 @@ export class QueueFullError extends Error {
 
 export class ServiceNotRunningError extends Error {
     constructor() {
-        super('Service is not running. Start it with: agentary start');
+        super('Service is not running. Start it with: phaibel start');
         this.name = 'ServiceNotRunningError';
     }
 }

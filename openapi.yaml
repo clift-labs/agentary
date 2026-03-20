@@ -1,0 +1,995 @@
+openapi: 3.1.0
+info:
+  title: Phaibel API
+  description: |
+    REST API for the Phaibel personal organizer. Provides CRUD for entities
+    (tasks, events, notes, goals, etc.), entity type schemas, full-text search,
+    Feral process execution, calendar config, cron scheduler management, and
+    service status.
+
+    The API is served by the Phaibel service daemon on port 3737 alongside the
+    web client and WebSocket chat interface.
+  version: 3.0.9
+  contact:
+    name: Phaibel
+
+servers:
+  - url: http://localhost:3737
+    description: Local service daemon
+
+tags:
+  - name: Entity Types
+    description: CRUD for entity type schemas (task, event, note, goal, etc.)
+  - name: Entities
+    description: CRUD for entity instances (Markdown files with YAML frontmatter)
+  - name: Search
+    description: Full-text search across entities
+  - name: Processes
+    description: List and execute Feral FBP processes
+  - name: Convenience
+    description: Pre-built endpoints for the web client (today tasks, events, calendars)
+  - name: Scheduler
+    description: Cron job management
+  - name: Service
+    description: Daemon status and health
+
+paths:
+  # ── Entity Types ──────────────────────────────────────────────────────
+
+  /api/types:
+    get:
+      tags: [Entity Types]
+      summary: List all entity types
+      description: Returns every registered entity type with its full schema (fields, defaults, completion config).
+      operationId: listEntityTypes
+      responses:
+        '200':
+          description: Array of entity type schemas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EntityTypeConfig'
+
+    post:
+      tags: [Entity Types]
+      summary: Create a new entity type
+      operationId: createEntityType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityTypeConfig'
+      responses:
+        '201':
+          description: Entity type created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTypeConfig'
+        '400':
+          description: Missing required fields (name, plural, directory)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Entity type with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/types/{type}:
+    parameters:
+      - $ref: '#/components/parameters/TypeName'
+
+    get:
+      tags: [Entity Types]
+      summary: Get one entity type schema
+      operationId: getEntityType
+      responses:
+        '200':
+          description: Entity type schema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTypeConfig'
+        '404':
+          description: Unknown entity type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Entity Types]
+      summary: Update an entity type
+      description: Replaces the full entity type config. Fields not provided fall back to defaults.
+      operationId: updateEntityType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityTypeConfig'
+      responses:
+        '200':
+          description: Updated entity type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityTypeConfig'
+        '404':
+          description: Entity type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Entity Types]
+      summary: Remove an entity type
+      description: Removes a user-defined entity type. Built-in types cannot be removed.
+      operationId: removeEntityType
+      responses:
+        '200':
+          description: Entity type removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  name:
+                    type: string
+                    example: bookmark
+        '400':
+          description: Built-in type or not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Entities ──────────────────────────────────────────────────────────
+
+  /api/entities/{type}:
+    parameters:
+      - $ref: '#/components/parameters/TypeName'
+
+    get:
+      tags: [Entities]
+      summary: List entities of a type
+      description: Returns all entities of the given type. Supports optional query filters.
+      operationId: listEntities
+      parameters:
+        - name: status
+          in: query
+          description: Filter by status field value (e.g. `open`, `done`)
+          schema:
+            type: string
+        - name: tag
+          in: query
+          description: Filter by tag (case-insensitive match)
+          schema:
+            type: string
+        - name: due
+          in: query
+          description: |
+            Filter by due date. Special values:
+            - `today` — entities due today
+            - `overdue` — entities with dueDate before today
+            - `YYYY-MM-DD` — entities due on a specific date
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Array of entities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Entity'
+        '404':
+          description: Unknown entity type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Entities]
+      summary: Create an entity
+      description: |
+        Creates a new entity of the given type. The `title` field is required.
+        All fields are validated against the type's schema. Field defaults from
+        the type config are applied automatically. The entity is assigned a
+        generated ID and written to the vault.
+      operationId: createEntity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityCreateRequest'
+      responses:
+        '201':
+          description: Entity created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityCreateResponse'
+        '400':
+          description: Validation error or missing title
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Unknown entity type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/entities/{type}/{id}:
+    parameters:
+      - $ref: '#/components/parameters/TypeName'
+      - $ref: '#/components/parameters/EntityId'
+
+    get:
+      tags: [Entities]
+      summary: Get a single entity
+      description: Looks up by filename stem first, then scans for matching `id` field.
+      operationId: getEntity
+      responses:
+        '200':
+          description: Entity found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entity'
+        '404':
+          description: Entity or type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags: [Entities]
+      summary: Update entity fields
+      description: |
+        Merges provided fields into entity metadata. The `id` and `entityType`
+        fields are immutable and ignored if sent. If `content` is provided it
+        replaces the Markdown body. Fields are validated against the type schema
+        (required checks are skipped on update).
+      operationId: updateEntity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityPatchRequest'
+      responses:
+        '200':
+          description: Entity updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entity'
+        '400':
+          description: Validation error or invalid JSON
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Entity or type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Entities]
+      summary: Soft-delete an entity
+      description: Moves the entity file to `{vault}/.phaibel/.trash/` and removes it from the index.
+      operationId: deleteEntity
+      responses:
+        '200':
+          description: Entity trashed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  id:
+                    type: string
+                    example: a1b2c3d4
+                  title:
+                    type: string
+                    example: Fix the plumbing
+        '404':
+          description: Entity or type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Search ────────────────────────────────────────────────────────────
+
+  /api/search:
+    get:
+      tags: [Search]
+      summary: Search entities
+      description: Full-text search across entity titles, content, and metadata. At least one of `q` or `tag` is required.
+      operationId: searchEntities
+      parameters:
+        - name: q
+          in: query
+          description: Search query string
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Restrict search to a specific entity type
+          schema:
+            type: string
+        - name: tag
+          in: query
+          description: Filter by tag
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results with relevance scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchResult'
+        '400':
+          description: Missing both `q` and `tag` parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Processes ─────────────────────────────────────────────────────────
+
+  /api/processes:
+    get:
+      tags: [Processes]
+      summary: List Feral processes
+      description: Returns all registered Feral FBP process definitions.
+      operationId: listProcesses
+      responses:
+        '200':
+          description: Array of process summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProcessSummary'
+
+  /api/processes/{key}/run:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        description: Process key identifier
+        schema:
+          type: string
+    post:
+      tags: [Processes]
+      summary: Execute a Feral process
+      description: Runs the process with the provided context values. Returns the final context after execution.
+      operationId: runProcess
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Key-value pairs to seed the process context
+              additionalProperties: true
+      responses:
+        '200':
+          description: Process executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  result:
+                    type: object
+                    description: Final context state after process execution
+                    additionalProperties: true
+        '400':
+          description: Process not found or execution error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Convenience ───────────────────────────────────────────────────────
+
+  /api/calendars:
+    get:
+      tags: [Convenience]
+      summary: List configured calendars
+      description: Returns id and name for each calendar configured in `calendars.json`.
+      operationId: listCalendars
+      responses:
+        '200':
+          description: Array of calendar identifiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: work
+                    name:
+                      type: string
+                      example: Work Calendar
+
+  /api/today:
+    get:
+      tags: [Convenience]
+      summary: Get today's tasks
+      description: |
+        Returns tasks that are due today, overdue, or have no due date.
+        Tasks with status `done` are excluded.
+      operationId: getTodayTasks
+      responses:
+        '200':
+          description: Today's date and matching tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodayResponse'
+
+  /api/events:
+    get:
+      tags: [Convenience]
+      summary: Get upcoming events
+      description: Returns events bucketed by date for the next N days.
+      operationId: getEvents
+      parameters:
+        - name: days
+          in: query
+          description: Number of days to look ahead (default 3)
+          schema:
+            type: integer
+            default: 3
+            minimum: 1
+      responses:
+        '200':
+          description: Events grouped by date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventsResponse'
+
+  /api/tasks/{id}/done:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Task entity ID
+        schema:
+          type: string
+    patch:
+      tags: [Convenience]
+      summary: Mark a task as done
+      description: Sets the task's completion field to its completion value (typically `status` → `done`).
+      operationId: markTaskDone
+      responses:
+        '200':
+          description: Task marked as done
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Scheduler ─────────────────────────────────────────────────────────
+
+  /api/scheduler:
+    get:
+      tags: [Scheduler]
+      summary: Get cron scheduler status
+      description: Returns the current state of all cron jobs including enabled status, interval, and last run time.
+      operationId: getSchedulerStatus
+      responses:
+        '200':
+          description: Scheduler status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerStatus'
+
+  /api/scheduler/{job}/toggle:
+    parameters:
+      - $ref: '#/components/parameters/JobName'
+    post:
+      tags: [Scheduler]
+      summary: Toggle a cron job
+      description: Flips the `enabled` flag for the specified job and reloads the scheduler.
+      operationId: toggleSchedulerJob
+      responses:
+        '200':
+          description: Updated scheduler status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerStatus'
+        '404':
+          description: Unknown job name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/scheduler/{job}/run:
+    parameters:
+      - $ref: '#/components/parameters/JobName'
+    post:
+      tags: [Scheduler]
+      summary: Trigger a cron job immediately
+      description: Runs the specified job now, regardless of its schedule or enabled status.
+      operationId: runSchedulerJob
+      responses:
+        '200':
+          description: Job result and updated scheduler status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SchedulerStatus'
+                  - type: object
+                    properties:
+                      summary:
+                        type: string
+                        description: Human-readable summary of what the job did
+        '400':
+          description: Job execution error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Service ───────────────────────────────────────────────────────────
+
+  /api/status:
+    get:
+      tags: [Service]
+      summary: Get service status
+      description: Returns daemon uptime, queue size, entity graph stats, vault root, and memory usage.
+      operationId: getServiceStatus
+      responses:
+        '200':
+          description: Service health and status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+components:
+  parameters:
+    TypeName:
+      name: type
+      in: path
+      required: true
+      description: Entity type name (e.g. `task`, `event`, `note`, `goal`, `person`)
+      schema:
+        type: string
+        example: task
+
+    EntityId:
+      name: id
+      in: path
+      required: true
+      description: Entity ID (matches filename stem or `id` frontmatter field)
+      schema:
+        type: string
+        example: a1b2c3d4
+
+    JobName:
+      name: job
+      in: path
+      required: true
+      description: Cron job name
+      schema:
+        type: string
+        enum:
+          - cal-sync
+          - inbox-import
+          - recurrence-generate
+          - process-lifecycle
+          - pamp-check
+          - embedding-sync
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Entity not found
+
+    # ── Entity Types ────────────────────────────────────────────────────
+
+    FieldDef:
+      type: object
+      required: [key, type]
+      properties:
+        key:
+          type: string
+          description: Field key in entity frontmatter
+          example: dueDate
+        type:
+          type: string
+          enum: [string, number, boolean, date, datetime, enum, array, object]
+          description: |
+            Field data type. Validation rules:
+            - `string` — must be a string
+            - `number` — must be a number, not NaN
+            - `boolean` — must be a boolean
+            - `date` — must match YYYY-MM-DD format
+            - `datetime` — must match ISO 8601 (YYYY-MM-DDTHH:MM...)
+            - `enum` — must be one of the values in `values[]`
+            - `array` — must be an array
+            - `object` — must be a non-array object
+        label:
+          type: string
+          description: Human-readable label
+          example: Due Date
+        required:
+          type: boolean
+          description: Whether the field is required on creation
+          default: false
+        default:
+          description: Default value applied if field is not provided on creation
+        values:
+          type: array
+          items:
+            type: string
+          description: Allowed values for `enum` type fields
+          example: [open, in-progress, done, blocked]
+
+    EntityTypeConfig:
+      type: object
+      required: [name, plural, directory]
+      properties:
+        name:
+          type: string
+          description: Singular type name (used as the entity type identifier)
+          example: task
+        plural:
+          type: string
+          description: Plural form of the type name
+          example: tasks
+        directory:
+          type: string
+          description: Subdirectory name within the vault
+          example: todos
+        description:
+          type: string
+          description: Human-readable description of the entity type
+          example: A task or to-do item to be completed
+        defaultTags:
+          type: array
+          items:
+            type: string
+          description: Tags automatically applied to new entities of this type
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldDef'
+          description: Schema field definitions for validation
+        completionField:
+          type: string
+          description: Field that indicates completion (e.g. `status`)
+          example: status
+        completionValue:
+          type: string
+          description: Value of completionField that means "done" (e.g. `done`)
+          example: done
+
+    # ── Entities ────────────────────────────────────────────────────────
+
+    EntityMeta:
+      type: object
+      description: YAML frontmatter fields from the entity file
+      properties:
+        id:
+          type: string
+          example: a1b2c3d4
+        title:
+          type: string
+          example: Fix the plumbing
+        entityType:
+          type: string
+          example: task
+        status:
+          type: string
+          example: open
+        priority:
+          type: string
+          example: high
+        dueDate:
+          type: string
+          format: date
+          example: '2026-03-15'
+        tags:
+          type: array
+          items:
+            type: string
+          example: [year-of-the-house, outdoor]
+        summary:
+          type: string
+          example: Plumbing repair needed for outdoor faucet
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    Entity:
+      type: object
+      properties:
+        id:
+          type: string
+          example: a1b2c3d4
+        title:
+          type: string
+          example: Fix the plumbing
+        entityType:
+          type: string
+          example: task
+        meta:
+          $ref: '#/components/schemas/EntityMeta'
+        content:
+          type: string
+          description: Markdown body content below the frontmatter
+          example: Detailed notes about the plumbing issue...
+
+    EntityCreateRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          description: Entity title (required)
+          example: Fix the plumbing
+        content:
+          type: string
+          description: Markdown body content
+          example: Detailed notes about the plumbing issue...
+      additionalProperties:
+        description: Any additional fields matching the entity type schema (status, priority, dueDate, tags, etc.)
+
+    EntityCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: a1b2c3d4
+        title:
+          type: string
+          example: Fix the plumbing
+        entityType:
+          type: string
+          example: task
+        meta:
+          $ref: '#/components/schemas/EntityMeta'
+
+    EntityPatchRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          description: New Markdown body (replaces existing if provided)
+      additionalProperties:
+        description: |
+          Any fields to merge into entity metadata. The `id` and `entityType`
+          fields are immutable and will be ignored. All other fields are
+          validated against the type schema.
+
+    # ── Search ──────────────────────────────────────────────────────────
+
+    SearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        entityType:
+          type: string
+        meta:
+          $ref: '#/components/schemas/EntityMeta'
+        content:
+          type: string
+        score:
+          type: number
+          description: Relevance score (higher = more relevant)
+
+    # ── Processes ───────────────────────────────────────────────────────
+
+    ProcessSummary:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Process unique key
+          example: create-task
+        description:
+          type: string
+          description: Human-readable description
+          example: Creates a new task in the vault
+        hasTool:
+          type: boolean
+          description: Whether this process is registered as an LLM tool
+
+    # ── Convenience ─────────────────────────────────────────────────────
+
+    TodayTask:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          example: open
+        priority:
+          type: string
+          example: medium
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+
+    TodayResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: Today's date (YYYY-MM-DD)
+          example: '2026-03-14'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TodayTask'
+
+    EventItem:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Team standup
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        location:
+          type: string
+          nullable: true
+
+    EventsResponse:
+      type: object
+      properties:
+        dates:
+          type: object
+          description: Events keyed by date (YYYY-MM-DD)
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/EventItem'
+          example:
+            '2026-03-14':
+              - title: Team standup
+                startDate: '2026-03-14T09:00:00Z'
+                endDate: '2026-03-14T09:30:00Z'
+                location: null
+
+    # ── Scheduler ───────────────────────────────────────────────────────
+
+    SchedulerStatus:
+      type: object
+      description: Status of all cron jobs
+      additionalProperties:
+        type: object
+        properties:
+          enabled:
+            type: boolean
+          intervalMinutes:
+            type: number
+          lastRun:
+            type: string
+            format: date-time
+            nullable: true
+          nextRun:
+            type: string
+            format: date-time
+            nullable: true
+
+    # ── Service ─────────────────────────────────────────────────────────
+
+    ServiceStatus:
+      type: object
+      properties:
+        uptime:
+          type: integer
+          description: Daemon uptime in seconds
+          example: 3600
+        queueSize:
+          type: integer
+          description: Number of tasks in the processing queue
+          example: 0
+        graph:
+          type: object
+          properties:
+            nodes:
+              type: integer
+              description: Number of entities in the knowledge graph
+              example: 142
+            edges:
+              type: integer
+              description: Number of relationships in the knowledge graph
+              example: 87
+        vaultRoot:
+          type: string
+          description: Absolute path to the active vault
+          example: /Users/gary/phaibel-vault
+        memory:
+          type: object
+          properties:
+            rss:
+              type: integer
+              description: Resident set size in MB
+              example: 85
+            heapUsed:
+              type: integer
+              description: V8 heap used in MB
+              example: 42

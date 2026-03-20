@@ -78,7 +78,7 @@ describe('ProcessEngine', () => {
                 {
                     key: 'set',
                     catalog_node_key: 'catalog_set_value',
-                    configuration: { value: 'Dobbi', context_path: 'name', value_type: 'string' },
+                    configuration: { value: 'Phaibel', context_path: 'name', value_type: 'string' },
                     edges: { ok: 'end' },
                 },
                 { key: 'end', catalog_node_key: 'catalog_stop', configuration: {}, edges: {} },
@@ -89,7 +89,7 @@ describe('ProcessEngine', () => {
         const ctx = new DefaultContext();
         await engine.process(process, ctx);
 
-        expect(ctx.get('name')).toBe('Dobbi');
+        expect(ctx.get('name')).toBe('Phaibel');
     });
 
     it('should merge process context into runtime context', async () => {

@@ -247,10 +247,10 @@ describe('Data Nodes', () => {
             ]);
 
             const ctx = new DefaultContext();
-            ctx.set('json', '{"name":"Dobbi","level":10}');
+            ctx.set('json', '{"name":"Phaibel","level":10}');
             const result = await node.process(ctx);
             expect(result.status).toBe(ResultStatus.OK);
-            expect(ctx.getObject('data')).toEqual({ name: 'Dobbi', level: 10 });
+            expect(ctx.getObject('data')).toEqual({ name: 'Phaibel', level: 10 });
         });
 
         it('should return ERROR for invalid JSON', async () => {
@@ -276,10 +276,10 @@ describe('Data Nodes', () => {
             ]);
 
             const ctx = new DefaultContext();
-            ctx.set('data', { name: 'Dobbi' });
+            ctx.set('data', { name: 'Phaibel' });
             const result = await node.process(ctx);
             expect(result.status).toBe(ResultStatus.OK);
-            expect(ctx.getString('json')).toBe('{"name":"Dobbi"}');
+            expect(ctx.getString('json')).toBe('{"name":"Phaibel"}');
         });
     });
 
@@ -293,12 +293,12 @@ describe('Data Nodes', () => {
             ]);
 
             const ctx = new DefaultContext();
-            ctx.set('name', 'Dobbi');
+            ctx.set('name', 'Phaibel');
             ctx.set('level', 42);
 
             const result = await node.process(ctx);
             expect(result.status).toBe(ResultStatus.OK);
-            expect(logged[0]).toBe('Hello Dobbi, you are level 42.');
+            expect(logged[0]).toBe('Hello Phaibel, you are level 42.');
         });
     });
 });

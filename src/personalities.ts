@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Agentary — Personality Definitions
+// Phaibel — Personality Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface Personality {

@@ -108,7 +108,7 @@ class McpManager {
         });
 
         const client = new Client(
-            { name: 'agentary', version: '1.0.0' },
+            { name: 'phaibel', version: '1.0.0' },
             { capabilities: {} },
         );
 

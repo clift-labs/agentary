@@ -22,7 +22,7 @@ export function resetVaultCache(): void {
 
 /**
  * Finds the vault root by looking for .vault.md in cwd or parent directories.
- * Also checks the AGENTARY_VAULT env var.
+ * Also checks the PHAIBEL_VAULT env var.
  * Returns null if no vault is found.
  */
 export async function findVaultRoot(): Promise<string | null> {
@@ -30,7 +30,7 @@ export async function findVaultRoot(): Promise<string | null> {
         return cachedVaultRoot;
     }
 
-    const envVault = process.env.AGENTARY_VAULT;
+    const envVault = process.env.PHAIBEL_VAULT;
     if (envVault) {
         const markerPath = path.join(envVault, VAULT_FILE);
         try {
@@ -42,7 +42,7 @@ export async function findVaultRoot(): Promise<string | null> {
         }
     }
 
-    const systemDir = path.join(os.homedir(), '.agentary');
+    const systemDir = path.join(os.homedir(), '.phaibel');
     let currentDir = process.cwd();
 
     while (currentDir !== path.dirname(currentDir)) {
@@ -75,7 +75,7 @@ export async function getVaultRoot(): Promise<string> {
         const agentName = await getAgentName();
         console.error(chalk.red(`\n🤖 ${agentName} cannot find a vault here.`));
         console.error(chalk.gray('No .vault.md found in this directory or any parent.'));
-        console.error(chalk.gray('\nTo create a vault, run: agentary init'));
+        console.error(chalk.gray('\nTo create a vault, run: phaibel init'));
         throw new Error('No vault found in current directory tree');
     }
 

@@ -126,7 +126,7 @@ export async function startDaemon(): Promise<DaemonStatus> {
     }
 
     // Start the service process.
-    // AGENTARY_SERVICE=1 triggers `service/index.ts` to boot the daemon.
+    // PHAIBEL_SERVICE=1 triggers `service/index.ts` to boot the daemon.
     const entryScript = path.join(import.meta.dirname, '..', 'index.js');
 
     const logFile = await getDaemonLogPath();
@@ -137,10 +137,10 @@ export async function startDaemon(): Promise<DaemonStatus> {
     const vaultRoot = await findVaultRoot();
     const childEnv: Record<string, string> = {
         ...process.env as Record<string, string>,
-        AGENTARY_SERVICE: '1',
+        PHAIBEL_SERVICE: '1',
     };
     if (vaultRoot) {
-        childEnv.AGENTARY_VAULT = vaultRoot;
+        childEnv.PHAIBEL_VAULT = vaultRoot;
     }
 
     const child = spawn('node', [entryScript], {

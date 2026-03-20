@@ -73,7 +73,7 @@ export function renderEntityHeader(config: EntityHeaderConfig): void {
 
 /**
  * Returns the entity-mode prompt string for the interactive loop.
- * Uses the breadcrumb path so the prompt shows `🤖 agentary.note>` etc.
+ * Uses the breadcrumb path so the prompt shows `🤖 phaibel.note>` etc.
  */
 export function entityPrompt(_type: string): string {
     return breadcrumbPrompt();

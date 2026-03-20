@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Restricts NodeCode file operations to allowed directories:
 //   1. The active vault root (and everything under it)
-//   2. ~/.agentary/ (system configuration directory)
+//   2. ~/.phaibel/ (system configuration directory)
 //
 // All NodeCodes that perform file I/O must call assertPathAllowed() before
 // any read/write operation.
@@ -13,12 +13,12 @@ import path from 'path';
 import os from 'os';
 import { findVaultRoot } from '../../state/manager.js';
 
-const AGENTARY_SYSTEM_DIR = path.join(os.homedir(), '.agentary');
+const PHAIBEL_SYSTEM_DIR = path.join(os.homedir(), '.phaibel');
 
 export class FileAccessDeniedError extends Error {
     constructor(filePath: string) {
         super(
-            `File access denied: "${filePath}" is outside the vault and ~/.agentary/. ` +
+            `File access denied: "${filePath}" is outside the vault and ~/.phaibel/. ` +
             `Feral NodeCodes may only access files within the active vault or the system directory.`,
         );
         this.name = 'FileAccessDeniedError';
@@ -49,13 +49,13 @@ function isUnder(filePath: string, allowedDir: string): boolean {
  *
  * Allowed directories:
  *   - The active vault root (if one exists)
- *   - ~/.agentary/ (always allowed for config/state access)
+ *   - ~/.phaibel/ (always allowed for config/state access)
  */
 export async function assertPathAllowed(filePath: string): Promise<void> {
     const resolved = resolveAbsolute(filePath);
 
-    // Always allow ~/.agentary/
-    if (isUnder(resolved, AGENTARY_SYSTEM_DIR)) return;
+    // Always allow ~/.phaibel/
+    if (isUnder(resolved, PHAIBEL_SYSTEM_DIR)) return;
 
     // Allow the vault root (if one is active)
     const vaultRoot = await findVaultRoot();
@@ -71,7 +71,7 @@ export async function assertPathAllowed(filePath: string): Promise<void> {
 export function assertPathAllowedSync(filePath: string, vaultRoot: string | null): void {
     const resolved = resolveAbsolute(filePath);
 
-    if (isUnder(resolved, AGENTARY_SYSTEM_DIR)) return;
+    if (isUnder(resolved, PHAIBEL_SYSTEM_DIR)) return;
     if (vaultRoot && isUnder(resolved, vaultRoot)) return;
 
     throw new FileAccessDeniedError(resolved);

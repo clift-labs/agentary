@@ -57,7 +57,7 @@ Format the response as markdown that can be appended to an existing document.`;
                 console.log(chalk.gray(formattedNote));
 
             } catch (err) {
-                console.debug('[agentary:commands:remember]', err);
+                console.debug('[phaibel:commands:remember]', err);
                 spinner.stop();
 
                 // Fall back to simple append without AI
@@ -73,7 +73,7 @@ Format the response as markdown that can be appended to an existing document.`;
                 }
 
                 console.log(chalk.green('✓ Noted!'));
-                console.log(chalk.gray('(Configure AI with `agentary config add-provider anthropic` for smart formatting)'));
+                console.log(chalk.gray('(Configure AI with `phaibel config add-provider anthropic` for smart formatting)'));
             }
 
         } catch (error) {

@@ -210,7 +210,7 @@ export interface FeralRuntime {
 /**
  * Bootstrap the full Feral runtime:
  * 1. Creates NodeCodeFactory with all built-in node codes
- * 2. Loads user-defined catalog config from ~/.agentary/feral-catalog.json
+ * 2. Loads user-defined catalog config from ~/.phaibel/feral-catalog.json
  * 3. Builds Catalog from built-in + user-defined sources
  * 4. Wires EventDispatcher, ProcessEngine, ProcessFactory, Runner
  */
@@ -244,7 +244,7 @@ export async function bootstrapFeral(
         new McpCatalogSource(mcpTools),
     ]);
 
-    // 4. Load process definitions from {vault}/.agentary/processes/
+    // 4. Load process definitions from {vault}/.phaibel/processes/
     const processDir = await getProcessesDir();
     const jsonProcessSource = new JsonProcessSource(processDir);
     await jsonProcessSource.load();

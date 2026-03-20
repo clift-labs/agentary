@@ -25,7 +25,7 @@ skillCommand
 
         if (cfg.skills.some(s => s.id === id)) {
             console.log(chalk.yellow(`\n  A skill with id "${id}" already exists, sir.`));
-            console.log(chalk.gray(`  Use ${chalk.bold(`agentary skill remove ${id}`)} first, then re-add.\n`));
+            console.log(chalk.gray(`  Use ${chalk.bold(`phaibel skill remove ${id}`)} first, then re-add.\n`));
             return;
         }
 
@@ -80,7 +80,7 @@ skillCommand
 
         if (cfg.skills.length === 0) {
             console.log(chalk.yellow('\n  No skills configured.'));
-            console.log(chalk.gray(`  Use ${chalk.bold('agentary skill add <name> --command <cmd>')} to add one.\n`));
+            console.log(chalk.gray(`  Use ${chalk.bold('phaibel skill add <name> --command <cmd>')} to add one.\n`));
             return;
         }
 

@@ -1,12 +1,12 @@
 /**
- * Agentary "10 Questions" — a personal-assistant onboarding interview.
+ * Phaibel "10 Questions" — a personal-assistant onboarding interview.
  *
  * Covers personality selection, agent naming, identity, work, relationships,
  * health, growth, and how the user wants their agent to help.
  * Answers are stored as a concise AI-context block in the vault root .vault.md
  * so every LLM call has the full picture.
  *
- * Run automatically on first launch, or manually via `agentary interview`.
+ * Run automatically on first launch, or manually via `phaibel interview`.
  */
 
 import { Command } from 'commander';
@@ -66,7 +66,7 @@ interface TenQAnswers {
 
 export async function runInterview(): Promise<void> {
     // ── Q0: Personality selection ────────────────────────────────────────
-    console.log(chalk.cyan('\n🤖 Welcome to Agentary!\n'));
+    console.log(chalk.cyan('\n🤖 Welcome to Phaibel!\n'));
     console.log(chalk.gray('   First, choose the personality for your agent:\n'));
 
     const { personalityId } = await inquirer.prompt([{
@@ -295,7 +295,7 @@ export async function runInterview(): Promise<void> {
     const outroLines = personality.outroLines.map(l =>
         `   ${chalk.cyan(l.replace(/{agent}/g, answers.agentName))}`
     );
-    outroLines.push(`   ${chalk.gray(`(You can re-do this anytime with: agentary interview)`)}\n`);
+    outroLines.push(`   ${chalk.gray(`(You can re-do this anytime with: phaibel interview)`)}\n`);
     await printLines(outroLines);
 }
 

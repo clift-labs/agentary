@@ -1,16 +1,16 @@
 /**
- * Breadcrumb navigation for the Agentary TUI.
+ * Breadcrumb navigation for the Phaibel TUI.
  *
- * Maintains a dot-separated path (e.g. `agentary.note`) so the user always
+ * Maintains a dot-separated path (e.g. `phaibel.note`) so the user always
  * knows where they are in the interface hierarchy.
  *
- *   🤖 agentary>              ← shell root
- *   🤖 agentary.note>         ← inside the note editor
- *   🤖 agentary.todo>         ← inside the todo editor
+ *   🤖 phaibel>              ← shell root
+ *   🤖 phaibel.note>         ← inside the note editor
+ *   🤖 phaibel.todo>         ← inside the todo editor
  */
 import chalk from 'chalk';
 
-let segments: string[] = ['agentary'];
+let segments: string[] = ['phaibel'];
 
 /** Push a new segment onto the breadcrumb path. */
 export function pushCrumb(segment: string): void {
@@ -24,7 +24,7 @@ export function popCrumb(): void {
 
 /** Reset the breadcrumb path back to root. */
 export function resetCrumbs(): void {
-    segments = ['agentary'];
+    segments = ['phaibel'];
 }
 
 /** Get the current breadcrumb segments (for display in headers, etc.). */

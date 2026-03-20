@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // EMBEDDING INDEX
 // Semantic search layer for entities using OpenAI embeddings.
-// Vectors persist to ~/.agentary/embeddings.json and load into memory on startup.
+// Vectors persist to ~/.phaibel/embeddings.json and load into memory on startup.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { promises as fs } from 'fs';

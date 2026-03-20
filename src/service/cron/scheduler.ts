@@ -13,6 +13,7 @@ import { evaluateProcessLifecycle } from './process-lifecycle.js';
 import { checkPampMail } from './pamp-checker.js';
 import { getEntityIndex } from '../../entities/entity-index.js';
 import { getEmbeddingIndex } from '../../entities/embedding-index.js';
+import { analyzeFeedback } from './feedback-analysis.js';
 import { getCronConfigPath, getVaultConfigDir } from '../../paths.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ const DEFAULT_CONFIG: CronConfig = {
         'process-lifecycle':   { enabled: false, intervalMinutes: 60 },
         'pamp-check':          { enabled: false, intervalMinutes: 15 },
         'embedding-sync':      { enabled: false, intervalMinutes: 1440 },
+        'feedback-analysis':   { enabled: false, intervalMinutes: 1440 },
     },
 };
 
@@ -114,6 +116,12 @@ const JOB_DEFS: CronJobDef[] = [
             if (!entityIndex.isBuilt) return 'skipped (entity index not built)';
             const result = await embeddingIndex.sync(entityIndex);
             return `${result.added} added, ${result.updated} updated, ${result.removed} removed`;
+        },
+    },
+    {
+        name: 'feedback-analysis',
+        async run() {
+            return analyzeFeedback();
         },
     },
 ];

@@ -2,16 +2,16 @@
  * Centralized debug logger.
  *
  * By default logs only the error message (single line).
- * Set AGENTARY_DEBUG=1 to get full stack traces.
+ * Set PHAIBEL_DEBUG=1 to get full stack traces.
  */
 
-const VERBOSE = process.env.AGENTARY_DEBUG === '1';
+const VERBOSE = process.env.PHAIBEL_DEBUG === '1';
 
 /**
  * Log a debug/error message in a compact, user-friendly format.
  *
- * In normal mode: `[agentary:config] ENOENT: no such file or directory, open '...'`
- * In debug mode:  full stack trace (AGENTARY_DEBUG=1)
+ * In normal mode: `[phaibel:config] ENOENT: no such file or directory, open '...'`
+ * In debug mode:  full stack trace (PHAIBEL_DEBUG=1)
  */
 export function debug(tag: string, err: unknown): void {
     if (VERBOSE) {

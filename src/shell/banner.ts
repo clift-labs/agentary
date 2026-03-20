@@ -1,5 +1,5 @@
 /**
- * Startup banner for the Agentary interactive shell.
+ * Startup banner for the Phaibel interactive shell.
  *
  * Displays ASCII art, a randomised greeting, and current state
  * (service, vault) every time the shell boots.
@@ -13,15 +13,15 @@ import { getDaemonStatus } from '../service/daemon.js';
 import { findVaultRoot, getAgentName } from '../state/manager.js';
 
 /**
- * Load the ASCII art from agentary.txt (bundled alongside the source).
+ * Load the ASCII art from phaibel.txt (bundled alongside the source).
  */
 async function loadAsciiArt(): Promise<string> {
     try {
-        const artPath = path.join(import.meta.dirname, '..', 'agentary.txt');
+        const artPath = path.join(import.meta.dirname, '..', 'phaibel.txt');
         return await fs.readFile(artPath, 'utf-8');
     } catch {
         // Fallback if the file cannot be found
-        return '🤖 Agentary';
+        return '🤖 Phaibel';
     }
 }
 
@@ -71,7 +71,7 @@ export async function printStartupBanner(): Promise<void> {
 
     const vaultLabel = state.vault
         ? chalk.white(`🏠 ${path.basename(state.vault)}`)
-        : chalk.yellow('🏠 no vault (run agentary init)');
+        : chalk.yellow('🏠 no vault (run phaibel init)');
 
     console.log(`  ${serviceIcon}  │  ${vaultLabel}`);
     console.log(chalk.gray('  Tab-complete commands • Up/Down for history • Type "exit" or Ctrl+D to leave\n'));

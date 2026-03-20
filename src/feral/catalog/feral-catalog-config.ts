@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Feral CCF — Catalog Configuration (JSON file at {vault}/.agentary/feral-catalog.json)
+// Feral CCF — Catalog Configuration (JSON file at {vault}/.phaibel/feral-catalog.json)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { promises as fs } from 'fs';

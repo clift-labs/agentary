@@ -1,6 +1,6 @@
 # PAMP — Personal Assistant Message Protocol
 
-> Design specification for inter-Dobbi messaging via a Post Office relay.
+> Design specification for inter-Phaibel messaging via a Post Office relay.
 
 **Version:** 0.1.0-draft
 **Status:** Design Phase
@@ -9,13 +9,13 @@
 
 ## 1. Overview
 
-PAMP enables Dobbi instances to exchange encrypted messages through a shared **Post Office** server. Each Dobbi registers a **Mailbox**, establishes bilateral or unilateral **Agreements** with other mailboxes, and then sends/receives messages whose bodies are end-to-end encrypted — the Post Office can only read routing headers.
+PAMP enables Phaibel instances to exchange encrypted messages through a shared **Post Office** server. Each Phaibel registers a **Mailbox**, establishes bilateral or unilateral **Agreements** with other mailboxes, and then sends/receives messages whose bodies are end-to-end encrypted — the Post Office can only read routing headers.
 
 ```mermaid
 graph LR
-    subgraph "Dobbi A (Alice)"
+    subgraph "Phaibel A (Alice)"
         A_Client[PAMP Client]
-        A_Vault[(Local Vault<br/>~/.dobbi/pamp/)]
+        A_Vault[(Local Vault<br/>~/.phaibel/pamp/)]
     end
 
     subgraph "Post Office"
@@ -24,9 +24,9 @@ graph LR
         PO_Registry[(Mailbox Registry)]
     end
 
-    subgraph "Dobbi B (Bob)"
+    subgraph "Phaibel B (Bob)"
         B_Client[PAMP Client]
-        B_Vault[(Local Vault<br/>~/.dobbi/pamp/)]
+        B_Vault[(Local Vault<br/>~/.phaibel/pamp/)]
     end
 
     A_Client -- "HTTPS" --> PO_API
@@ -43,7 +43,7 @@ graph LR
 
 ### 2.1 Mailbox ID Format
 
-Each Dobbi registers a globally unique mailbox at a Post Office:
+Each Phaibel registers a globally unique mailbox at a Post Office:
 
 ```
 {MAILBOX_ID}@pamp.{postoffice_host}
@@ -52,17 +52,17 @@ Each Dobbi registers a globally unique mailbox at a Post Office:
 | Component | Format | Example |
 |-----------|--------|---------|
 | `MAILBOX_ID` | 8 chars, uppercase base-36 `[A-Z0-9]` | `K7X2MQ4P` |
-| `postoffice_host` | Domain of the Post Office | `relay.dobbi.dev` |
-| **Full address** | Combined | `K7X2MQ4P@pamp.relay.dobbi.dev` |
+| `postoffice_host` | Domain of the Post Office | `relay.phaibel.dev` |
+| **Full address** | Combined | `K7X2MQ4P@pamp.relay.phaibel.dev` |
 
 - The Post Office **guarantees uniqueness** of the `MAILBOX_ID` within its registry.
-- A Dobbi instance may hold **one mailbox per Post Office** (but may register at multiple Post Offices).
+- A Phaibel instance may hold **one mailbox per Post Office** (but may register at multiple Post Offices).
 
 ### 2.2 Mailbox Registration
 
 ```mermaid
 sequenceDiagram
-    participant D as Dobbi Client
+    participant D as Phaibel Client
     participant PO as Post Office
 
     D->>D: Generate RSA-4096 keypair (identity key)
@@ -70,7 +70,7 @@ sequenceDiagram
     PO->>PO: Validate ID uniqueness<br/>(or generate if not provided)
     PO->>PO: Generate API key (pamp_sk_...)
     PO-->>D: 201 {mailbox_id, address, api_key, registered_at}
-    D->>D: Store credentials in ~/.dobbi/pamp/identity.json
+    D->>D: Store credentials in ~/.phaibel/pamp/identity.json
     Note over D: API key is shown ONCE at registration.<br/>Client must store it securely.
 ```
 
@@ -94,15 +94,15 @@ Before two mailboxes can exchange messages, they must form an **Agreement**. Thi
 | **Unilateral (A→B)** | A requests, B accepts receive-only | No | Yes |
 | **Unilateral (B→A)** | B requests, A accepts receive-only | Yes | No |
 
-> **Unilateral use case:** A notification service (e.g. a shared calendar Dobbi) broadcasts to subscribers who cannot reply.
+> **Unilateral use case:** A notification service (e.g. a shared calendar Phaibel) broadcasts to subscribers who cannot reply.
 
 ### 3.2 Agreement Flow
 
 ```mermaid
 sequenceDiagram
-    participant A as Dobbi A (Initiator)
+    participant A as Phaibel A (Initiator)
     participant PO as Post Office
-    participant B as Dobbi B (Responder)
+    participant B as Phaibel B (Responder)
 
     Note over A: Wants to message B
 
@@ -150,8 +150,8 @@ stateDiagram-v2
 {
   "agreement_id": "agr-5HN2KQ8M",
   "type": "bilateral",              // bilateral | unilateral
-  "initiator": "K7X2MQ4P@pamp.relay.dobbi.dev",
-  "responder": "R3TW9YAL@pamp.relay.dobbi.dev",
+  "initiator": "K7X2MQ4P@pamp.relay.phaibel.dev",
+  "responder": "R3TW9YAL@pamp.relay.phaibel.dev",
   "status": "active",
   "permissions": {
     "initiator_can_send": true,
@@ -200,8 +200,8 @@ Messages are transmitted and stored as **Base64-encoded** blobs. When decoded, a
   "pamp": "0.1.0",                           // protocol version
   "message_id": "msg-7KW3NP2X",             // unique, 8-char base36 prefixed
   "agreement_id": "agr-5HN2KQ8M",           // which agreement authorizes this
-  "from": "K7X2MQ4P@pamp.relay.dobbi.dev",
-  "to": "R3TW9YAL@pamp.relay.dobbi.dev",
+  "from": "K7X2MQ4P@pamp.relay.phaibel.dev",
+  "to": "R3TW9YAL@pamp.relay.phaibel.dev",
   "created_at": "2026-03-09T16:00:00Z",
   "read_at": null,                           // set when recipient reads
   "chain": [],                               // message chain (see §5)
@@ -223,7 +223,7 @@ Messages are transmitted and stored as **Base64-encoded** blobs. When decoded, a
 
 ```mermaid
 graph LR
-    subgraph "Sender (Dobbi A)"
+    subgraph "Sender (Phaibel A)"
         PT[Plaintext Body] --> AES[AES-256-GCM Encrypt]
         RK[Random AES Key] --> AES
         RK --> EK[X25519 Encrypt<br/>with B's public key]
@@ -236,7 +236,7 @@ graph LR
         PKG --> B64[Base64 Encode]
     end
 
-    subgraph "Recipient (Dobbi B)"
+    subgraph "Recipient (Phaibel B)"
         B64 --> DK[X25519 Decrypt<br/>with B's private key]
         DK --> AES_KEY[Recovered AES Key]
         B64 --> DAES[AES-256-GCM Decrypt]
@@ -282,7 +282,7 @@ graph LR
 1. A new conversation starts with `chain: []`
 2. A reply copies the parent's chain and appends the parent's `message_id`
 3. The chain is an **ordered array** — position = sequence in conversation
-4. Each Dobbi stores the **full decrypted messages locally** so the chain IDs serve as references to reconstruct the full thread from local storage
+4. Each Phaibel stores the **full decrypted messages locally** so the chain IDs serve as references to reconstruct the full thread from local storage
 5. The **chain hash** (`SHA-256` of the concatenated chain IDs) is included in the header for integrity verification — if any message in the chain is tampered with or missing, the hash won't match
 
 ```jsonc
@@ -445,7 +445,7 @@ The `details` object carries structured context depending on the error code:
     "status": 410,
     "details": {
       "agreement_id": "agr-5HN2KQ8M",
-      "revoked_by": "K7X2MQ4P@pamp.relay.dobbi.dev",
+      "revoked_by": "K7X2MQ4P@pamp.relay.phaibel.dev",
       "revoked_at": "2026-03-09T18:00:00Z"
     }
   }
@@ -509,12 +509,12 @@ PAMP-Mailbox: K7X2MQ4P
 
 ---
 
-## 7. Local Storage (Dobbi Client)
+## 7. Local Storage (Phaibel Client)
 
 ### 7.1 Vault Structure
 
 ```
-~/.dobbi/
+~/.phaibel/
 └── pamp/
     ├── identity.json           # Mailbox credentials & identity keypair
     ├── sessions/
@@ -534,10 +534,10 @@ PAMP-Mailbox: K7X2MQ4P
 ```jsonc
 {
   "mailbox_id": "K7X2MQ4P",
-  "address": "K7X2MQ4P@pamp.relay.dobbi.dev",
-  "post_office": "https://relay.dobbi.dev",
+  "address": "K7X2MQ4P@pamp.relay.phaibel.dev",
+  "post_office": "https://relay.phaibel.dev",
   "api_key": "pamp_sk_a1b2c3d4e5f67890abcdef1234567890",  // secret — never share
-  "display_name": "Alice's Dobbi",
+  "display_name": "Alice's Phaibel",
   "identity_keypair": {
     "public_key": "<base64 RSA-4096 public>",
     "private_key": "<base64 RSA-4096 private>"  // never leaves this file
@@ -549,14 +549,14 @@ PAMP-Mailbox: K7X2MQ4P
 ### 7.3 Stored Message Format
 
 ```jsonc
-// ~/.dobbi/pamp/inbox/msg-BBBB2222.json
+// ~/.phaibel/pamp/inbox/msg-BBBB2222.json
 {
   "header": {
     "pamp": "0.1.0",
     "message_id": "msg-BBBB2222",
     "agreement_id": "agr-5HN2KQ8M",
-    "from": "R3TW9YAL@pamp.relay.dobbi.dev",
-    "to": "K7X2MQ4P@pamp.relay.dobbi.dev",
+    "from": "R3TW9YAL@pamp.relay.phaibel.dev",
+    "to": "K7X2MQ4P@pamp.relay.phaibel.dev",
     "created_at": "2026-03-09T17:00:00Z",
     "read_at": "2026-03-09T17:05:00Z",
     "chain": ["msg-AAAA1111"],
@@ -575,9 +575,9 @@ PAMP-Mailbox: K7X2MQ4P
 
 ```mermaid
 sequenceDiagram
-    participant A as Dobbi A (Sender)
+    participant A as Phaibel A (Sender)
     participant PO as Post Office
-    participant B as Dobbi B (Recipient)
+    participant B as Phaibel B (Recipient)
 
     Note over A,B: Agreement already active,<br/>keys exchanged
 
@@ -624,7 +624,7 @@ These ideas extend PAMP beyond basic messaging. Each is optional and can be adop
 
 ### 9.1 Actionable Messages (`application/pamp-action`)
 
-Let Dobbi instances send structured requests that the recipient can act on — turning messages into a lightweight RPC channel between personal assistants.
+Let Phaibel instances send structured requests that the recipient can act on — turning messages into a lightweight RPC channel between personal assistants.
 
 ```jsonc
 // Body (decrypted) of an action message
@@ -644,9 +644,9 @@ Let Dobbi instances send structured requests that the recipient can act on — t
 ```
 
 **Use cases:**
-- Share a task or event with another Dobbi (who can import it into their vault)
+- Share a task or event with another Phaibel (who can import it into their vault)
 - Request availability for scheduling
-- Delegate a task (sender's Dobbi asks recipient's Dobbi to create a todo)
+- Delegate a task (sender's Phaibel asks recipient's Phaibel to create a todo)
 - Poll — ask a yes/no question that auto-resolves
 
 ### 9.2 Presence & Polling Strategy
@@ -657,7 +657,7 @@ Instead of constant polling, support **long-poll** and **webhook** delivery:
 |----------|-------------|----------|
 | **Poll** | `GET /mailbox/{id}/messages?since={timestamp}` | Simple clients, infrequent checks |
 | **Long-poll** | Same endpoint with `?wait=30s` — server holds connection until new message or timeout | Near-real-time without WebSocket |
-| **Webhook** | Post Office calls a registered URL on new message | Always-on Dobbi daemons |
+| **Webhook** | Post Office calls a registered URL on new message | Always-on Phaibel daemons |
 
 ### 9.3 Multi-Recipient Threads (Group Channels)
 
@@ -679,7 +679,7 @@ Add optional header fields:
 }
 ```
 
-The receiving Dobbi can use priority to decide whether to interrupt the user or batch-deliver during a daily briefing.
+The receiving Phaibel can use priority to decide whether to interrupt the user or batch-deliver during a daily briefing.
 
 ### 9.5 Delivery Receipts (Beyond Read Receipts)
 
@@ -709,9 +709,9 @@ Two Post Offices can federate so `ALICE@pamp.relay-a.com` can message `BOB@pamp.
 
 ```mermaid
 graph LR
-    A[Dobbi A] -->|HTTPS| PO_A[Post Office A<br/>relay-a.com]
+    A[Phaibel A] -->|HTTPS| PO_A[Post Office A<br/>relay-a.com]
     PO_A -->|"Federation API<br/>(server-to-server)"| PO_B[Post Office B<br/>relay-b.com]
-    PO_B -->|HTTPS| B[Dobbi B]
+    PO_B -->|HTTPS| B[Phaibel B]
 ```
 
 - Post Offices exchange server-level TLS certificates
@@ -739,20 +739,20 @@ graph LR
 
 ---
 
-## 11. Dobbi Integration Points
+## 11. Phaibel Integration Points
 
 ### 11.1 CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `dobbi pamp setup` | Register a mailbox at a Post Office |
-| `dobbi pamp status` | Show mailbox info, active agreements, unread count |
-| `dobbi pamp agree <address>` | Initiate an agreement |
-| `dobbi pamp agreements` | List all agreements and their status |
-| `dobbi pamp send <address> <message>` | Send a message (or reply with `--reply-to`) |
-| `dobbi pamp inbox` | List received messages |
-| `dobbi pamp read <msg_id>` | Read and decrypt a message |
-| `dobbi pamp thread <msg_id>` | Show full conversation thread |
+| `phaibel pamp setup` | Register a mailbox at a Post Office |
+| `phaibel pamp status` | Show mailbox info, active agreements, unread count |
+| `phaibel pamp agree <address>` | Initiate an agreement |
+| `phaibel pamp agreements` | List all agreements and their status |
+| `phaibel pamp send <address> <message>` | Send a message (or reply with `--reply-to`) |
+| `phaibel pamp inbox` | List received messages |
+| `phaibel pamp read <msg_id>` | Read and decrypt a message |
+| `phaibel pamp thread <msg_id>` | Show full conversation thread |
 
 ### 11.2 Feral Integration
 
@@ -762,12 +762,12 @@ PAMP operations map naturally to Feral NodeCodes:
 |----------|---------|
 | `pamp_send_message` | Send a message within a process flow |
 | `pamp_check_inbox` | Poll for new messages, output to context |
-| `pamp_share_entity` | Send an entity to another Dobbi via action message |
+| `pamp_share_entity` | Send an entity to another Phaibel via action message |
 | `pamp_await_reply` | Wait for a reply to a sent message (with timeout) |
 
 ### 11.3 Service Daemon Hook
 
-The Dobbi daemon (`src/service/daemon.ts`) can register a **webhook** with the Post Office for real-time delivery, or run a periodic poll cron job (e.g. every 5 minutes) to fetch new messages.
+The Phaibel daemon (`src/service/daemon.ts`) can register a **webhook** with the Post Office for real-time delivery, or run a periodic poll cron job (e.g. every 5 minutes) to fetch new messages.
 
 ---
 
@@ -775,7 +775,7 @@ The Dobbi daemon (`src/service/daemon.ts`) can register a **webhook** with the P
 
 ```mermaid
 graph TB
-    subgraph "Dobbi A"
+    subgraph "Phaibel A"
         A1[User / Agent] -->|compose| A2[PAMP Client]
         A2 -->|encrypt + sign| A3[Base64 Envelope]
         A7[inbox/sent storage] --> A2
@@ -787,7 +787,7 @@ graph TB
         P4[Webhook Dispatcher] -->|notify| B2
     end
 
-    subgraph "Dobbi B"
+    subgraph "Phaibel B"
         B2[PAMP Client] -->|decrypt + verify| B3[Plaintext Message]
         B3 --> B4[inbox storage]
         B3 --> B5[Thread Index]
@@ -810,7 +810,7 @@ graph TB
 # Raw structure (before outer Base64 encoding):
 
 {"pamp":"0.1.0","message_id":"msg-7KW3NP2X","agreement_id":"agr-5HN2KQ8M",
-"from":"K7X2MQ4P@pamp.relay.dobbi.dev","to":"R3TW9YAL@pamp.relay.dobbi.dev",
+"from":"K7X2MQ4P@pamp.relay.phaibel.dev","to":"R3TW9YAL@pamp.relay.phaibel.dev",
 "created_at":"2026-03-09T16:00:00Z","read_at":null,
 "chain":[],"chain_hash":"e3b0c44298fc1c14...",
 "content_type":"text/plain",

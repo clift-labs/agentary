@@ -200,8 +200,8 @@ export const inboxCommand = new Command('inbox')
                 const msg = getResponse('inbox_empty');
                 console.log(chalk.gray(`\n📥 ${msg}`));
                 console.log(chalk.gray('\nTo add items:'));
-                console.log(chalk.gray('  agentary inbox add "Remember to call mom"'));
-                console.log(chalk.gray('  agentary inbox add /path/to/file.txt'));
+                console.log(chalk.gray('  phaibel inbox add "Remember to call mom"'));
+                console.log(chalk.gray('  phaibel inbox add /path/to/file.txt'));
                 return;
             }
 

@@ -38,7 +38,6 @@ vi.mock('../../src/llm/router.js', () => ({
         chat: vi.fn().mockResolvedValue('mock response'),
     }),
     createSystemPrompt: vi.fn().mockReturnValue('system prompt'),
-    createDobbiSystemPrompt: vi.fn().mockReturnValue('system prompt'),
 }));
 
 describe('QueueProcessor', () => {

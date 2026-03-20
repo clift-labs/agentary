@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Agentary Service - Background daemon for task processing.
+ * Phaibel Service - Background daemon for task processing.
  *
  * This is the main entry point for the service when run as a daemon.
  * It starts the Unix socket server and queue processor.
@@ -19,7 +19,7 @@ import { getCronScheduler } from './cron/scheduler.js';
 import type { ServiceRequest, ServiceResponse, Task } from './protocol.js';
 
 // Only run if this is the service process
-const isService = process.env.AGENTARY_SERVICE === '1';
+const isService = process.env.PHAIBEL_SERVICE === '1';
 
 async function handleRequest(request: ServiceRequest): Promise<ServiceResponse> {
     const queueManager = await getQueueManager();
@@ -210,7 +210,7 @@ async function handleRequest(request: ServiceRequest): Promise<ServiceResponse> 
 }
 
 async function main(): Promise<void> {
-    console.log('Agentary service starting...');
+    console.log('Phaibel service starting...');
 
     const server = new ServiceServer();
     const webServer = new WebServer();
@@ -272,7 +272,7 @@ async function main(): Promise<void> {
         console.error('Failed to start web server:', err);
     }
 
-    console.log(`Agentary service running on ${SOCKET_PATH}`);
+    console.log(`Phaibel service running on ${SOCKET_PATH}`);
 }
 
 if (isService) {

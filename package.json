@@ -1,14 +1,14 @@
 {
-  "name": "agentary",
+  "name": "phaibel",
   "version": "4.0.7",
-  "description": "An AI-powered Personal Assistant with configurable personalities",
+  "description": "AI personal agent that dynamically assembles executable processes from composable code blocks — powered by FeralCCF",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
   },
   "main": "dist/index.js",
   "bin": {
-    "agentary": "./dist/index.js"
+    "phaibel": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -27,12 +27,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/clift-labs/agentary.git"
+    "url": "https://github.com/clift-labs/phaibel.git"
   },
   "license": "MIT",
   "scripts": {
     "prepublishOnly": "npm run build",
-    "build": "tsc && cp src/agentary.txt dist/agentary.txt && cp src/service/web-client.html dist/service/web-client.html",
+    "build": "tsc && cp src/phaibel.txt dist/phaibel.txt && cp src/service/web-client.html dist/service/web-client.html",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run --exclude='tests/integration/**'",

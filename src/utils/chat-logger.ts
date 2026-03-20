@@ -2,7 +2,7 @@
 // Chat Session Logger — structured JSONL logs per chat session
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Each chat session gets its own file: {vault}/.agentary/logs/<chatId>.log
+// Each chat session gets its own file: {vault}/.phaibel/logs/<chatId>.log
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createWriteStream, type WriteStream } from 'fs';
@@ -19,7 +19,8 @@ export type ChatLogType =
     | 'process_result'
     | 'completion_check'
     | 'response'
-    | 'error';
+    | 'error'
+    | 'reaction';
 
 /**
  * Generate a short chat ID like `chat-a3f2b1`.
@@ -85,4 +86,24 @@ export class ChatLogger {
         const logFile = path.join(logsDir, `${this._chatId}.log`);
         this.stream = createWriteStream(logFile, { flags: 'a' });
     }
+}
+
+/**
+ * Append a reaction entry to an existing chat log file.
+ * Used when reactions arrive after the chat session is finished.
+ */
+export async function appendReaction(
+    chatId: string,
+    reaction: 'positive' | 'negative',
+    details?: string,
+): Promise<void> {
+    const logsDir = await getLogsDir();
+    await fs.mkdir(logsDir, { recursive: true });
+    const logFile = path.join(logsDir, `${chatId}.log`);
+    const line = JSON.stringify({
+        ts: new Date().toISOString(),
+        type: 'reaction',
+        data: { reaction, details: details || null },
+    });
+    await fs.appendFile(logFile, line + '\n');
 }

@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Given a type name and plain-English description, asks the LLM to design the
-// field schema, then registers the new entity type in ~/.agentary/entity-types.json.
+// field schema, then registers the new entity type in ~/.phaibel/entity-types.json.
 //
 // Config:
 //   type_name    — singular slug, e.g. "person" or "album"
@@ -24,7 +24,7 @@ import { getModelForCapability } from '../../../llm/router.js';
 
 const ALREADY_EXISTS = 'already_exists';
 
-const SYSTEM_PROMPT = `You are a data modelling assistant for a personal knowledge-management CLI called Agentary.
+const SYSTEM_PROMPT = `You are a data modelling assistant for a personal knowledge-management CLI called Phaibel.
 Given a type name and description, produce a JSON object defining the fields for that entity type.
 
 Rules:

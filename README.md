@@ -1,6 +1,6 @@
-# Agentary
+# Phaibel
 
-An AI-powered personal assistant that lives in your terminal. Agentary manages your todos, events, notes, goals, people, and more — all stored as plain Markdown files in a local "vault" folder.
+An AI-powered personal assistant that lives in your terminal. Phaibel manages your todos, events, notes, goals, people, and more — all stored as plain Markdown files in a local "vault" folder.
 
 Choose from 4 personalities and name your agent to make it truly yours.
 
@@ -44,16 +44,16 @@ Choose from 4 personalities and name your agent to make it truly yours.
 
 ```bash
 # Install globally
-npm install -g agentary
+npm install -g phaibel
 
 # Initialize your vault
-agentary init
+phaibel init
 
 # Add an API key (OpenAI or Anthropic)
-agentary config add-provider openai
+phaibel config add-provider openai
 
 # Launch the interactive shell
-agentary
+phaibel
 ```
 
 That's it. Your agent is ready to serve.
@@ -81,16 +81,16 @@ You also choose a name for your agent — it becomes part of every interaction, 
 If you prefer to build from source:
 
 ```bash
-git clone https://github.com/clift-labs/agentary.git
-cd agentary
+git clone https://github.com/clift-labs/phaibel.git
+cd phaibel
 npm install
 npm run build
 npm link
 ```
 
-## What Agentary Does
+## What Phaibel Does
 
-All of your information stays **local** — stored as plain Markdown files with YAML frontmatter, organized into structured content types within your vault. Agentary comes with built-in content types for common needs, and can create new ones on the fly when it needs a new way to store information.
+All of your information stays **local** — stored as plain Markdown files with YAML frontmatter, organized into structured content types within your vault. Phaibel comes with built-in content types for common needs, and can create new ones on the fly when it needs a new way to store information.
 
 ### Content Types
 
@@ -116,7 +116,7 @@ Just type naturally and your agent figures out what to do:
 
 ### Dynamic Process Generation
 
-What sets Agentary apart from other personal agents is that it **writes a unique software process for every request**. Instead of following rigid, pre-built workflows, it dynamically assembles a process graph tailored to exactly what you asked for.
+What sets Phaibel apart from other personal agents is that it **writes a unique software process for every request**. Instead of following rigid, pre-built workflows, it dynamically assembles a process graph tailored to exactly what you asked for.
 
 This is powered by the **FeralCCF** (Feral Catalog-Code Framework) library, which has three layers:
 
@@ -128,43 +128,43 @@ When you say "show me my high-priority tasks due this week", your agent doesn't 
 
 ## Commands
 
-Run `agentary` with no arguments to enter the interactive shell, or use commands directly:
+Run `phaibel` with no arguments to enter the interactive shell, or use commands directly:
 
 | Command | Description |
 |---------|-------------|
-| `agentary` | Launch interactive shell |
-| `agentary init` | Initialize a new vault |
-| `agentary interview` | Run (or re-run) the personality & onboarding interview |
-| `agentary setup` | Change your name/gender preferences |
-| `agentary today` | Show today's tasks and schedule |
-| `agentary todo [title]` | Create or list tasks |
-| `agentary todo done <title>` | Mark a task complete |
-| `agentary event [title]` | Create or list events |
-| `agentary note [title]` | Create or list notes |
-| `agentary goal [title]` | Create or list goals |
-| `agentary person [name]` | Create or list people |
-| `agentary todont [title]` | Create or list todonts |
-| `agentary remember <text>` | Quick-capture to inbox |
-| `agentary cal` | Calendar view |
-| `agentary config` | View/manage LLM configuration |
-| `agentary service start` | Start the background service + web UI |
-| `agentary shell` | Enter interactive mode (same as no args) |
+| `phaibel` | Launch interactive shell |
+| `phaibel init` | Initialize a new vault |
+| `phaibel interview` | Run (or re-run) the personality & onboarding interview |
+| `phaibel setup` | Change your name/gender preferences |
+| `phaibel today` | Show today's tasks and schedule |
+| `phaibel todo [title]` | Create or list tasks |
+| `phaibel todo done <title>` | Mark a task complete |
+| `phaibel event [title]` | Create or list events |
+| `phaibel note [title]` | Create or list notes |
+| `phaibel goal [title]` | Create or list goals |
+| `phaibel person [name]` | Create or list people |
+| `phaibel todont [title]` | Create or list todonts |
+| `phaibel remember <text>` | Quick-capture to inbox |
+| `phaibel cal` | Calendar view |
+| `phaibel config` | View/manage LLM configuration |
+| `phaibel service start` | Start the background service + web UI |
+| `phaibel shell` | Enter interactive mode (same as no args) |
 
 ## BYOK (Bring Your Own Key)
 
-Agentary doesn't come with an API key — you bring your own from [OpenAI](https://platform.openai.com) and/or [Anthropic](https://console.anthropic.com). Your keys are stored locally in `~/.agentary/secrets.json` and never leave your machine.
+Phaibel doesn't come with an API key — you bring your own from [OpenAI](https://platform.openai.com) and/or [Anthropic](https://console.anthropic.com). Your keys are stored locally in `~/.phaibel/secrets.json` and never leave your machine.
 
 ```bash
 # Add OpenAI
-agentary config add-provider openai
+phaibel config add-provider openai
 
 # Add Anthropic
-agentary config add-provider anthropic
+phaibel config add-provider anthropic
 
-# Or both — Agentary will use each provider's strengths
+# Or both — Phaibel will use each provider's strengths
 ```
 
-When both providers are configured, Agentary automatically picks the best model for each task based on six **capabilities**:
+When both providers are configured, Phaibel automatically picks the best model for each task based on six **capabilities**:
 
 | Capability | What it does | OpenAI default | Anthropic default |
 |------------|-------------|----------------|-------------------|
@@ -178,21 +178,21 @@ When both providers are configured, Agentary automatically picks the best model 
 You can override any mapping:
 
 ```bash
-agentary config set-capability reason anthropic claude-sonnet-4-6
-agentary config reset-capability reason   # restore auto-selection
-agentary config                           # view current configuration
+phaibel config set-capability reason anthropic claude-sonnet-4-6
+phaibel config reset-capability reason   # restore auto-selection
+phaibel config                           # view current configuration
 ```
 
 ### Where Things Live
 
 ```
-~/.agentary/
+~/.phaibel/
   secrets.json         # API keys (never committed)
 
 your-vault/
   .vault.md            # Vault root context (read by the LLM)
   .state.json          # User profile (name, personality, agent name)
-  .agentary/           # Vault-scoped config
+  .phaibel/           # Vault-scoped config
     config.json        # LLM capability overrides
     entity-types.json  # Custom entity type definitions
   todos/               # Markdown files with YAML frontmatter
@@ -209,10 +209,10 @@ Every entity is a plain `.md` file. You can edit them with any text editor, sync
 
 ## Web UI
 
-Agentary includes a browser-based dashboard:
+Phaibel includes a browser-based dashboard:
 
 ```bash
-agentary service start
+phaibel service start
 ```
 
 This starts a background daemon with a web UI (default: `http://localhost:3737`) that shows:
@@ -224,7 +224,7 @@ This starts a background daemon with a web UI (default: `http://localhost:3737`)
 
 ## The Interactive Shell
 
-When you run `agentary` with no arguments, you get a full interactive shell with:
+When you run `phaibel` with no arguments, you get a full interactive shell with:
 
 - **Tab completion** for commands
 - **Up/Down arrow** history

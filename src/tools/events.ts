@@ -39,7 +39,7 @@ registerServiceTool({
         }
 
         const globalDir = path.join(
-            process.env.HOME || '~', '.agentary', 'vault', 'global', 'events',
+            process.env.HOME || '~', '.phaibel', 'vault', 'global', 'events',
         );
 
         const allEvents: Array<{
@@ -121,7 +121,7 @@ registerServiceTool({
         }
 
         const globalDir = path.join(
-            process.env.HOME || '~', '.agentary', 'vault', 'global', 'events',
+            process.env.HOME || '~', '.phaibel', 'vault', 'global', 'events',
         );
 
         const events: Array<{

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic Entity CRUD Command
-// Handles any user-defined entity type: `agentary entity <type> [list|add|remove|show]`
+// Handles any user-defined entity type: `phaibel entity <type> [list|add|remove|show]`
 // The shell maps `car add` → `entity car add` automatically.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ async function addEntity(typeName: string, titleArg?: string): Promise<void> {
     const typeConfig = await getEntityType(typeName);
     if (!typeConfig) {
         console.log(chalk.red(`\n  Unknown entity type: "${typeName}"`));
-        console.log(chalk.gray('  Run: agentary type list'));
+        console.log(chalk.gray('  Run: phaibel type list'));
         return;
     }
 
